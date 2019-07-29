@@ -1,9 +1,15 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"go/types"
 	"log"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"golang.org/x/tools/go/packages"
@@ -14,20 +20,20 @@ import (
 
 func main() {
 
-	pkgTypesMap, err := GetPackageTypesMap("corego/service/xyt/api")
-	if err != nil {
-		log.Fatal(err)
-	}
-	query := &TypeLocation{
+	inLoc := &TypeLocation{
 		PackageName: "corego/service/xyt/view",
 		TypeName:    "BaseView",
 	}
-	query = &TypeLocation{
+	outLoc := &TypeLocation{
 		PackageName: "corego/service/zhike-teacher/legacyapi",
 		TypeName:    "GetTaskListResp",
 	}
-	//corego/service/zhike-teacher/legacyapi.ACKUserLevelUpResp
-	GetTypeInfo(query, pkgTypesMap,0)
+
+	api := NewAPI("test", "测试API", "/zhike/test", inLoc, outLoc)
+	if err := api.Gen("corego/service/xyt/router"); err != nil {
+		log.Fatal(err)
+	}
+	api.Print()
 
 }
 
@@ -72,7 +78,6 @@ func GetPackageTypesMap(root string) (map[string]map[string]string, error) {
 
 	// 提取类型信息
 	for _, lpkg := range lpkgs {
-		//println(lpkg.PkgPath, lpkg.TypeName)
 		if lpkg.Types != nil {
 			qual := types.RelativeTo(lpkg.Types)
 			scope := lpkg.Types.Scope()
@@ -94,33 +99,6 @@ func GetPackageTypesMap(root string) (map[string]map[string]string, error) {
 	}
 
 	return pkgTypesMap, nil
-}
-
-// queryType eg. "corego/service/xyt/api.ABC"
-func GetTypeInfo(query *TypeLocation, packageTypesMap map[string]map[string]string, dep int) {
-	// println(query.PackageName, query.TypeName)
-	fields, err := getObjectFields(query, packageTypesMap)
-	if err != nil {
-		log.Fatal(err)
-		return
-	}
-	for _, v := range fields {
-		t, err := getObjectField(query, v)
-		prefixSpace := ""
-		for i := 0; i < dep; i++ {
-			prefixSpace += "\t\t"
-		}
-		if err != nil {
-			fmt.Printf("%s- %v\n", prefixSpace, err)
-		}
-		if !strings.HasPrefix(t.Name, "XXX_") {
-			//fmt.Println(k, v)
-			fmt.Printf("%s- %+v\n", prefixSpace, t)
-			if t.IsRef {
-				GetTypeInfo(newTypeLocation(t.Type), packageTypesMap, dep+1)
-			}
-		}
-	}
 }
 
 type TypeLocation struct {
@@ -162,11 +140,13 @@ func getObjectFields(info *TypeLocation, packageTypesMap map[string]map[string]s
 }
 
 type ObjectField struct {
-	Name       string
-	Type       string
-	IsRepeated bool
+	Name       string `json:"name"`
+	JSONTag    string `json:"json_tag"`
+	Comment    string `json:"comment"`
+	Type       string `json:"type"`
+	IsRepeated bool   `json:"is_repeated"`
+	IsRef      bool   `json:"is_ref"`
 	//IsMap      bool  暂不支持Map
-	IsRef bool
 }
 
 func cleanRepeatedOrRef(filedTypeName string) string {
@@ -277,6 +257,121 @@ func isBuiltinType(t string) bool {
 }
 
 type Object struct {
-	ID     string
-	Fields []*ObjectField
+	ID     string         `json:"id"`
+	Fields []*ObjectField `json:"fields"`
+}
+
+type API struct {
+	Name            string             `json:"name"`
+	Comment         string             `json:"comment"`
+	RouterPath      string             `json:"router_path"`
+	InArgument      *Object            `json:"in_argument"`
+	OutArgument     *Object            `json:"out_argument"`
+	ObjectsMap      map[string]*Object `json:"objects_map"`
+	inArgumentLoc   *TypeLocation
+	outArgumentLoc  *TypeLocation
+	packageTypesMap map[string]map[string]string
+	debug           bool
+}
+
+func NewAPI(name string, comment string, routerPath string, inArgumentLoc, outArgumentLoc *TypeLocation) *API {
+	return &API{Name: name, Comment: comment, RouterPath: routerPath, inArgumentLoc: inArgumentLoc, outArgumentLoc: outArgumentLoc}
+}
+
+func (api *API) getTypeInfo(query *TypeLocation, rootObj *Object, dep int) error {
+	// println(query.PackageName, query.TypeName)
+	fields, err := getObjectFields(query, api.packageTypesMap)
+	if err != nil {
+		return err
+	}
+
+	rootObj.ID = query.String()
+	rootObj.Fields = make([]*ObjectField, 0)
+	for _, v := range fields {
+		t, err := getObjectField(query, v)
+		prefixSpace := ""
+		for i := 0; i < dep; i++ {
+			prefixSpace += "\t\t"
+		}
+		if err != nil {
+			if api.debug {
+				fmt.Printf("%s- %v\n", prefixSpace, err)
+			}
+			return err
+		}
+		if !strings.HasPrefix(t.Name, "XXX_") {
+			rootObj.Fields = append(rootObj.Fields, t)
+			if api.debug {
+				fmt.Printf("%s- %+v\n", prefixSpace, t)
+			}
+			if t.IsRef {
+				if err = api.getTypeInfo(newTypeLocation(t.Type), new(Object), dep+1); err != nil {
+					return err
+				}
+			}
+		}
+	}
+	api.ObjectsMap[rootObj.ID] = rootObj
+	return nil
+}
+
+func (api *API) Gen(rootPackage string) error {
+	pkgTypesMap, err := GetPackageTypesMap(rootPackage)
+	if err != nil {
+		return err
+	}
+	api.packageTypesMap = pkgTypesMap
+	api.InArgument = new(Object)
+	api.OutArgument = new(Object)
+	api.ObjectsMap = map[string]*Object{}
+	err = api.getTypeInfo(api.inArgumentLoc, api.InArgument, 0)
+	if err != nil {
+		return err
+	}
+	err = api.getTypeInfo(api.outArgumentLoc, api.OutArgument, 0)
+	if err != nil {
+		return err
+	}
+	// set json tag and comment
+	astPkgCacheMap := map[string]map[string]*ast.Package{}
+	for _, obj := range api.ObjectsMap {
+		err = api.setObjectJSONTagAndComment(obj, astPkgCacheMap)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (api *API) setObjectJSONTagAndComment(obj *Object, astPkgCacheMap map[string]map[string]*ast.Package) error {
+	goPath := os.Getenv("GOPATH")
+	t := newTypeLocation(obj.ID)
+	var f map[string]*ast.Package
+	var err error
+	if _, ok := astPkgCacheMap[t.PackageName]; !ok {
+		fset := token.NewFileSet()
+		f, err = parser.ParseDir(fset, filepath.Join(goPath, "src", t.PackageName), nil, parser.ParseComments)
+		if err != nil {
+			return err
+		}
+	} else {
+		f = astPkgCacheMap[t.PackageName]
+	}
+
+	for _, v := range f {
+		i, err := findStructInfo(t.TypeName, v)
+		if err != nil {
+			return err
+		}
+		for k, field := range obj.Fields {
+			field.Comment = i.Fields[k].DocComment
+			field.JSONTag = i.Fields[k].JSONTag
+		}
+	}
+	return nil
+}
+
+func (api *API) Print() {
+	b, _ := json.MarshalIndent(api, "", "\t")
+	fmt.Println(string(b))
 }
