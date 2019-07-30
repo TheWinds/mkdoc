@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-type structField struct {
+type goStructField struct {
 	Name       string
 	Type       string
 	Comment    string
@@ -13,17 +13,17 @@ type structField struct {
 	JSONTag    string
 }
 
-type structInfo struct {
+type goStructInfo struct {
 	Name     string
-	Fields   []structField
+	Fields   []goStructField
 	FieldNum int
 }
 
-// 获取结构体信息
-func findStructInfo(structName string, f *ast.Package) (*structInfo, error) {
+// 从语法树获取结构体信息
+func findGOStructInfo(structName string, f *ast.Package) (*goStructInfo, error) {
 
-	info := new(structInfo)
-	info.Fields = make([]structField, 0)
+	info := new(goStructInfo)
+	info.Fields = make([]goStructField, 0)
 	// 从语法树获取内容
 	ast.Inspect(f, func(node ast.Node) bool {
 		switch node.(type) {
@@ -43,7 +43,7 @@ func findStructInfo(structName string, f *ast.Package) (*structInfo, error) {
 						tag = getJSONTag(field.Tag.Value, name)
 					}
 					info.FieldNum++
-					info.Fields = append(info.Fields, structField{
+					info.Fields = append(info.Fields, goStructField{
 						Name:       name,
 						Comment:    comment,
 						DocComment: field.Doc.Text(),

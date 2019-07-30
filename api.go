@@ -6,61 +6,10 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"go/types"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
-
-	"golang.org/x/tools/go/packages"
-
-	//"golang.org/x/tools/go/types/typeutil"
-	"sort"
 )
-
-func main() {
-
-	inLoc := &TypeLocation{
-		PackageName: "corego/service/xyt/view",
-		TypeName:    "BaseView",
-	}
-	outLoc := &TypeLocation{
-		PackageName: "corego/service/zhike-teacher/legacyapi",
-		TypeName:    "GetTaskListResp",
-	}
-
-	api := NewAPI("test", "测试API", "/zhike/test", inLoc, outLoc)
-	if err := api.Gen("corego/service/xyt/router"); err != nil {
-		log.Fatal(err)
-	}
-	api.Print()
-
-}
-
-
-type TypeLocation struct {
-	PackageName string
-	TypeName    string
-}
-
-func (t *TypeLocation) String() string {
-	return fmt.Sprintf("%s.%s", t.PackageName, t.TypeName)
-}
-
-func newTypeLocation(raw string) *TypeLocation {
-	t := &TypeLocation{}
-	if strings.HasPrefix(raw, "*") {
-		raw = raw[1:]
-	} else if strings.HasPrefix(raw, "[]*") {
-		raw = raw[3:]
-	} else if strings.HasPrefix(raw, "[]") {
-		raw = raw[2:]
-	}
-	e := strings.Split(raw, ".")
-	t.PackageName, t.TypeName = e[0], e[1]
-	return t
-}
-
 
 type API struct {
 	Name            string             `json:"name"`
@@ -79,7 +28,115 @@ func NewAPI(name string, comment string, routerPath string, inArgumentLoc, outAr
 	return &API{Name: name, Comment: comment, RouterPath: routerPath, inArgumentLoc: inArgumentLoc, outArgumentLoc: outArgumentLoc}
 }
 
-func (api *API) getTypeInfo(query *TypeLocation, rootObj *Object, dep int) error {
+// Gen 生成API信息
+// 得到所有依赖类型的信息、字段JSONTag以及DocComment
+func (api *API) Gen(rootPackage string) error {
+	pkgTypesMap, err := GetPackageTypesMap(rootPackage)
+	if err != nil {
+		return err
+	}
+	api.packageTypesMap = pkgTypesMap
+	api.InArgument = new(Object)
+	api.OutArgument = new(Object)
+	api.ObjectsMap = map[string]*Object{}
+	err = api.getObjectInfo(api.inArgumentLoc, api.InArgument, 0)
+	if err != nil {
+		return err
+	}
+	err = api.getObjectInfo(api.outArgumentLoc, api.OutArgument, 0)
+	if err != nil {
+		return err
+	}
+	// set json tag and comment
+	astPkgCacheMap := map[string]map[string]*ast.Package{}
+	for _, obj := range api.ObjectsMap {
+		err = api.setObjectJSONTagAndComment(obj, astPkgCacheMap)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (api *API) Print() {
+	b, _ := json.MarshalIndent(api, "", "\t")
+	fmt.Println(string(b))
+}
+
+func (api *API) PrintJSON() {
+	//sb := new(strings.Builder)
+	//api.printJSON(api.InArgument, 0, sb)
+	//m := map[string]interface{}{}
+	//err := json.Unmarshal([]byte(sb.String()), m)
+	//fmt.Println(err)
+	//b, _ := json.MarshalIndent(m, "", "\t")
+	//fmt.Println(string(b))
+	//
+	//sb = new(strings.Builder)
+	//api.printJSON(api.OutArgument, 0, sb)
+	//fmt.Println(sb.String())
+
+	mIn := make(map[string]interface{})
+	api.buildMap(api.InArgument, mIn)
+	mOut := make(map[string]interface{})
+	api.buildMap(api.OutArgument, mOut)
+
+	bin, _ := json.MarshalIndent(mIn, "", "\t")
+	bout, _ := json.MarshalIndent(mOut, "", "\t")
+
+	fmt.Println(string(bin))
+	fmt.Println(string(bout))
+
+}
+
+func (api *API) buildMap(obj *Object, rootMap map[string]interface{}) {
+	for _, field := range obj.Fields {
+		if field.IsRef {
+			f := map[string]interface{}{}
+			api.buildMap(api.ObjectsMap[field.Type], f)
+			if field.IsRepeated {
+				rootMap[field.JSONTag] = []map[string]interface{}{f}
+			} else {
+				rootMap[field.JSONTag] = f
+			}
+		} else {
+			rootMap[field.JSONTag] = 123
+		}
+	}
+}
+
+func (api *API) printJSON(obj *Object, dep int, sb *strings.Builder) {
+	api.writeJSONToken("{\n", dep, sb)
+	for _, field := range obj.Fields {
+		k := fmt.Sprintf("\t\"%s\" : ", field.JSONTag)
+		api.writeJSONToken(k, dep, sb)
+		if !field.IsRef {
+			api.writeJSONToken("123", dep, sb)
+			api.writeJSONToken(",\n", dep, sb)
+			continue
+		}
+		if field.IsRepeated {
+			api.writeJSONToken("\t[\n", dep, sb)
+			api.printJSON(api.ObjectsMap[field.Type], dep+1, sb)
+			api.writeJSONToken(",", dep+1, sb)
+			api.writeJSONToken("\t]\n", dep, sb)
+		} else {
+			api.printJSON(api.ObjectsMap[field.Type], dep+1, sb)
+		}
+		api.writeJSONToken(",\n", dep, sb)
+	}
+	api.writeJSONToken("}\n", dep, sb)
+}
+
+func (api *API) writeJSONToken(s string, dep int, sb *strings.Builder) {
+	prefix := ""
+	for i := 0; i < dep; i++ {
+		prefix += "\t"
+	}
+	sb.WriteString(prefix + s)
+}
+
+func (api *API) getObjectInfo(query *TypeLocation, rootObj *Object, dep int) error {
 	// println(query.PackageName, query.TypeName)
 	fields, err := api.getObjectFields(query, api.packageTypesMap)
 	if err != nil {
@@ -106,7 +163,7 @@ func (api *API) getTypeInfo(query *TypeLocation, rootObj *Object, dep int) error
 				fmt.Printf("%s- %+v\n", prefixSpace, t)
 			}
 			if t.IsRef {
-				if err = api.getTypeInfo(newTypeLocation(t.Type), new(Object), dep+1); err != nil {
+				if err = api.getObjectInfo(newTypeLocation(t.Type), new(Object), dep+1); err != nil {
 					return err
 				}
 			}
@@ -129,34 +186,6 @@ func (api *API) getObjectFields(info *TypeLocation, packageTypesMap map[string]m
 	return fields, nil
 }
 
-func (api *API) Gen(rootPackage string) error {
-	pkgTypesMap, err := GetPackageTypesMap(rootPackage)
-	if err != nil {
-		return err
-	}
-	api.packageTypesMap = pkgTypesMap
-	api.InArgument = new(Object)
-	api.OutArgument = new(Object)
-	api.ObjectsMap = map[string]*Object{}
-	err = api.getTypeInfo(api.inArgumentLoc, api.InArgument, 0)
-	if err != nil {
-		return err
-	}
-	err = api.getTypeInfo(api.outArgumentLoc, api.OutArgument, 0)
-	if err != nil {
-		return err
-	}
-	// set json tag and comment
-	astPkgCacheMap := map[string]map[string]*ast.Package{}
-	for _, obj := range api.ObjectsMap {
-		err = api.setObjectJSONTagAndComment(obj, astPkgCacheMap)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 func (api *API) setObjectJSONTagAndComment(obj *Object, astPkgCacheMap map[string]map[string]*ast.Package) error {
 	goPath := os.Getenv("GOPATH")
 	t := newTypeLocation(obj.ID)
@@ -173,7 +202,7 @@ func (api *API) setObjectJSONTagAndComment(obj *Object, astPkgCacheMap map[strin
 	}
 
 	for _, v := range f {
-		i, err := findStructInfo(t.TypeName, v)
+		i, err := findGOStructInfo(t.TypeName, v)
 		if err != nil {
 			return err
 		}
@@ -185,13 +214,14 @@ func (api *API) setObjectJSONTagAndComment(obj *Object, astPkgCacheMap map[strin
 	return nil
 }
 
-func (api *API) Print() {
-	b, _ := json.MarshalIndent(api, "", "\t")
-	fmt.Println(string(b))
-}
-
 // 添加API页面	CURD
 // API 			CURD
 // Field 		CURD
 // types 搜索
 // 类型连接
+
+type APIGroup struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	APIList     []*API `json:"api_list"`
+}
