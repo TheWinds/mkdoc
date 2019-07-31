@@ -12,7 +12,7 @@ func main() {
 	}
 	outLoc := &TypeLocation{
 		PackageName: "corego/service/xyt/view",
-		TypeName:    "TakeCourseView1",
+		TypeName:    "TakeCourseView",
 	}
 	baseViewLoc := &TypeLocation{
 		PackageName: "corego/service/xyt/view",

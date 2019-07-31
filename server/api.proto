@@ -4,6 +4,83 @@ package docspace.api;
 
 
 service DocSpace {
-    // 创建API文档
-    rpc CreateAPIDoc(CreateAPIDocReq) returns (CreateAPIDocResp);
+    // 更新文档项目信息
+    rpc UpdateProjectInfo (UpdateProjectInfoReq) returns (UpdateProjectInfoResp);
+    // 新增API组
+    rpc AddAPIGroupInfo (AddAPIGroupInfoReq) returns (AddAPIGroupInfoResp);
+    // 更新API组
+    rpc UpdateAPIGroupInfo (UpdateAPIGroupInfoReq) returns (UpdateAPIGroupInfoResp);
+    // 获取所有API组
+    rpc GetAPIGroupInfos (GetAPIGroupInfosReq) returns (GetAPIGroupInfosResp);
+    // 新增API
+    rpc AddAPI (AddAPIReq) returns (AddAPIResp);
+}
+
+message UpdateProjectInfoReq {
+    string name = 1;
+    string description = 2;
+}
+
+message UpdateProjectInfoResp {
+    bool success = 1;
+}
+
+message AddAPIGroupInfoReq {
+    string name = 1;
+    string description = 2;
+}
+
+message AddAPIGroupInfoResp {
+    int32 groupID = 1;
+    bool success = 2;
+}
+
+message UpdateAPIGroupInfoReq {
+    int32 groupID = 1;
+    string name = 2;
+    string description = 3;
+}
+
+message UpdateAPIGroupInfoResp {
+    bool success = 1;
+}
+
+message GetAPIGroupInfosReq {
+
+}
+
+message APIGroup {
+    int32 groupID = 1;
+    string name = 2;
+    string description = 3;
+}
+
+message GetAPIGroupInfosResp {
+    repeated APIGroup results = 1;
+    bool success = 2;
+}
+
+message APIField {
+    string name = 1;
+    string type = 2;
+    string json_tag = 3;
+    bool is_repeated = 4;
+    bool is_ref = 5;
+    string example = 6;
+}
+
+message AddAPIReq {
+    string name = 1;
+    string description = 2;
+    string router_path = 3;
+    string in_arg_go_type_loc = 4;
+    string out_arg_go_type_loc = 5;
+    repeated APIField in_arg_fields = 6;
+    repeated APIField out_arg_fields = 7;
+}
+
+message AddAPIResp {
+    int32 api_id = 1;
+    repeated APIField in_arg_fields = 2;
+    repeated APIField out_arg_fields = 3;
 }
