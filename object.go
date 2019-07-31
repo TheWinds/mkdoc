@@ -43,11 +43,11 @@ func getFieldNameFromType(filedType string) string {
 func getObjectField(structPkgInfo *TypeLocation, def string) (*ObjectField, error) {
 	// name type tag
 	// type tag
-
 	// name type
 	// FooBar  []*corego/service/xyt/view.FooBar
 	// FooBars []*FooBar
 	// String  string
+	// Strings  []string
 
 	// type
 	// []*corego/service/xyt/view.FooBar
@@ -78,9 +78,10 @@ func getObjectField(structPkgInfo *TypeLocation, def string) (*ObjectField, erro
 
 	objectField.Name = fieldName
 
-	if !isBuiltinType(fieldType) {
+	if !isBuiltinType(cleanRepeatedOrRef(fieldType)) {
 		objectField.IsRef = true
 	}
+
 	if strings.HasPrefix(fieldType, "[]") {
 		objectField.IsRepeated = true
 	}
@@ -105,7 +106,6 @@ func getObjectField(structPkgInfo *TypeLocation, def string) (*ObjectField, erro
 	} else {
 		objectField.Type = fieldBaseType
 	}
-
 	return objectField, nil
 }
 

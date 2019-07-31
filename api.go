@@ -58,80 +58,111 @@ func (api *API) Gen(rootPackage string) error {
 	return nil
 }
 
+func (api *API) LinkField2Field(fromObj *Object, fromFieldName string, toObj *Object, toFieldName string) error {
+	fromFieldIndex := -1
+	for k, fromField := range fromObj.Fields {
+		if fromField.Name == fromFieldName {
+			if fromField.Type == "interface{}" {
+				fromFieldIndex = k
+				break
+			} else {
+				return fmt.Errorf("link filed should from a interface{} filed but got %s", fromField.Type)
+			}
+		}
+	}
+	if fromFieldIndex == -1 {
+		return fmt.Errorf("type %s is not constains field %s", fromObj.ID, fromFieldName)
+
+	}
+
+	for _, toField := range toObj.Fields {
+		if toField.Name == toFieldName {
+			if !toField.IsRef {
+				return fmt.Errorf("filed must link to a pointer filed")
+			}
+			fromObj.Fields[fromFieldIndex].IsRepeated = toField.IsRepeated
+			fromObj.Fields[fromFieldIndex].Type = toField.Type
+			fromObj.Fields[fromFieldIndex].IsRef = true
+			return nil
+		}
+	}
+
+	return fmt.Errorf("type %s is not constains field %s", toObj.ID, toFieldName)
+}
+
+func (api *API) LinkField2Object(fromObj *Object, fromFieldName string, toObjID string, isRepeated bool) error {
+
+	for _, fromField := range fromObj.Fields {
+		if fromField.Name == fromFieldName {
+			if fromField.Type == "interface{}" {
+				fromField.IsRef = true
+				fromField.Type = toObjID
+				fromField.IsRepeated = isRepeated
+				return nil
+			} else {
+				return fmt.Errorf("link filed should from a interface{} filed but got %s", fromField.Type)
+			}
+		}
+	}
+	return fmt.Errorf("type %s is not constains field %s", fromObj.ID, fromFieldName)
+}
+
 func (api *API) Print() {
 	b, _ := json.MarshalIndent(api, "", "\t")
 	fmt.Println(string(b))
 }
 
-func (api *API) PrintJSON() {
-	//sb := new(strings.Builder)
-	//api.printJSON(api.InArgument, 0, sb)
-	//m := map[string]interface{}{}
-	//err := json.Unmarshal([]byte(sb.String()), m)
-	//fmt.Println(err)
-	//b, _ := json.MarshalIndent(m, "", "\t")
-	//fmt.Println(string(b))
-	//
-	//sb = new(strings.Builder)
-	//api.printJSON(api.OutArgument, 0, sb)
-	//fmt.Println(sb.String())
-
-	mIn := make(map[string]interface{})
-	api.buildMap(api.InArgument, mIn)
-	mOut := make(map[string]interface{})
-	api.buildMap(api.OutArgument, mOut)
-
-	bin, _ := json.MarshalIndent(mIn, "", "\t")
-	bout, _ := json.MarshalIndent(mOut, "", "\t")
-
-	fmt.Println(string(bin))
-	fmt.Println(string(bout))
-
-}
-
-func (api *API) buildMap(obj *Object, rootMap map[string]interface{}) {
-	for _, field := range obj.Fields {
-		if field.IsRef {
-			f := map[string]interface{}{}
-			api.buildMap(api.ObjectsMap[field.Type], f)
-			if field.IsRepeated {
-				rootMap[field.JSONTag] = []map[string]interface{}{f}
-			} else {
-				rootMap[field.JSONTag] = f
-			}
-		} else {
-			rootMap[field.JSONTag] = 123
-		}
-	}
+func (api *API) PrintJSON(obj *Object) {
+	sb:=new(strings.Builder)
+	api.printJSON(obj,0,sb)
+	fmt.Println(sb.String())
 }
 
 func (api *API) printJSON(obj *Object, dep int, sb *strings.Builder) {
-	api.writeJSONToken("{\n", dep, sb)
-	for _, field := range obj.Fields {
-		k := fmt.Sprintf("\t\"%s\" : ", field.JSONTag)
+	api.writeJSONToken("{\n", 0, sb)
+	for i, field := range obj.Fields {
+		k := fmt.Sprintf("    \"%s\" : ", field.JSONTag)
 		api.writeJSONToken(k, dep, sb)
 		if !field.IsRef {
-			api.writeJSONToken("123", dep, sb)
-			api.writeJSONToken(",\n", dep, sb)
+			if field.IsRepeated {
+				api.writeJSONToken("[", 0, sb)
+				api.writeJSONToken("1,2,3", 0, sb)
+				api.writeJSONToken("]", 0, sb)
+				if i != len(obj.Fields)-1 {
+					api.writeJSONToken(",\n", 0, sb)
+				}else {
+					api.writeJSONToken("\n", 0, sb)
+				}
+			}else {
+				api.writeJSONToken("123", 0, sb)
+				if i != len(obj.Fields)-1 {
+					api.writeJSONToken(",\n", 0, sb)
+				}else {
+					api.writeJSONToken("\n", 0, sb)
+				}
+			}
 			continue
 		}
 		if field.IsRepeated {
-			api.writeJSONToken("\t[\n", dep, sb)
+			api.writeJSONToken("[", 0, sb)
 			api.printJSON(api.ObjectsMap[field.Type], dep+1, sb)
-			api.writeJSONToken(",", dep+1, sb)
-			api.writeJSONToken("\t]\n", dep, sb)
+			api.writeJSONToken("]", dep, sb)
 		} else {
 			api.printJSON(api.ObjectsMap[field.Type], dep+1, sb)
 		}
-		api.writeJSONToken(",\n", dep, sb)
+		if i != len(obj.Fields)-1 {
+			api.writeJSONToken(",\n", 0, sb)
+		}else {
+			api.writeJSONToken("\n", 0, sb)
+		}
 	}
-	api.writeJSONToken("}\n", dep, sb)
+	api.writeJSONToken("}", dep, sb)
 }
 
 func (api *API) writeJSONToken(s string, dep int, sb *strings.Builder) {
 	prefix := ""
 	for i := 0; i < dep; i++ {
-		prefix += "\t"
+		prefix += "    "
 	}
 	sb.WriteString(prefix + s)
 }
@@ -162,7 +193,7 @@ func (api *API) getObjectInfo(query *TypeLocation, rootObj *Object, dep int) err
 			if api.debug {
 				fmt.Printf("%s- %+v\n", prefixSpace, t)
 			}
-			if t.IsRef {
+			if t.IsRef && dep >= 0 {
 				if err = api.getObjectInfo(newTypeLocation(t.Type), new(Object), dep+1); err != nil {
 					return err
 				}
@@ -191,14 +222,23 @@ func (api *API) setObjectJSONTagAndComment(obj *Object, astPkgCacheMap map[strin
 	t := newTypeLocation(obj.ID)
 	var f map[string]*ast.Package
 	var err error
-	if _, ok := astPkgCacheMap[t.PackageName]; !ok {
+	if astPkgCacheMap != nil {
+		if _, ok := astPkgCacheMap[t.PackageName]; !ok {
+			fset := token.NewFileSet()
+			f, err = parser.ParseDir(fset, filepath.Join(goPath, "src", t.PackageName), nil, parser.ParseComments)
+			if err != nil {
+				return err
+			}
+			astPkgCacheMap[t.PackageName] = f
+		} else {
+			f = astPkgCacheMap[t.PackageName]
+		}
+	} else {
 		fset := token.NewFileSet()
 		f, err = parser.ParseDir(fset, filepath.Join(goPath, "src", t.PackageName), nil, parser.ParseComments)
 		if err != nil {
 			return err
 		}
-	} else {
-		f = astPkgCacheMap[t.PackageName]
 	}
 
 	for _, v := range f {
