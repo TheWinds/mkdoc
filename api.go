@@ -218,6 +218,7 @@ func (api *API) getObjectFields(info *TypeLocation, packageTypesMap map[string]m
 }
 
 func (api *API) setObjectJSONTagAndComment(obj *Object, astPkgCacheMap map[string]map[string]*ast.Package) error {
+	//TODO:支持多个GOPATH
 	goPath := os.Getenv("GOPATH")
 	t := newTypeLocation(obj.ID)
 	var f map[string]*ast.Package

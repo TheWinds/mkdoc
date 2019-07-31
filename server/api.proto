@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+package docspace.api;
+
+
+service DocSpace {
+    // 创建API文档
+    rpc CreateAPIDoc(CreateAPIDocReq) returns (CreateAPIDocResp);
+}

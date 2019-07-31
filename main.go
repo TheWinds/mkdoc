@@ -11,8 +11,8 @@ func main() {
 		TypeName:    "BaseView",
 	}
 	outLoc := &TypeLocation{
-		PackageName: "corego/service/zhike-teacher/legacyapi",
-		TypeName:    "GetTaskListResp",
+		PackageName: "corego/service/xyt/view",
+		TypeName:    "TakeCourseView1",
 	}
 	baseViewLoc := &TypeLocation{
 		PackageName: "corego/service/xyt/view",
@@ -30,7 +30,7 @@ func main() {
 		log.Fatal(err)
 	}
 	api.setObjectJSONTagAndComment(baseViewObj,nil)
-	err = api.LinkField2Field(baseViewObj,"Data",api.OutArgument,"Results")
+	err = api.LinkField2Object(baseViewObj,"Data",outLoc.String(),false)
 	if err != nil {
 		log.Fatal(err)
 	}
