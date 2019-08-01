@@ -5,7 +5,9 @@ import (
 )
 
 func main() {
+	getAPIDocFuncInfo("corego/service/xyt/api")
 
+	return
 	inLoc := &TypeLocation{
 		PackageName: "corego/service/xyt/view",
 		TypeName:    "BaseView",
