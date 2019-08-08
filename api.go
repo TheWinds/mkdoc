@@ -58,6 +58,20 @@ func (api *API) Gen(rootPackage string) error {
 	return nil
 }
 
+func (api *API) PrintMarkdown() {
+	fmt.Printf("### %s\n", api.Comment)
+	fmt.Printf("#### %s\n", api.Name)
+	fmt.Printf("#### %s\n", api.RouterPath)
+	fmt.Println("- 参数")
+	fmt.Printf("```json\n")
+	fmt.Printf("%s\n", api.JSON(api.InArgument))
+	fmt.Printf("```\n")
+	fmt.Println("- 返回")
+	fmt.Printf("```json\n")
+	fmt.Printf("%s\n", api.JSON(api.OutArgument))
+	fmt.Printf("```\n")
+}
+
 func (api *API) LinkField2Field(fromObj *Object, fromFieldName string, toObj *Object, toFieldName string) error {
 	fromFieldIndex := -1
 	for k, fromField := range fromObj.Fields {
@@ -113,9 +127,15 @@ func (api *API) Print() {
 }
 
 func (api *API) PrintJSON(obj *Object) {
-	sb:=new(strings.Builder)
-	api.printJSON(obj,0,sb)
+	sb := new(strings.Builder)
+	api.printJSON(obj, 0, sb)
 	fmt.Println(sb.String())
+}
+
+func (api *API) JSON(obj *Object) string {
+	sb := new(strings.Builder)
+	api.printJSON(obj, 0, sb)
+	return sb.String()
 }
 
 func (api *API) printJSON(obj *Object, dep int, sb *strings.Builder) {
@@ -130,16 +150,15 @@ func (api *API) printJSON(obj *Object, dep int, sb *strings.Builder) {
 				api.writeJSONToken("]", 0, sb)
 				if i != len(obj.Fields)-1 {
 					api.writeJSONToken(",\n", 0, sb)
-				}else {
+				} else {
 					api.writeJSONToken("\n", 0, sb)
 				}
-			}else {
+			} else {
 				api.writeJSONToken("123", 0, sb)
 				if i != len(obj.Fields)-1 {
-					api.writeJSONToken(",\n", 0, sb)
-				}else {
-					api.writeJSONToken("\n", 0, sb)
+					api.writeJSONToken(",", 0, sb)
 				}
+				api.writeJSONToken(" # "+strings.TrimSuffix(field.Comment,"\n") +"\n", 0, sb)
 			}
 			continue
 		}
@@ -152,7 +171,7 @@ func (api *API) printJSON(obj *Object, dep int, sb *strings.Builder) {
 		}
 		if i != len(obj.Fields)-1 {
 			api.writeJSONToken(",\n", 0, sb)
-		}else {
+		} else {
 			api.writeJSONToken("\n", 0, sb)
 		}
 	}

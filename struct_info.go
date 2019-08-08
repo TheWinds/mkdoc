@@ -66,7 +66,7 @@ func getJSONTag(tags, defaultTag string) string {
 	if !strings.Contains(tags, "json") {
 		return defaultTag
 	}
-	return getMidString(tags, "json:\"", "\"")
+	return strings.Replace(getMidString(tags, "json:\"", "\""), ",omitempty", "", -1)
 }
 
 func getMidString(src, s, e string) string {
