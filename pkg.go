@@ -8,10 +8,10 @@ import (
 	"strings"
 )
 
-
 type TypeLocation struct {
 	PackageName string
 	TypeName    string
+	IsRepeated  bool
 }
 
 func (t *TypeLocation) String() string {
@@ -31,8 +31,6 @@ func newTypeLocation(raw string) *TypeLocation {
 	t.PackageName, t.TypeName = e[0], e[1]
 	return t
 }
-
-
 
 func GetPackageTypesMap(root string) (map[string]map[string]string, error) {
 	cfg := &packages.Config{

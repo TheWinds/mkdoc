@@ -36,8 +36,12 @@ func (api *API) Gen(rootPackage string) error {
 		return err
 	}
 	api.packageTypesMap = pkgTypesMap
-	api.InArgument = new(Object)
-	api.OutArgument = new(Object)
+	if api.InArgument == nil {
+		api.InArgument = new(Object)
+	}
+	if api.OutArgument == nil {
+		api.OutArgument = new(Object)
+	}
 	api.ObjectsMap = map[string]*Object{}
 	err = api.getObjectInfo(api.inArgumentLoc, api.InArgument, 0)
 	if err != nil {
@@ -60,15 +64,32 @@ func (api *API) Gen(rootPackage string) error {
 
 func (api *API) PrintMarkdown() {
 	fmt.Printf("### %s\n", api.Comment)
-	fmt.Printf("#### %s\n", api.Name)
 	fmt.Printf("#### %s\n", api.RouterPath)
+	fmt.Printf("> %s\n", api.Name)
+
 	fmt.Println("- 参数")
 	fmt.Printf("```json\n")
-	fmt.Printf("%s\n", api.JSON(api.InArgument))
+	if api.inArgumentLoc!=nil&& api.inArgumentLoc.IsRepeated{
+		fmt.Printf("[\n")
+	}
+	fmt.Printf("%s", api.JSON(api.InArgument))
+	if api.inArgumentLoc!=nil&& api.inArgumentLoc.IsRepeated{
+		fmt.Printf("]\n")
+	}else {
+		fmt.Printf("\n")
+	}
 	fmt.Printf("```\n")
 	fmt.Println("- 返回")
 	fmt.Printf("```json\n")
-	fmt.Printf("%s\n", api.JSON(api.OutArgument))
+	if api.outArgumentLoc!=nil&& api.outArgumentLoc.IsRepeated{
+		fmt.Printf("[")
+	}
+	fmt.Printf("%s", api.JSON(api.OutArgument))
+	if api.outArgumentLoc!=nil&& api.outArgumentLoc.IsRepeated{
+		fmt.Printf("]\n")
+	}else {
+		fmt.Printf("\n")
+	}
 	fmt.Printf("```\n")
 }
 
@@ -154,11 +175,11 @@ func (api *API) printJSON(obj *Object, dep int, sb *strings.Builder) {
 					api.writeJSONToken("\n", 0, sb)
 				}
 			} else {
-				api.writeJSONToken("123", 0, sb)
+				api.writeJSONToken(MockField(field.Type, field.JSONTag), 0, sb)
 				if i != len(obj.Fields)-1 {
 					api.writeJSONToken(",", 0, sb)
 				}
-				api.writeJSONToken(" # "+strings.TrimSuffix(field.Comment,"\n") +"\n", 0, sb)
+				api.writeJSONToken("\t# "+strings.TrimSuffix(field.Comment, "\n")+"\n", 0, sb)
 			}
 			continue
 		}
@@ -187,6 +208,9 @@ func (api *API) writeJSONToken(s string, dep int, sb *strings.Builder) {
 }
 
 func (api *API) getObjectInfo(query *TypeLocation, rootObj *Object, dep int) error {
+	if query == nil {
+		return nil
+	}
 	// println(query.PackageName, query.TypeName)
 	fields, err := api.getObjectFields(query, api.packageTypesMap)
 	if err != nil {
