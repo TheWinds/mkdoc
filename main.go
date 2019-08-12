@@ -230,32 +230,6 @@ func docSaleLeads() {
 		apiALLSaleTags,
 		apiCustomerSaleTags,
 		apiSaleTagStatistics,
-		//NewAPI(
-		//	"[mutation] classAdvisers",
-		//	"分配群班主任",
-		//	"/operationManage",
-		//	&TypeLocation{
-		//		PackageName: pkgZkStudent,
-		//		TypeName:    "SetGroupClassAdviserReq",
-		//	},
-		//	&TypeLocation{
-		//		PackageName: pkgZkStudent,
-		//		TypeName:    "SetGroupClassAdviserResp",
-		//	},
-		//),
-		//NewAPI(
-		//	"[mutation] groupQRCodeList",
-		//	"获取群码列表",
-		//	"/operationManage",
-		//	&TypeLocation{
-		//		PackageName: pkgZkStudent,
-		//		TypeName:    "GetGroupQRCodeListReq",
-		//	},
-		//	&TypeLocation{
-		//		PackageName: pkgZkStudent,
-		//		TypeName:    "GroupQRCode",
-		//	},
-		//),
 	}
 	for _, v := range apis {
 		v.Gen(pkgZkStudent)
