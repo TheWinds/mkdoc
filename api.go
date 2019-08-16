@@ -13,8 +13,10 @@ import (
 
 type API struct {
 	Name            string             `json:"name"`
-	Comment         string             `json:"comment"`
-	RouterPath      string             `json:"router_path"`
+	Desc            string             `json:"desc"`
+	Path            string             `json:"path"`
+	Method          string             `json:"method"` // post get delete patch ; query mutation
+	Type            string             `json:"type"`   // echo_handle graphql
 	InArgument      *Object            `json:"in_argument"`
 	OutArgument     *Object            `json:"out_argument"`
 	ObjectsMap      map[string]*Object `json:"objects_map"`
@@ -25,7 +27,7 @@ type API struct {
 }
 
 func NewAPI(name string, comment string, routerPath string, inArgumentLoc, outArgumentLoc *TypeLocation) *API {
-	return &API{Name: name, Comment: comment, RouterPath: routerPath, inArgumentLoc: inArgumentLoc, outArgumentLoc: outArgumentLoc}
+	return &API{Name: name, Desc: comment, Path: routerPath, inArgumentLoc: inArgumentLoc, outArgumentLoc: outArgumentLoc}
 }
 
 // Gen 生成API信息
@@ -63,31 +65,31 @@ func (api *API) Gen(rootPackage string) error {
 }
 
 func (api *API) PrintMarkdown() {
-	fmt.Printf("### %s\n", api.Comment)
-	fmt.Printf("#### %s\n", api.RouterPath)
+	fmt.Printf("### %s\n", api.Desc)
+	fmt.Printf("#### %s\n", api.Path)
 	fmt.Printf("> %s\n", api.Name)
 
 	fmt.Println("- 参数")
 	fmt.Printf("```json\n")
-	if api.inArgumentLoc!=nil&& api.inArgumentLoc.IsRepeated{
+	if api.inArgumentLoc != nil && api.inArgumentLoc.IsRepeated {
 		fmt.Printf("[\n")
 	}
 	fmt.Printf("%s", api.JSON(api.InArgument))
-	if api.inArgumentLoc!=nil&& api.inArgumentLoc.IsRepeated{
+	if api.inArgumentLoc != nil && api.inArgumentLoc.IsRepeated {
 		fmt.Printf("]\n")
-	}else {
+	} else {
 		fmt.Printf("\n")
 	}
 	fmt.Printf("```\n")
 	fmt.Println("- 返回")
 	fmt.Printf("```json\n")
-	if api.outArgumentLoc!=nil&& api.outArgumentLoc.IsRepeated{
+	if api.outArgumentLoc != nil && api.outArgumentLoc.IsRepeated {
 		fmt.Printf("[")
 	}
 	fmt.Printf("%s", api.JSON(api.OutArgument))
-	if api.outArgumentLoc!=nil&& api.outArgumentLoc.IsRepeated{
+	if api.outArgumentLoc != nil && api.outArgumentLoc.IsRepeated {
 		fmt.Printf("]\n")
-	}else {
+	} else {
 		fmt.Printf("\n")
 	}
 	fmt.Printf("```\n")

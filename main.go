@@ -1,12 +1,19 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+)
 
 func main() {
+	scanGraphQLAPIDocInfo("corego/service/boss/schemas")
+	return
 	docSaleLeads()
 }
 
 func docSaleLeads() {
+	fmt.Println("# SaleLeadsAPI")
+	fmt.Println("[TOC]")
+
 	fmt.Println("## 群码相关")
 	pkgOperation := "corego/service/operation/api"
 	apis := []*API{
@@ -26,7 +33,7 @@ func docSaleLeads() {
 			},
 		),
 		NewAPI(
-			"[mutation] classAdvisers",
+			"[mutation] setGroupClassAdviser",
 			"分配群班主任",
 			"/operationManage",
 			&TypeLocation{
@@ -64,9 +71,9 @@ func docSaleLeads() {
 	pkgZkStudent := "corego/service/zhike-student/api"
 
 	apiCourseSale := &API{
-		Name:       "[query] courseSale",
-		Comment:    "销售线索搜索",
-		RouterPath: "/zhike/courseManage",
+		Name: "[query] courseSale",
+		Desc: "销售线索搜索",
+		Path: "/zhike/courseManage",
 		InArgument: &Object{
 			ID: "courseSale",
 			Fields: []*ObjectField{
@@ -89,7 +96,7 @@ func docSaleLeads() {
 				{
 					Name:       "query",
 					JSONTag:    "query",
-					Comment:    "查询参数 新增classAdviserId字段 0-公共 非0-个人",
+					Comment:    "查询参数 新增classAdviserId字段 \"\"-公共 非\"\"-个人",
 					Type:       "string",
 					IsRepeated: false,
 					IsRef:      false,
@@ -103,9 +110,9 @@ func docSaleLeads() {
 	}
 
 	apiUserCourseList := &API{
-		Name:       "[query] userCourseList",
-		Comment:    "销售线索/课程列表",
-		RouterPath: "/zhike/courseManage",
+		Name: "[query] userCourseList",
+		Desc: "销售线索/课程列表",
+		Path: "/zhike/courseManage",
 		InArgument: &Object{
 			ID: "courseSale",
 			Fields: []*ObjectField{
@@ -142,9 +149,9 @@ func docSaleLeads() {
 		},
 	}
 	apiMaterielCommentUpdate := &API{
-		Name:       "[mutation] materielCommentUpdate",
-		Comment:    "更新发货备注",
-		RouterPath: "/zhike/courseManage",
+		Name: "[mutation] materielCommentUpdate",
+		Desc: "更新发货备注",
+		Path: "/zhike/courseManage",
 		inArgumentLoc: &TypeLocation{
 			PackageName: pkgZkStudent,
 			TypeName:    "BackendMaterialCommentLogUpdateRequest",
@@ -156,9 +163,9 @@ func docSaleLeads() {
 	}
 
 	apiSetCustomerSaleTag := &API{
-		Name:       "[mutation] setCustomerSaleTag",
-		Comment:    "设置用户的销售标签",
-		RouterPath: "/zhike/courseManage",
+		Name: "[mutation] setCustomerSaleTag",
+		Desc: "设置用户的销售标签",
+		Path: "/zhike/courseManage",
 		inArgumentLoc: &TypeLocation{
 			PackageName: pkgZkStudent,
 			TypeName:    "BackendSetCustomerSaleTagReq",
@@ -169,10 +176,24 @@ func docSaleLeads() {
 		},
 	}
 
+	apiDelCustomerSaleTag := &API{
+		Name: "[mutation] deleteCustomerSaleTag",
+		Desc: "删除用户的销售标签",
+		Path: "/zhike/courseManage",
+		inArgumentLoc: &TypeLocation{
+			PackageName: pkgZkStudent,
+			TypeName:    "BackendDeleteCustomerSaleTagReq",
+		},
+		outArgumentLoc: &TypeLocation{
+			PackageName: pkgZkStudent,
+			TypeName:    "BackendDeleteCustomerSaleTagResp",
+		},
+	}
+
 	apiALLSaleTags := &API{
-		Name:       "[query] saleTags",
-		Comment:    "获取所有销售标签",
-		RouterPath: "/zhike/courseManage",
+		Name: "[query] saleTags",
+		Desc: "获取所有销售标签",
+		Path: "/zhike/courseManage",
 		inArgumentLoc: &TypeLocation{
 			PackageName: pkgZkStudent,
 			TypeName:    "BackendGetALLSaleTagsReq",
@@ -185,9 +206,9 @@ func docSaleLeads() {
 	}
 
 	apiCustomerSaleTags := &API{
-		Name:       "[query] customerSaleTags",
-		Comment:    "获取用户的所有销售标签",
-		RouterPath: "/zhike/courseManage",
+		Name: "[query] customerSaleTags",
+		Desc: "获取用户的所有销售标签",
+		Path: "/zhike/courseManage",
 		inArgumentLoc: &TypeLocation{
 			PackageName: pkgZkStudent,
 			TypeName:    "BackendGetCustomerSaleTagsReq",
@@ -200,9 +221,9 @@ func docSaleLeads() {
 	}
 
 	apiSaleTagStatistics := &API{
-		Name:       "[query] saleTagStatistics",
-		Comment:    "获取标签统计",
-		RouterPath: "/zhike/courseManage",
+		Name: "[query] saleTagStatistics",
+		Desc: "获取标签统计",
+		Path: "/zhike/courseManage",
 		inArgumentLoc: &TypeLocation{
 			PackageName: pkgZkStudent,
 			TypeName:    "BackendGetTagStatisticsReq",
@@ -227,6 +248,7 @@ func docSaleLeads() {
 		apiUserCourseList,
 		apiMaterielCommentUpdate,
 		apiSetCustomerSaleTag,
+		apiDelCustomerSaleTag,
 		apiALLSaleTags,
 		apiCustomerSaleTags,
 		apiSaleTagStatistics,
