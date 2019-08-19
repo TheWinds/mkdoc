@@ -12,18 +12,17 @@ import (
 )
 
 type API struct {
-	Name            string             `json:"name"`
-	Desc            string             `json:"desc"`
-	Path            string             `json:"path"`
-	Method          string             `json:"method"` // post get delete patch ; query mutation
-	Type            string             `json:"type"`   // echo_handle graphql
-	InArgument      *Object            `json:"in_argument"`
-	OutArgument     *Object            `json:"out_argument"`
-	ObjectsMap      map[string]*Object `json:"objects_map"`
-	inArgumentLoc   *TypeLocation
-	outArgumentLoc  *TypeLocation
-	packageTypesMap map[string]map[string]string
-	debug           bool
+	Name           string             `json:"name"`
+	Desc           string             `json:"desc"`
+	Path           string             `json:"path"`
+	Method         string             `json:"method"` // post get delete patch ; query mutation
+	Type           string             `json:"type"`   // echo_handle graphql
+	InArgument     *Object            `json:"in_argument"`
+	OutArgument    *Object            `json:"out_argument"`
+	ObjectsMap     map[string]*Object `json:"objects_map"`
+	inArgumentLoc  *TypeLocation
+	outArgumentLoc *TypeLocation
+	debug          bool
 }
 
 func NewAPI(name string, comment string, routerPath string, inArgumentLoc, outArgumentLoc *TypeLocation) *API {
@@ -32,12 +31,7 @@ func NewAPI(name string, comment string, routerPath string, inArgumentLoc, outAr
 
 // Gen 生成API信息
 // 得到所有依赖类型的信息、字段JSONTag以及DocComment
-func (api *API) Gen(rootPackage string) error {
-	pkgTypesMap, err := GetPackageTypesMap(rootPackage)
-	if err != nil {
-		return err
-	}
-	api.packageTypesMap = pkgTypesMap
+func (api *API) Gen() error {
 	if api.InArgument == nil {
 		api.InArgument = new(Object)
 	}
@@ -45,7 +39,7 @@ func (api *API) Gen(rootPackage string) error {
 		api.OutArgument = new(Object)
 	}
 	api.ObjectsMap = map[string]*Object{}
-	err = api.getObjectInfo(api.inArgumentLoc, api.InArgument, 0)
+	err := api.getObjectInfo(api.inArgumentLoc, api.InArgument, 0)
 	if err != nil {
 		return err
 	}
@@ -214,7 +208,7 @@ func (api *API) getObjectInfo(query *TypeLocation, rootObj *Object, dep int) err
 		return nil
 	}
 	// println(query.PackageName, query.TypeName)
-	fields, err := api.getObjectFields(query, api.packageTypesMap)
+	fields, err := api.getObjectFields(query)
 	if err != nil {
 		return err
 	}
@@ -249,8 +243,12 @@ func (api *API) getObjectInfo(query *TypeLocation, rootObj *Object, dep int) err
 	return nil
 }
 
-func (api *API) getObjectFields(info *TypeLocation, packageTypesMap map[string]map[string]string) ([]string, error) {
-	body := packageTypesMap[info.PackageName][info.TypeName]
+func (api *API) getObjectFields(info *TypeLocation) ([]string, error) {
+	typesMap, err := GetPackageTypesMap(info.PackageName)
+	if err != nil {
+		return nil, err
+	}
+	body := typesMap[info.TypeName]
 	prefix := fmt.Sprintf("type %s struct{", info.TypeName)
 	body = strings.Replace(body, prefix, "", 1)
 	body = body[:len(body)-1]

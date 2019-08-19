@@ -65,8 +65,6 @@ func scanGraphQLAPIDocInfo(pkg string) ([]*API, error) {
 		// get imports
 		for _, v := range pkgs {
 			for fileName, file := range v.Files {
-				fmt.Println(fileName, file.Name)
-				fmt.Println("imports:")
 				fImportFilesMap := map[string]string{}
 				for _, imp := range file.Imports {
 					importName := ""
@@ -77,7 +75,6 @@ func scanGraphQLAPIDocInfo(pkg string) ([]*API, error) {
 						importName = filepath.Base(importPath)
 					}
 					fImportFilesMap[importName] = importPath
-					fmt.Println("  ", importName, importPath)
 				}
 				fileImports[fileName] = fImportFilesMap
 			}
@@ -91,12 +88,9 @@ func scanGraphQLAPIDocInfo(pkg string) ([]*API, error) {
 						value := readCode(f, kvExpr.Value)
 						if strings.HasPrefix(value, "&graphql.Field{") {
 							fileName := f.Position(kvExpr.Pos()).Filename
-							//fmt.Println(value)
 							if !strings.Contains(value, "@apidoc") {
 								return true
 							}
-							fmt.Println("file:", fileName)
-							fmt.Println()
 							count++
 							//ast.Print(f,kvExpr)
 
@@ -117,16 +111,6 @@ func scanGraphQLAPIDocInfo(pkg string) ([]*API, error) {
 	}
 	fmt.Println("Count:", count)
 	return nil, nil
-}
-
-func parseDocDefFromGraphqlSrc(nodeAST *ast.KeyValueExpr, code string, imports map[string]string) (string, error) {
-	graphQLResolveSource := &GraphQLResolveSource{
-		NodeAST: nodeAST,
-		Code:    code,
-		Imports: imports,
-	}
-	graphQLResolveSource.GetAPI()
-	return "", nil
 }
 
 type GraphQLResolveSource struct {
@@ -227,10 +211,10 @@ func (g *GraphQLResolveSource) GetAPI() (api *API, err error) {
 										switch attrName {
 										case "Type":
 											field.Type = g.mapToGoType(fieldAttrElt.(*ast.KeyValueExpr).Value.(*ast.SelectorExpr).Sel.Name)
-											fmt.Println("field type:", field.Type)
+											//fmt.Println("field type:", field.Type)
 										case "Description":
 											field.Comment = fieldAttrElt.(*ast.KeyValueExpr).Value.(*ast.BasicLit).Value
-											fmt.Println("field desc:", field.Comment)
+											//fmt.Println("field desc:", field.Comment)
 										}
 									}
 									fields = append(fields, field)
@@ -246,7 +230,7 @@ func (g *GraphQLResolveSource) GetAPI() (api *API, err error) {
 		default:
 		}
 	}
-	err = api.Gen("corego/service/zhike-student/api")
+	err = api.Gen()
 	if err != nil {
 		return
 	}
@@ -318,4 +302,35 @@ func readCode(f *token.FileSet, node ast.Node) string {
 	pe := f.Position(node.End())
 	file, _ := ioutil.ReadFile(ps.Filename)
 	return string(file[ps.Offset:pe.Offset])
+}
+
+type DocDeclare string
+
+var commandRe map[string]string
+
+func init() {
+	commandRe = map[string]string{
+		"name":             `(@apidoc\s+name\s+)([^\s]+)`,
+		"desc":             `(@apidoc\s+desc\s+)([^\s]+)`,
+		"name_desc":        `(@apidoc\s+name\s+)([^\s]+)(\s+desc\s+)([^\s]+)`,
+		"type":             `(@apidoc\s+type\s+)([^\s]+)`,
+		"path":             `(@apidoc\s+path\s+)([^\s]+)`,
+		"method":           `(@apidoc\s+method\s+)([^\s]+)`,
+		"path_method":      `(@apidoc\s+path\s+)([^\s]+)(\s+method\s+)([^\s]+)`,
+		"tag":              `(@apidoc\s+tag\s+)([^\s]+)`,
+		"in_gotype":        `(@apidoc\s+in\s+gotype\s+)([^\s]+)`,
+		"out_gotype":       `(@apidoc\s+out\s+gotype\s+)([^\s]+)`,
+		"in_fileds_block":  `(@apidoc\s+in\s+fields\s+{\s+)(.|\s)+}`,
+		"out_fileds_block": `(@apidoc\s+in\s+fields\s+{\s+)(.|\s)+}`,
+		"filed":            `(\w+)\s+(\w+)\s*(.+)*`,
+	}
+}
+
+func (declare DocDeclare) ParseToAPI() (*API, error) {
+	panic("")
+	//lines := strings.Split(string(declare), "\n")
+
+	//for _, line := range lines {
+	//
+	//}
 }
