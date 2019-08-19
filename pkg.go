@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"go/types"
 	"golang.org/x/tools/go/packages"
-	"sort"
 	"strings"
 )
 
@@ -32,44 +31,51 @@ func newTypeLocation(raw string) *TypeLocation {
 	return t
 }
 
-func GetPackageTypesMap(root string) (map[string]map[string]string, error) {
+var globalPackageTypesMap map[string]map[string]string
+
+func GetPackageTypesMap(pkg string) (map[string]string, error) {
+	if globalPackageTypesMap == nil {
+		globalPackageTypesMap = map[string]map[string]string{}
+	}
+	if globalPackageTypesMap[pkg] == nil {
+	}
+
 	cfg := &packages.Config{
 		Mode: packages.LoadTypes,
 	}
 
-	lpkgs, err := packages.Load(cfg, root)
+	lpkgs, err := packages.Load(cfg, pkg)
 	if err != nil {
 		panic(err)
 		return nil, err
 	}
 
 	// 遍历所有依赖包
-	var all []*packages.Package // postorder
-	seen := make(map[*packages.Package]bool)
-	var visit func(*packages.Package)
-	visit = func(lpkg *packages.Package) {
-		if !seen[lpkg] {
-			seen[lpkg] = true
+	//var all []*packages.Package // postorder
+	//seen := make(map[*packages.Package]bool)
+	//var visit func(*packages.Package)
+	//visit = func(lpkg *packages.Package) {
+	//	if !seen[lpkg] {
+	//		seen[lpkg] = true
+	//
+	//		// visit imports
+	//		var importPaths []string
+	//		for path := range lpkg.Imports {
+	//			importPaths = append(importPaths, path)
+	//		}
+	//		sort.Strings(importPaths) // for determinism
+	//		for _, path := range importPaths {
+	//			visit(lpkg.Imports[path])
+	//		}
+	//
+	//		all = append(all, lpkg)
+	//	}
+	//}
+	//for _, lpkg := range lpkgs {
+	//	visit(lpkg)
+	//}
+	//lpkgs = all
 
-			// visit imports
-			var importPaths []string
-			for path := range lpkg.Imports {
-				importPaths = append(importPaths, path)
-			}
-			sort.Strings(importPaths) // for determinism
-			for _, path := range importPaths {
-				visit(lpkg.Imports[path])
-			}
-
-			all = append(all, lpkg)
-		}
-	}
-	for _, lpkg := range lpkgs {
-		visit(lpkg)
-	}
-	lpkgs = all
-
-	pkgTypesMap := map[string]map[string]string{}
 
 	// 提取类型信息
 	for _, lpkg := range lpkgs {
@@ -89,9 +95,9 @@ func GetPackageTypesMap(root string) (map[string]map[string]string, error) {
 					typesMap[obj.Name()] = ts
 				}
 			}
-			pkgTypesMap[lpkg.PkgPath] = typesMap
+			globalPackageTypesMap[lpkg.PkgPath] = typesMap
 		}
 	}
 
-	return pkgTypesMap, nil
+	return globalPackageTypesMap[pkg], nil
 }
