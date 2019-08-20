@@ -1,4 +1,4 @@
-package main
+package docspace
 
 type APIDoc struct {
 	Name        string      `json:"name"`

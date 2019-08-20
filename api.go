@@ -1,4 +1,4 @@
-package main
+package docspace
 
 import (
 	"encoding/json"
@@ -60,9 +60,13 @@ func (api *API) Gen() error {
 }
 
 func (api *API) PrintMarkdown() {
-	fmt.Printf("### %s\n", api.Desc)
-	fmt.Printf("#### %s\n", api.Path)
-	fmt.Printf("> %s\n", api.Name)
+	if api.Desc == ""{
+		fmt.Printf("### %s\n", api.Name)
+	}else {
+		fmt.Printf("### %s\n", api.Desc)
+	}
+	fmt.Printf("#### - %s\n", api.Type)
+	fmt.Printf("> [%s] %s %s\n", api.Method, api.Path, api.Name)
 
 	fmt.Println("- 参数")
 	fmt.Printf("```json\n")

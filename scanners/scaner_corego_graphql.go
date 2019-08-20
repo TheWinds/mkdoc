@@ -1,57 +1,43 @@
-package main
+package scaners
 
 import (
+	"docspace"
 	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
 )
 
-func getAPIDocFuncInfo(pkg string) {
+// 文件 => 路由Path映射
+var fileRouterPathMap map[string]string
 
-	goPath := os.Getenv("GOPATH")
-	rootDir := filepath.Join(goPath, "src", pkg)
-	subDirs := getSubDirs(rootDir)
-	for _, dir := range subDirs {
-		println(dir)
-		f := token.NewFileSet()
-		pkgs, err := parser.ParseDir(f, dir, nil, parser.ParseComments)
-		if err != nil {
-			panic(err)
-		}
-		for _, v := range pkgs {
-			ast.Inspect(v, func(node ast.Node) bool {
-				if funcNode, ok := node.(*ast.FuncDecl); ok {
-					if strings.Contains(funcNode.Doc.Text(), "@apidoc") {
-						println(funcNode.Name.Name, ":")
-						println(funcNode.Doc.Text())
-						println("body :")
-						printCode(f, funcNode.Body)
-						//for _, v := range funcNode.Body.List {
-						//	switch v.(type) {
-						//	case *ast.AssignStmt:
-						//		printCode(f, v)
-						//	case *ast.DeferStmt:
-						//		printCode(f, v)
-						//	}
-						//}
-					}
-				}
-				return true
-			})
-		}
+func init() {
+	fileRouterPathMap = map[string]string{
+		"corego/service/boss/schemas/adminSchema.go":         "/adminManage",
+		"corego/service/boss/schemas/businessSchema.go":      "/channelManage",
+		"corego/service/boss/schemas/competionSchema.go":     "/competitionManage",
+		"corego/service/boss/schemas/customerSchema.go":      "/customerManage",
+		"corego/service/boss/schemas/indexSchema.go":         "/indexManage",
+		"corego/service/boss/schemas/manageSchema.go":        "/manage",
+		"corego/service/boss/schemas/operationSchema.go":     "/operationManage",
+		"corego/service/boss/schemas/payOrderSchema.go":      "/orderManage",
+		"corego/service/boss/schemas/zhike/courseSchema.go":  "/zhike/courseManage",
+		"corego/service/boss/schemas/zhike/teacherSchame.go": "/zhike/teacherManage",
+		"corego/service/boss/schemas/zhike/wordSchema.go":    "/zhike/wordManage",
 	}
-
 }
 
-func scanGraphQLAPIDocInfo(pkg string) ([]*API, error) {
+func scanGraphQLAPIDocInfo(pkg string) ([]*docspace.API, error) {
 
 	goPath := os.Getenv("GOPATH")
-	rootDir := filepath.Join(goPath, "src", pkg)
+	if strings.Contains(goPath, ";") {
+		goPath = strings.TrimSpace(strings.Split(goPath, ";")[0])
+	}
+	goSrcPath := filepath.Join(goPath, "src") + "/"
+	rootDir := filepath.Join(goSrcPath, pkg)
 	subDirs := getSubDirs(rootDir)
 	count := 0
 	fileImports := map[string]map[string]string{}
@@ -95,11 +81,25 @@ func scanGraphQLAPIDocInfo(pkg string) ([]*API, error) {
 							//ast.Print(f,kvExpr)
 
 							s := &GraphQLResolveSource{
-								NodeAST: kvExpr,
-								Code:    value,
-								Imports: fileImports[fileName],
+								NodeAST:   kvExpr,
+								Code:      value,
+								Imports:   fileImports[fileName],
+								FileSet:   f,
+								GOSrcPath: goSrcPath,
 							}
-							s.GetAPI()
+							annotation, err := s.GetAPI()
+							if err != nil {
+								fmt.Println(err)
+								return true
+							}
+							//fmt.Println(annotation)
+							api, err := annotation.ParseToAPI()
+							if err != nil {
+								fmt.Println(err)
+								return true
+							}
+							api.Gen()
+							api.PrintMarkdown()
 						}
 					}
 					//return false
@@ -114,9 +114,11 @@ func scanGraphQLAPIDocInfo(pkg string) ([]*API, error) {
 }
 
 type GraphQLResolveSource struct {
-	NodeAST *ast.KeyValueExpr
-	Code    string
-	Imports map[string]string
+	FileSet   *token.FileSet
+	NodeAST   *ast.KeyValueExpr
+	Code      string
+	Imports   map[string]string
+	GOSrcPath string
 }
 
 func assertBasicLit(i interface{}) (*ast.BasicLit, bool) {
@@ -135,17 +137,41 @@ func assertGraphQLFieldElts(i interface{}) ([]ast.Expr, bool) {
 		return nil, false
 	}
 }
-func (g *GraphQLResolveSource) GetAPI() (api *API, err error) {
+
+func (g *GraphQLResolveSource) getAnnotationFromCode() string {
+	sb := strings.Builder{}
+	lines := strings.Split(g.Code, "\n")
+	for k, line := range lines {
+		if strings.Contains(line, "@apidoc") {
+			lineRemoveComment := strings.Replace(line, "//", "", -1)
+			sb.WriteString(strings.TrimSpace(lineRemoveComment))
+			if k != len(lines)-1 {
+				sb.WriteString("\n")
+			}
+		}
+	}
+	return sb.String()
+}
+
+func (g *GraphQLResolveSource) GetAPI() (annotation docspace.DocAnnotation, err error) {
 	nodeAPIName, ok := assertBasicLit(g.NodeAST.Key)
 	if !ok {
 		err = fmt.Errorf("not support:key is not string")
 		return
 	}
-	//fmt.Println("API name:", nodeAPIName.Value)
-	api = new(API)
-	api.Name = nodeAPIName.Value
-	api.Type = "graphql"
-	api.Method = "query"
+	absFileName := g.FileSet.Position(g.NodeAST.Pos()).Filename
+	relativeFileName := strings.Replace(absFileName, g.GOSrcPath, "", -1)
+	fmt.Println(relativeFileName)
+	annotationBuilder := strings.Builder{}
+	annotationBuilder.WriteString(fmt.Sprintf("@apidoc name %s\n", strings.Replace(nodeAPIName.Value, "\"", "", -1)))
+
+	annotationBuilder.WriteString(fmt.Sprintf("@apidoc type graphql\n"))
+
+	path := fileRouterPathMap[relativeFileName]
+	if path != "" {
+		annotationBuilder.WriteString(fmt.Sprintf("@apidoc path %s\n", path))
+	}
+
 	fieldElts, ok := assertGraphQLFieldElts(g.NodeAST.Value)
 	if !ok {
 		err = fmt.Errorf("not support:graphql api must define as a &graphql.Field")
@@ -159,8 +185,6 @@ func (g *GraphQLResolveSource) GetAPI() (api *API, err error) {
 			keyName := expr.Key.(*ast.Ident).Name
 			switch keyName {
 			case "Type", "Args":
-				//fmt.Println(keyName, ": ")
-				//  通过 从GoType 定义的参数类型
 				if callExpr, ok := expr.Value.(*ast.CallExpr); ok {
 					typeConvFuncName := callExpr.Fun.(*ast.SelectorExpr).Sel.Name
 					switch callExpr.Args[0].(type) {
@@ -168,26 +192,18 @@ func (g *GraphQLResolveSource) GetAPI() (api *API, err error) {
 						typeExpr := callExpr.Args[0].(*ast.CompositeLit).Type.(*ast.SelectorExpr)
 						packageName := typeExpr.X.(*ast.Ident).Name
 						typeName := typeExpr.Sel.Name
-						//fmt.Println("- Fun:", typeConvFuncName)
-						//fmt.Println("- PackageName:", packageName)
-						//fmt.Println("- TypeName:", typeName)
 						isRepeated := strings.Contains(typeConvFuncName, "List")
-						typeLoc := &TypeLocation{
+						typeLoc := &docspace.TypeLocation{
 							PackageName: g.Imports[packageName],
 							TypeName:    typeName,
 							IsRepeated:  isRepeated,
 						}
-						//fmt.Println("- GoType:", typeLoc.String())
 						if keyName == "Type" {
-							api.outArgumentLoc = typeLoc
+							annotationBuilder.WriteString(fmt.Sprintf("@apidoc out gotype %s\n", typeLoc.String()))
 						} else {
-							api.inArgumentLoc = typeLoc
+							annotationBuilder.WriteString(fmt.Sprintf("@apidoc in gotype %s\n", typeLoc.String()))
 						}
 					case *ast.SelectorExpr:
-						//fmt.Println("- TypeName:", "NoName")
-						//typeExpr := callExpr.Args[0].(*ast.SelectorExpr)
-						//fmt.Println(typeExpr.X.(*ast.Ident).Name)
-
 					}
 
 				}
@@ -195,33 +211,27 @@ func (g *GraphQLResolveSource) GetAPI() (api *API, err error) {
 				if lit, ok := expr.Value.(*ast.CompositeLit); ok {
 					if litType, ok := lit.Type.(*ast.SelectorExpr); ok {
 						if litType.Sel.Name == "FieldConfigArgument" {
-							inObj := &Object{
-								ID: fmt.Sprintf("intype.graphql.%s", api.Name),
-							}
-							fields := make([]*ObjectField, 0)
+							annotationBuilder.WriteString(fmt.Sprintf("@apidoc in fields {\n"))
+
 							for _, e := range lit.Elts {
 								if argKV, ok := e.(*ast.KeyValueExpr); ok {
 									fieldName := argKV.Key.(*ast.BasicLit).Value
-									//fmt.Println("field name:", fieldName)
-									field := new(ObjectField)
-									field.Name = fieldName
-									field.JSONTag = fieldName
+									annotationBuilder.WriteString(fmt.Sprintf("    %s", strings.Replace(fieldName, "\"", "", -1)))
 									for _, fieldAttrElt := range argKV.Value.(*ast.UnaryExpr).X.(*ast.CompositeLit).Elts {
 										attrName := fieldAttrElt.(*ast.KeyValueExpr).Key.(*ast.Ident).Name
 										switch attrName {
 										case "Type":
-											field.Type = g.mapToGoType(fieldAttrElt.(*ast.KeyValueExpr).Value.(*ast.SelectorExpr).Sel.Name)
-											//fmt.Println("field type:", field.Type)
+											fieldType := g.mapToGoType(fieldAttrElt.(*ast.KeyValueExpr).Value.(*ast.SelectorExpr).Sel.Name)
+											annotationBuilder.WriteString(fmt.Sprintf(" %s", fieldType))
 										case "Description":
-											field.Comment = fieldAttrElt.(*ast.KeyValueExpr).Value.(*ast.BasicLit).Value
-											//fmt.Println("field desc:", field.Comment)
+											fieldComment := fieldAttrElt.(*ast.KeyValueExpr).Value.(*ast.BasicLit).Value
+											annotationBuilder.WriteString(fmt.Sprintf(" %s", strings.Replace(fieldComment, "\"", "", -1)))
 										}
 									}
-									fields = append(fields, field)
+									annotationBuilder.WriteString(fmt.Sprintf("\n"))
 								}
 							}
-							inObj.Fields = fields
-							api.InArgument = inObj
+							annotationBuilder.WriteString(fmt.Sprintf("}\n"))
 						}
 					}
 				}
@@ -230,31 +240,10 @@ func (g *GraphQLResolveSource) GetAPI() (api *API, err error) {
 		default:
 		}
 	}
-	err = api.Gen()
-	if err != nil {
-		return
-	}
-	api.PrintMarkdown()
 
-	return
-	//g.NodeAST.
-	typeConvFuncNames := []string{
-		"NewGraphQLListTypeFromRPCType",
-		"NewGraphQLTypeFromRPCType",
-		"NewGraphQLArgsFromRPCType"}
-	typeConvFuncNames[0] = ""
-	lines := strings.Split(g.Code, "\n")
-	for _, line := range lines {
-		if strings.Contains(line, "Type") {
+	annotationBuilder.WriteString(g.getAnnotationFromCode())
 
-		}
-		if strings.Contains(line, "Arg") {
-
-		}
-		if strings.Contains(line, "@apidoc") {
-
-		}
-	}
+	annotation = docspace.DocAnnotation(annotationBuilder.String())
 	return
 }
 
@@ -262,44 +251,7 @@ func (g *GraphQLResolveSource) mapToGoType(graphQLType string) string {
 	m := map[string]string{
 		"Int":    "int64",
 		"String": "string",
+		"Float":  "float",
 	}
 	return m[graphQLType]
-}
-
-func (g *GraphQLResolveSource) getGoType(codeLine string) string {
-
-	if strings.Contains(codeLine, "Type") {
-
-	}
-	if strings.Contains(codeLine, "Arg") {
-
-	}
-	panic("")
-}
-
-func (g *GraphQLResolveSource) getFuncArg(s, funcName string) string {
-	s = strings.Replace(s, " ", "", -1)
-	return getMidString(s, funcName+"(", ")")
-}
-
-func getSubDirs(root string) []string {
-	subDirs := make([]string, 0)
-	filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
-		if info.IsDir() {
-			subDirs = append(subDirs, path)
-		}
-		return nil
-	})
-	return subDirs
-}
-
-func printCode(f *token.FileSet, node ast.Node) {
-	println(readCode(f, node))
-}
-
-func readCode(f *token.FileSet, node ast.Node) string {
-	ps := f.Position(node.Pos())
-	pe := f.Position(node.End())
-	file, _ := ioutil.ReadFile(ps.Filename)
-	return string(file[ps.Offset:pe.Offset])
 }
