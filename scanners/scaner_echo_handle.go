@@ -46,6 +46,7 @@ func (c *CoregoEchoAPIScanner) ScanAnnotations(pkg string) ([]docspace.DocAnnota
 			})
 		}
 	}
+	return nil, nil
 }
 
 func (c *CoregoEchoAPIScanner) GetName() string {
