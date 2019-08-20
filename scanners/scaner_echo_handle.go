@@ -1,6 +1,7 @@
-package scaners
+package scanners
 
 import (
+	"docspace"
 	"go/ast"
 	"go/parser"
 	"go/token"
@@ -9,8 +10,10 @@ import (
 	"strings"
 )
 
-func getAPIDocFuncInfo(pkg string) {
+type CoregoEchoAPIScanner struct {
+}
 
+func (c *CoregoEchoAPIScanner) ScanAnnotations(pkg string) ([]docspace.DocAnnotation, error) {
 	goPath := os.Getenv("GOPATH")
 	rootDir := filepath.Join(goPath, "src", pkg)
 	subDirs := getSubDirs(rootDir)
@@ -43,6 +46,15 @@ func getAPIDocFuncInfo(pkg string) {
 			})
 		}
 	}
-
 }
 
+func (c *CoregoEchoAPIScanner) GetName() string {
+	return "echo-corego"
+}
+
+func (c *CoregoEchoAPIScanner) SetConfig(map[string]interface{}) {
+}
+
+func (c *CoregoEchoAPIScanner) GetHelp() string {
+	return ""
+}

@@ -1,4 +1,4 @@
-package scaners
+package scanners
 
 import (
 	"go/ast"

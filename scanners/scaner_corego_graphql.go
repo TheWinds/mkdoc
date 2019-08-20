@@ -1,4 +1,4 @@
-package scaners
+package scanners
 
 import (
 	"docspace"
@@ -30,8 +30,14 @@ func init() {
 	}
 }
 
-func scanGraphQLAPIDocInfo(pkg string) ([]*docspace.API, error) {
+type CoregoGraphQLAPIScanner struct {
+}
 
+func (c *CoregoGraphQLAPIScanner) GetName() string {
+	return "gql-corego"
+}
+
+func (c *CoregoGraphQLAPIScanner) ScanAnnotations(pkg string) ([]docspace.DocAnnotation, error) {
 	goPath := os.Getenv("GOPATH")
 	if strings.Contains(goPath, ";") {
 		goPath = strings.TrimSpace(strings.Split(goPath, ";")[0])
@@ -39,8 +45,9 @@ func scanGraphQLAPIDocInfo(pkg string) ([]*docspace.API, error) {
 	goSrcPath := filepath.Join(goPath, "src") + "/"
 	rootDir := filepath.Join(goSrcPath, pkg)
 	subDirs := getSubDirs(rootDir)
-	count := 0
 	fileImports := map[string]map[string]string{}
+
+	annotations := make([]docspace.DocAnnotation, 0)
 
 	for _, dir := range subDirs {
 		f := token.NewFileSet()
@@ -48,7 +55,8 @@ func scanGraphQLAPIDocInfo(pkg string) ([]*docspace.API, error) {
 		if err != nil {
 			panic(err)
 		}
-		// get imports
+
+		// 获取包引用关系
 		for _, v := range pkgs {
 			for fileName, file := range v.Files {
 				fImportFilesMap := map[string]string{}
@@ -66,6 +74,7 @@ func scanGraphQLAPIDocInfo(pkg string) ([]*docspace.API, error) {
 			}
 		}
 
+		// 从AST提取语法树
 		for _, v := range pkgs {
 			ast.Inspect(v, func(node ast.Node) bool {
 				if kvExpr, ok := node.(*ast.KeyValueExpr); ok {
@@ -77,8 +86,6 @@ func scanGraphQLAPIDocInfo(pkg string) ([]*docspace.API, error) {
 							if !strings.Contains(value, "@apidoc") {
 								return true
 							}
-							count++
-							//ast.Print(f,kvExpr)
 
 							s := &GraphQLResolveSource{
 								NodeAST:   kvExpr,
@@ -87,19 +94,11 @@ func scanGraphQLAPIDocInfo(pkg string) ([]*docspace.API, error) {
 								FileSet:   f,
 								GOSrcPath: goSrcPath,
 							}
-							annotation, err := s.GetAPI()
+							annotation, err := s.GetDocAnnotation()
 							if err != nil {
-								fmt.Println(err)
 								return true
 							}
-							//fmt.Println(annotation)
-							api, err := annotation.ParseToAPI()
-							if err != nil {
-								fmt.Println(err)
-								return true
-							}
-							api.Gen()
-							api.PrintMarkdown()
+							annotations = append(annotations, annotation)
 						}
 					}
 					//return false
@@ -109,8 +108,15 @@ func scanGraphQLAPIDocInfo(pkg string) ([]*docspace.API, error) {
 		}
 
 	}
-	fmt.Println("Count:", count)
-	return nil, nil
+
+	return annotations, nil
+}
+
+func (c *CoregoGraphQLAPIScanner) SetConfig(map[string]interface{}) {
+}
+
+func (c *CoregoGraphQLAPIScanner) GetHelp() string {
+	return ""
 }
 
 type GraphQLResolveSource struct {
@@ -121,40 +127,8 @@ type GraphQLResolveSource struct {
 	GOSrcPath string
 }
 
-func assertBasicLit(i interface{}) (*ast.BasicLit, bool) {
-	r, ok := i.(*ast.BasicLit)
-	return r, ok
-}
-
-func assertGraphQLFieldElts(i interface{}) ([]ast.Expr, bool) {
-	if unaryExpr, ok := i.(*ast.UnaryExpr); ok {
-		if compositeLit, ok := unaryExpr.X.(*ast.CompositeLit); ok {
-			return compositeLit.Elts, true
-		} else {
-			return nil, false
-		}
-	} else {
-		return nil, false
-	}
-}
-
-func (g *GraphQLResolveSource) getAnnotationFromCode() string {
-	sb := strings.Builder{}
-	lines := strings.Split(g.Code, "\n")
-	for k, line := range lines {
-		if strings.Contains(line, "@apidoc") {
-			lineRemoveComment := strings.Replace(line, "//", "", -1)
-			sb.WriteString(strings.TrimSpace(lineRemoveComment))
-			if k != len(lines)-1 {
-				sb.WriteString("\n")
-			}
-		}
-	}
-	return sb.String()
-}
-
-func (g *GraphQLResolveSource) GetAPI() (annotation docspace.DocAnnotation, err error) {
-	nodeAPIName, ok := assertBasicLit(g.NodeAST.Key)
+func (g *GraphQLResolveSource) GetDocAnnotation() (annotation docspace.DocAnnotation, err error) {
+	nodeAPIName, ok := g.assertBasicLit(g.NodeAST.Key)
 	if !ok {
 		err = fmt.Errorf("not support:key is not string")
 		return
@@ -172,7 +146,7 @@ func (g *GraphQLResolveSource) GetAPI() (annotation docspace.DocAnnotation, err 
 		annotationBuilder.WriteString(fmt.Sprintf("@apidoc path %s\n", path))
 	}
 
-	fieldElts, ok := assertGraphQLFieldElts(g.NodeAST.Value)
+	fieldElts, ok := g.assertGraphQLFieldElts(g.NodeAST.Value)
 	if !ok {
 		err = fmt.Errorf("not support:graphql api must define as a &graphql.Field")
 		return
@@ -245,6 +219,38 @@ func (g *GraphQLResolveSource) GetAPI() (annotation docspace.DocAnnotation, err 
 
 	annotation = docspace.DocAnnotation(annotationBuilder.String())
 	return
+}
+
+func (g *GraphQLResolveSource) assertBasicLit(i interface{}) (*ast.BasicLit, bool) {
+	r, ok := i.(*ast.BasicLit)
+	return r, ok
+}
+
+func (g *GraphQLResolveSource) assertGraphQLFieldElts(i interface{}) ([]ast.Expr, bool) {
+	if unaryExpr, ok := i.(*ast.UnaryExpr); ok {
+		if compositeLit, ok := unaryExpr.X.(*ast.CompositeLit); ok {
+			return compositeLit.Elts, true
+		} else {
+			return nil, false
+		}
+	} else {
+		return nil, false
+	}
+}
+
+func (g *GraphQLResolveSource) getAnnotationFromCode() string {
+	sb := strings.Builder{}
+	lines := strings.Split(g.Code, "\n")
+	for k, line := range lines {
+		if strings.Contains(line, "@apidoc") {
+			lineRemoveComment := strings.Replace(line, "//", "", -1)
+			sb.WriteString(strings.TrimSpace(lineRemoveComment))
+			if k != len(lines)-1 {
+				sb.WriteString("\n")
+			}
+		}
+	}
+	return sb.String()
 }
 
 func (g *GraphQLResolveSource) mapToGoType(graphQLType string) string {
