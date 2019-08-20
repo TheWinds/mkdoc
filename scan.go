@@ -6,8 +6,10 @@ import (
 	"go/parser"
 	"go/token"
 	"io/ioutil"
+	"math/rand"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 )
 
@@ -141,7 +143,7 @@ func (g *GraphQLResolveSource) GetAPI() (api *API, err error) {
 		err = fmt.Errorf("not support:key is not string")
 		return
 	}
-	fmt.Println("API name:", nodeAPIName.Value)
+	//fmt.Println("API name:", nodeAPIName.Value)
 	api = new(API)
 	api.Name = nodeAPIName.Value
 	api.Type = "graphql"
@@ -159,7 +161,7 @@ func (g *GraphQLResolveSource) GetAPI() (api *API, err error) {
 			keyName := expr.Key.(*ast.Ident).Name
 			switch keyName {
 			case "Type", "Args":
-				fmt.Println(keyName, ": ")
+				//fmt.Println(keyName, ": ")
 				//  通过 从GoType 定义的参数类型
 				if callExpr, ok := expr.Value.(*ast.CallExpr); ok {
 					typeConvFuncName := callExpr.Fun.(*ast.SelectorExpr).Sel.Name
@@ -168,16 +170,16 @@ func (g *GraphQLResolveSource) GetAPI() (api *API, err error) {
 						typeExpr := callExpr.Args[0].(*ast.CompositeLit).Type.(*ast.SelectorExpr)
 						packageName := typeExpr.X.(*ast.Ident).Name
 						typeName := typeExpr.Sel.Name
-						fmt.Println("- Fun:", typeConvFuncName)
-						fmt.Println("- PackageName:", packageName)
-						fmt.Println("- TypeName:", typeName)
+						//fmt.Println("- Fun:", typeConvFuncName)
+						//fmt.Println("- PackageName:", packageName)
+						//fmt.Println("- TypeName:", typeName)
 						isRepeated := strings.Contains(typeConvFuncName, "List")
 						typeLoc := &TypeLocation{
 							PackageName: g.Imports[packageName],
 							TypeName:    typeName,
 							IsRepeated:  isRepeated,
 						}
-						fmt.Println("- GoType:", typeLoc.String())
+						//fmt.Println("- GoType:", typeLoc.String())
 						if keyName == "Type" {
 							api.outArgumentLoc = typeLoc
 						} else {
@@ -202,7 +204,7 @@ func (g *GraphQLResolveSource) GetAPI() (api *API, err error) {
 							for _, e := range lit.Elts {
 								if argKV, ok := e.(*ast.KeyValueExpr); ok {
 									fieldName := argKV.Key.(*ast.BasicLit).Value
-									fmt.Println("field name:", fieldName)
+									//fmt.Println("field name:", fieldName)
 									field := new(ObjectField)
 									field.Name = fieldName
 									field.JSONTag = fieldName
@@ -304,33 +306,103 @@ func readCode(f *token.FileSet, node ast.Node) string {
 	return string(file[ps.Offset:pe.Offset])
 }
 
-type DocDeclare string
+type DocAnnotation string
 
-var commandRe map[string]string
+var commandRe map[string]*regexp.Regexp
 
 func init() {
-	commandRe = map[string]string{
-		"name":             `(@apidoc\s+name\s+)([^\s]+)`,
-		"desc":             `(@apidoc\s+desc\s+)([^\s]+)`,
-		"name_desc":        `(@apidoc\s+name\s+)([^\s]+)(\s+desc\s+)([^\s]+)`,
-		"type":             `(@apidoc\s+type\s+)([^\s]+)`,
-		"path":             `(@apidoc\s+path\s+)([^\s]+)`,
-		"method":           `(@apidoc\s+method\s+)([^\s]+)`,
-		"path_method":      `(@apidoc\s+path\s+)([^\s]+)(\s+method\s+)([^\s]+)`,
-		"tag":              `(@apidoc\s+tag\s+)([^\s]+)`,
-		"in_gotype":        `(@apidoc\s+in\s+gotype\s+)([^\s]+)`,
-		"out_gotype":       `(@apidoc\s+out\s+gotype\s+)([^\s]+)`,
-		"in_fileds_block":  `(@apidoc\s+in\s+fields\s+{\s+)(.|\s)+}`,
-		"out_fileds_block": `(@apidoc\s+in\s+fields\s+{\s+)(.|\s)+}`,
-		"filed":            `(\w+)\s+(\w+)\s*(.+)*`,
+	commandRe = map[string]*regexp.Regexp{
+		"name":             regexp.MustCompile(`(@apidoc\s+name\s+)([^\s]+)`),
+		"desc":             regexp.MustCompile(`(@apidoc\s+desc\s+)([^\s]+)`),
+		"name_desc":        regexp.MustCompile(`(@apidoc\s+name\s+)([^\s]+)(\s+desc\s+)([^\s]+)`),
+		"type":             regexp.MustCompile(`(@apidoc\s+type\s+)([^\s]+)`),
+		"path":             regexp.MustCompile(`(@apidoc\s+path\s+)([^\s]+)`),
+		"method":           regexp.MustCompile(`(@apidoc\s+method\s+)([^\s]+)`),
+		"path_method":      regexp.MustCompile(`(@apidoc\s+path\s+)([^\s]+)(\s+method\s+)([^\s]+)`),
+		"tag":              regexp.MustCompile(`(@apidoc\s+tag\s+)([^\s]+)`),
+		"in_gotype":        regexp.MustCompile(`(@apidoc\s+in\s+gotype\s+)([^\s]+)`),
+		"out_gotype":       regexp.MustCompile(`(@apidoc\s+out\s+gotype\s+)([^\s]+)`),
+		"in_fileds_block":  regexp.MustCompile(`(@apidoc\s+in\s+fields\s+(\[\])?{\s+)((.|\s)+)}`),
+		"out_fileds_block": regexp.MustCompile(`(@apidoc\s+out\s+fields\s+(\[\])?{\s+)((.|\s)+)}`),
+		"filed":            regexp.MustCompile(`(\w+)\s+(\w+)\s*(.+)*`),
 	}
 }
 
-func (declare DocDeclare) ParseToAPI() (*API, error) {
-	panic("")
-	//lines := strings.Split(string(declare), "\n")
+func (annotation DocAnnotation) ParseToAPI() (*API, error) {
+	api := new(API)
+	for command, re := range commandRe {
+		matchGroups := re.FindStringSubmatch(string(annotation))
+		if len(matchGroups) > 0 {
+			switch command {
+			case "name":
+				api.Name = matchGroups[2]
+			case "desc":
+				api.Desc = matchGroups[2]
+			case "name_desc":
+				api.Name = matchGroups[2]
+				api.Desc = matchGroups[4]
+			case "type":
+				api.Type = matchGroups[2]
+			case "path":
+				api.Path = matchGroups[2]
+			case "method":
+				api.Method = matchGroups[2]
+			case "path_method":
+				api.Method = matchGroups[2]
+				api.Path = matchGroups[4]
+			case "tag":
+				tagsStr := matchGroups[2]
+				api.Tags = make([]string, 0)
+				if strings.Contains(tagsStr, ",") {
+					for _, tag := range strings.Split(tagsStr, ",") {
+						if tag != "" {
+							api.Tags = append(api.Tags, strings.TrimSpace(tag))
+						}
+					}
+				} else {
+					api.Tags = append(api.Tags, strings.TrimSpace(tagsStr))
+				}
+			case "in_gotype":
+				api.inArgumentLoc = newTypeLocation(matchGroups[2])
+			case "out_gotype":
+				api.outArgumentLoc = newTypeLocation(matchGroups[2])
+			case "in_fileds_block":
+				// TODO: isRepeated := matchGroups[2] != ""
+				fieldStmts := matchGroups[3]
+				api.InArgument = &Object{
+					ID:     fmt.Sprintf("#obj_%d", rand.Int63()),
+					Fields: parseToObjectFields(fieldStmts),
+				}
+			case "out_fileds_block":
+				fieldStmts := matchGroups[3]
+				api.OutArgument = &Object{
+					ID:     fmt.Sprintf("#obj_%d", rand.Int63()),
+					Fields: parseToObjectFields(fieldStmts),
+				}
+			}
+		}
+	}
+	return nil, nil
+}
 
-	//for _, line := range lines {
-	//
-	//}
+func parseToObjectFields(fieldStmts string) []*ObjectField {
+	fields := make([]*ObjectField, 0)
+	for _, stmt := range strings.Split(fieldStmts, "\n") {
+		matchGroups := commandRe["field"].FindStringSubmatch(stmt)
+		if len(matchGroups) > 0 {
+			if !isBuiltinType(matchGroups[2]) {
+				fmt.Printf("type [%s] is not support,skip\n", matchGroups[2])
+				continue
+			}
+			fields = append(fields, &ObjectField{
+				Name:       matchGroups[1],
+				JSONTag:    matchGroups[1],
+				Comment:    strings.TrimSpace(matchGroups[3]),
+				Type:       matchGroups[2],
+				IsRepeated: false,
+				IsRef:      false,
+			})
+		}
+	}
+	return fields
 }
