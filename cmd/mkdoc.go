@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	scannerName = kingpin.Flag("scaner", "which api scanner to use,eg. gql-corego").Required().Short('s').String()
+	scannerName = kingpin.Flag("scanner", "which api scanner to use,eg. gql-corego").Required().Short('s').String()
 	tag         = kingpin.Flag("tag", "which tag to filter,eg. v1").Short('t').String()
 	pkg         = kingpin.Arg("pkg", "which package to scan").Required().String()
 	output      = kingpin.Arg("out", "which file to output").String()
@@ -75,10 +75,16 @@ func main() {
 
 	// match tags
 	matchTagAPIs := make([]*docspace.API, 0)
+	tagsMap := map[string]bool{}
+	allTags := make([]string, 0)
 
 	if *tag != "" {
 		for _, api := range apis {
 			for _, t := range api.Tags {
+				if _, exist := tagsMap[t]; !exist {
+					tagsMap[t] = true
+					allTags = append(allTags, t)
+				}
 				if t == *tag {
 					matchTagAPIs = append(matchTagAPIs, api)
 					break
@@ -90,7 +96,10 @@ func main() {
 	}
 
 	if len(matchTagAPIs) == 0 {
-		fmt.Printf("👽  no tag is matched,bye bye\n")
+		fmt.Printf("👽  no tag is matched,all tags:\n")
+		for _, t := range allTags {
+			fmt.Printf("    %s\n", t)
+		}
 		return
 	}
 
