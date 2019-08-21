@@ -39,8 +39,9 @@ func (c *CoregoGraphQLAPIScanner) GetName() string {
 
 func (c *CoregoGraphQLAPIScanner) ScanAnnotations(pkg string) ([]docspace.DocAnnotation, error) {
 	goPath := os.Getenv("GOPATH")
-	if strings.Contains(goPath, ";") {
-		goPath = strings.TrimSpace(strings.Split(goPath, ";")[0])
+	//TODO(thewinds):scan all go path
+	if strings.Contains(goPath, ":") {
+		goPath = strings.TrimSpace(strings.Split(goPath, ":")[0])
 	}
 	goSrcPath := filepath.Join(goPath, "src") + "/"
 	rootDir := filepath.Join(goSrcPath, pkg)
