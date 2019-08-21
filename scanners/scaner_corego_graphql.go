@@ -135,7 +135,7 @@ func (g *GraphQLResolveSource) GetDocAnnotation() (annotation docspace.DocAnnota
 	}
 	absFileName := g.FileSet.Position(g.NodeAST.Pos()).Filename
 	relativeFileName := strings.Replace(absFileName, g.GOSrcPath, "", -1)
-	fmt.Println(relativeFileName)
+	//fmt.Println(relativeFileName)
 	annotationBuilder := strings.Builder{}
 	annotationBuilder.WriteString(fmt.Sprintf("@apidoc name %s\n", strings.Replace(nodeAPIName.Value, "\"", "", -1)))
 
