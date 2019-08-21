@@ -30,9 +30,9 @@ func NewAPI(name string, comment string, routerPath string, inArgumentLoc, outAr
 	return &API{Name: name, Desc: comment, Path: routerPath, inArgumentLoc: inArgumentLoc, outArgumentLoc: outArgumentLoc}
 }
 
-// Gen 生成API信息
+// Build 生成API信息
 // 得到所有依赖类型的信息、字段JSONTag以及DocComment
-func (api *API) Gen() error {
+func (api *API) Build() error {
 	if api.InArgument == nil {
 		api.InArgument = new(Object)
 	}
@@ -60,38 +60,45 @@ func (api *API) Gen() error {
 }
 
 func (api *API) PrintMarkdown() {
-	if api.Desc == ""{
-		fmt.Printf("### %s\n", api.Name)
-	}else {
-		fmt.Printf("### %s\n", api.Desc)
-	}
-	fmt.Printf("#### - %s\n", api.Type)
-	fmt.Printf("> [%s] %s %s\n", api.Method, api.Path, api.Name)
+	fmt.Println(api.MakeMarkdown())
+}
 
-	fmt.Println("- 参数")
-	fmt.Printf("```json\n")
-	if api.inArgumentLoc != nil && api.inArgumentLoc.IsRepeated {
-		fmt.Printf("[\n")
-	}
-	fmt.Printf("%s", api.JSON(api.InArgument))
-	if api.inArgumentLoc != nil && api.inArgumentLoc.IsRepeated {
-		fmt.Printf("]\n")
+func (api *API) MakeMarkdown() string {
+	sb := strings.Builder{}
+	if api.Desc == "" {
+		sb.WriteString(fmt.Sprintf("### %s\n", api.Name))
 	} else {
-		fmt.Printf("\n")
+		sb.WriteString(fmt.Sprintf("### %s\n", api.Desc))
 	}
-	fmt.Printf("```\n")
-	fmt.Println("- 返回")
-	fmt.Printf("```json\n")
-	if api.outArgumentLoc != nil && api.outArgumentLoc.IsRepeated {
-		fmt.Printf("[")
+	sb.WriteString(fmt.Sprintf("- %s\n", api.Type))
+	sb.WriteString(fmt.Sprintf("> [%s] %s %s\n", api.Method, api.Path, api.Name))
+
+	sb.WriteString("- 参数\n")
+	sb.WriteString(fmt.Sprintf("```json\n"))
+	if api.inArgumentLoc != nil && api.inArgumentLoc.IsRepeated {
+		sb.WriteString(fmt.Sprintf("[\n"))
 	}
-	fmt.Printf("%s", api.JSON(api.OutArgument))
-	if api.outArgumentLoc != nil && api.outArgumentLoc.IsRepeated {
-		fmt.Printf("]\n")
+	sb.WriteString(fmt.Sprintf("%s", api.JSON(api.InArgument)))
+	if api.inArgumentLoc != nil && api.inArgumentLoc.IsRepeated {
+		sb.WriteString(fmt.Sprintf("]\n"))
 	} else {
-		fmt.Printf("\n")
+		sb.WriteString(fmt.Sprintf("\n"))
 	}
-	fmt.Printf("```\n")
+	sb.WriteString(fmt.Sprintf("```\n"))
+	sb.WriteString("- 返回\n")
+
+	sb.WriteString(fmt.Sprintf("```json\n"))
+	if api.outArgumentLoc != nil && api.outArgumentLoc.IsRepeated {
+		sb.WriteString(fmt.Sprintf("["))
+	}
+	sb.WriteString(fmt.Sprintf("%s", api.JSON(api.OutArgument)))
+	if api.outArgumentLoc != nil && api.outArgumentLoc.IsRepeated {
+		sb.WriteString(fmt.Sprintf("]\n"))
+	} else {
+		sb.WriteString(fmt.Sprintf("\n"))
+	}
+	sb.WriteString(fmt.Sprintf("```\n"))
+	return sb.String()
 }
 
 func (api *API) LinkField2Field(fromObj *Object, fromFieldName string, toObj *Object, toFieldName string) error {
