@@ -69,8 +69,10 @@ func (api *API) MakeMarkdown() string {
 	if len(strings.TrimSpace(api.Desc)) > 0 {
 		sb.WriteString(fmt.Sprintf("> %s\n", api.Desc))
 	}
-	sb.WriteString(fmt.Sprintf("- %s\n", api.Type))
-	sb.WriteString(fmt.Sprintf("` [%s] %s\n`", api.Method, api.Path))
+	sb.WriteString(fmt.Sprintf("- %s %s\n", api.Method, api.Type))
+	sb.WriteString(fmt.Sprintf("```\n"))
+	sb.WriteString(fmt.Sprintf("[path] %s\n", api.Path))
+	sb.WriteString(fmt.Sprintf("```\n"))
 
 	sb.WriteString("- 参数\n")
 	sb.WriteString(fmt.Sprintf("```json\n"))
