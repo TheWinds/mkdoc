@@ -65,13 +65,12 @@ func (api *API) PrintMarkdown() {
 
 func (api *API) MakeMarkdown() string {
 	sb := strings.Builder{}
-	if api.Desc == "" {
-		sb.WriteString(fmt.Sprintf("### %s\n", api.Name))
-	} else {
-		sb.WriteString(fmt.Sprintf("### %s\n", api.Desc))
+	sb.WriteString(fmt.Sprintf("### %s\n", api.Name))
+	if len(strings.TrimSpace(api.Desc)) > 0 {
+		sb.WriteString(fmt.Sprintf("> %s\n", api.Desc))
 	}
 	sb.WriteString(fmt.Sprintf("- %s\n", api.Type))
-	sb.WriteString(fmt.Sprintf("> [%s] %s %s\n", api.Method, api.Path, api.Name))
+	sb.WriteString(fmt.Sprintf("` [%s] %s\n`", api.Method, api.Path))
 
 	sb.WriteString("- 参数\n")
 	sb.WriteString(fmt.Sprintf("```json\n"))

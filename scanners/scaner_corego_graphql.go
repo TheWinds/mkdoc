@@ -138,13 +138,13 @@ func (g *GraphQLResolveSource) GetDocAnnotation() (annotation docspace.DocAnnota
 	relativeFileName := strings.Replace(absFileName, g.GOSrcPath, "", -1)
 	//fmt.Println(relativeFileName)
 	annotationBuilder := strings.Builder{}
-	annotationBuilder.WriteString(fmt.Sprintf("@apidoc name %s\n", strings.Replace(nodeAPIName.Value, "\"", "", -1)))
+	apiCallName := strings.Replace(nodeAPIName.Value, "\"", "", -1)
 
 	annotationBuilder.WriteString(fmt.Sprintf("@apidoc type graphql\n"))
 
 	path := fileRouterPathMap[relativeFileName]
 	if path != "" {
-		annotationBuilder.WriteString(fmt.Sprintf("@apidoc path %s\n", path))
+		annotationBuilder.WriteString(fmt.Sprintf("@apidoc path %s %s\n", path, apiCallName))
 	}
 
 	fieldElts, ok := g.assertGraphQLFieldElts(g.NodeAST.Value)
