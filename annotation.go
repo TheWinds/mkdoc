@@ -85,7 +85,6 @@ func (annotation DocAnnotation) ParseToAPI() (*API, error) {
 					loc.PackageName = pkgMap[loc.PackageName]
 				}
 				api.outArgumentLoc = loc
-				fmt.Printf("%v\n", loc)
 			case "in_fileds_block":
 				// TODO: isRepeated := matchGroups[2] != ""
 				fieldStmts := matchGroups[3]
