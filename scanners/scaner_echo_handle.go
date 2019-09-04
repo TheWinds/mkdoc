@@ -49,14 +49,14 @@ func (c *CoregoEchoAPIScanner) ScanAnnotations(pkg string) ([]docspace.DocAnnota
 			ast.Inspect(v, func(node ast.Node) bool {
 				if funcNode, ok := node.(*ast.FuncDecl); ok {
 					if strings.Contains(funcNode.Doc.Text(), "@apidoc") {
-						annotationStr := fmt.Sprintf("@apidoc type echo-http\n")
-						annotationStr += funcNode.Doc.Text()
-						//TODO(thewinds): add import to annotation syntax
+						sb := strings.Builder{}
+						sb.WriteString(fmt.Sprintf("@apidoc type echo-http\n"))
+						sb.WriteString(funcNode.Doc.Text())
 						fileName := f.Position(node.Pos()).Filename
 						for name, path := range fileImports[fileName] {
-							annotationStr = strings.Replace(annotationStr, name+".", path+".", -1)
+							sb.WriteString(fmt.Sprintf("@apidoc pkg_map %s %s\n", name, path))
 						}
-						annotations = append(annotations, docspace.DocAnnotation(annotationStr))
+						annotations = append(annotations, docspace.DocAnnotation(sb.String()))
 					}
 				}
 				return true

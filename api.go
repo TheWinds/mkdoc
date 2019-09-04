@@ -220,7 +220,6 @@ func (api *API) getObjectInfo(query *TypeLocation, rootObj *Object, dep int) err
 	if query == nil {
 		return nil
 	}
-	// println(query.PackageName, query.TypeName)
 	fields, err := api.getObjectFields(query)
 	if err != nil {
 		return err
@@ -262,15 +261,22 @@ func (api *API) getObjectFields(info *TypeLocation) ([]string, error) {
 		return nil, err
 	}
 	body := typesMap[info.TypeName]
+	if len(body) == 0 {
+		return []string{}, nil
+	}
 	prefix := fmt.Sprintf("type %s struct{", info.TypeName)
 	body = strings.Replace(body, prefix, "", 1)
 	body = body[:len(body)-1]
 
 	fields := strings.Split(body, ";")
+	ret := make([]string, 0)
 	for i := range fields {
 		fields[i] = strings.TrimSpace(fields[i])
+		if len(fields[i]) > 0 {
+			ret = append(ret, fields[i])
+		}
 	}
-	return fields, nil
+	return ret, nil
 }
 
 func (api *API) setObjectJSONTagAndComment(obj *Object, astPkgCacheMap map[string]map[string]*ast.Package) error {

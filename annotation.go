@@ -26,11 +26,21 @@ func init() {
 		"in_fileds_block":  regexp.MustCompile(`(@apidoc\s+in\s+fields\s+(\[\])?{\s+)((.|\s)+)}`),
 		"out_fileds_block": regexp.MustCompile(`(@apidoc\s+out\s+fields\s+(\[\])?{\s+)((.|\s)+)}`),
 		"field":            regexp.MustCompile(`(\w+)\s+(\w+)\s*(.+)*`),
+		"pkg_map":          regexp.MustCompile(`(@apidoc\s+pkg_map\s+)([^\s]+)\s+([^\s]+)`),
 	}
 }
 
 func (annotation DocAnnotation) ParseToAPI() (*API, error) {
 	api := new(API)
+	matchPkgGroups := annotationRegexps["pkg_map"].FindAllStringSubmatch(string(annotation), -1)
+	pkgMap := make(map[string]string, len(matchPkgGroups))
+	for _, matchGroup := range matchPkgGroups {
+		if len(matchGroup) > 0 {
+			pkgName := matchGroup[2]
+			pkgPath := matchGroup[3]
+			pkgMap[pkgName] = pkgPath
+		}
+	}
 	for command, re := range annotationRegexps {
 		matchGroups := re.FindStringSubmatch(string(annotation))
 		if len(matchGroups) > 0 {
@@ -64,9 +74,18 @@ func (annotation DocAnnotation) ParseToAPI() (*API, error) {
 					api.Tags = append(api.Tags, strings.TrimSpace(tagsStr))
 				}
 			case "in_gotype":
-				api.inArgumentLoc = newTypeLocation(matchGroups[2])
+				loc := newTypeLocation(matchGroups[2])
+				if pkgMap[loc.PackageName] != "" {
+					loc.PackageName = pkgMap[loc.PackageName]
+				}
+				api.inArgumentLoc = loc
 			case "out_gotype":
-				api.outArgumentLoc = newTypeLocation(matchGroups[2])
+				loc := newTypeLocation(matchGroups[2])
+				if pkgMap[loc.PackageName] != "" {
+					loc.PackageName = pkgMap[loc.PackageName]
+				}
+				api.outArgumentLoc = loc
+				fmt.Printf("%v\n", loc)
 			case "in_fileds_block":
 				// TODO: isRepeated := matchGroups[2] != ""
 				fieldStmts := matchGroups[3]
