@@ -23,7 +23,9 @@ func newTypeLocation(raw string) *TypeLocation {
 		raw = raw[1:]
 	} else if strings.HasPrefix(raw, "[]*") {
 		raw = raw[3:]
+		t.IsRepeated = true
 	} else if strings.HasPrefix(raw, "[]") {
+		t.IsRepeated = true
 		raw = raw[2:]
 	}
 	e := strings.Split(raw, ".")
@@ -75,7 +77,6 @@ func GetPackageTypesMap(pkg string) (map[string]string, error) {
 	//	visit(lpkg)
 	//}
 	//lpkgs = all
-
 
 	// 提取类型信息
 	for _, lpkg := range lpkgs {
