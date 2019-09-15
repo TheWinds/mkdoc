@@ -1,6 +1,7 @@
 package docspace
 
 import (
+	"fmt"
 	"go/ast"
 	"strings"
 )
@@ -31,26 +32,35 @@ func findGOStructInfo(structName string, f *ast.Package) (*goStructInfo, error) 
 			structNode := node.(*ast.TypeSpec)
 			if structNode.Name.Name == structName {
 				info.Name = structNode.Name.Name
-				structFields := (structNode.Type).(*ast.StructType).Fields
-				for _, field := range structFields.List {
-					name := field.Names[0].Name
-					comment := ""
-					if field.Comment != nil && len(field.Comment.List) != 0 {
-						comment = (field.Comment.List[0]).Text
-					}
-					var tag string
-					if field.Tag != nil {
-						tag = getJSONTag(field.Tag.Value, name)
-					}
-					info.FieldNum++
-					info.Fields = append(info.Fields, goStructField{
-						Name:       name,
-						Comment:    comment,
-						DocComment: field.Doc.Text(),
-						JSONTag:    tag,
-					})
+				switch structNode.Type.(type) {
+				case *ast.StructType:
+					structFields := (structNode.Type).(*ast.StructType).Fields
+					for _, field := range structFields.List {
+						name := field.Names[0].Name
+						comment := ""
+						if field.Comment != nil && len(field.Comment.List) != 0 {
+							comment = (field.Comment.List[0]).Text
+						}
+						var tag string
+						if field.Tag != nil {
+							tag = getJSONTag(field.Tag.Value, name)
+						}
+						info.FieldNum++
+						info.Fields = append(info.Fields, goStructField{
+							Name:       name,
+							Comment:    comment,
+							DocComment: field.Doc.Text(),
+							JSONTag:    tag,
+						})
 
+					}
+				case *ast.Ident:
+					structNode := (structNode.Type).(*ast.Ident)
+					info.Name = structNode.Name
+				default:
+					fmt.Printf("WARNING: only support `type <TypeName> <StructName>` go syntax,plase check %s \n", info.Name)
 				}
+
 			}
 
 		}
