@@ -337,12 +337,12 @@ func (api *API) getObjectInfoV2(query *TypeLocation, rootObj *Object, dep int) e
 			Name:       field.Name,
 			JSONTag:    field.JSONTag,
 			Comment:    comment,
-			Type:       field.GoType.Name,
+			Type:       field.GoType.Location().String(),
 			IsRepeated: field.GoType.IsRep,
 			IsRef:      field.GoType.IsRef,
 		}
 		rootObj.Fields = append(rootObj.Fields, objField)
-		if objField.IsRef && dep > 0 && api.ObjectsMap[rootObj.ID] == nil {
+		if objField.IsRef && api.ObjectsMap[rootObj.ID] == nil {
 			if err := api.getObjectInfoV2(field.GoType.Location(), new(Object), dep+1); err != nil {
 				return err
 			}

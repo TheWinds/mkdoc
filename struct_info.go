@@ -107,9 +107,20 @@ func getNodeFileImports(node ast.Node, pkg *ast.Package, fileset *token.FileSet)
 			}
 			importCache[fileName][importName] = importPath
 		}
-		importCache[fileName][""] = pkg.Name
+		importCache[fileName][""] = getPkgPath(fileName)
 	}
 	return importCache[fileName]
+}
+
+func getPkgPath(fileName string) string {
+	goPaths := GetGOPaths()
+	for _, v := range goPaths {
+		v := v + "/src/"
+		if strings.HasPrefix(fileName, v) {
+			return filepath.Dir(fileName[len(v):])
+		}
+	}
+	return ""
 }
 
 func getMidString(src, s, e string) string {
@@ -145,7 +156,7 @@ func (t *GoType) String() string {
 	if t.ImportPkgName != "" {
 		importInfo += t.PkgName + " => " + t.ImportPkgName
 	}
-	return fmt.Sprintf("Name: %s\nType:%s\nImport:%s", t.Name, typ, importInfo)
+	return fmt.Sprintf("Name: %s\nIsRef: %v\nImport:%s", typ, t.IsRef, importInfo)
 }
 
 func (t *GoType) Location() *TypeLocation {
