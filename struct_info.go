@@ -1,8 +1,10 @@
 package docspace
 
 import (
+	"errors"
 	"fmt"
 	"go/ast"
+	"go/token"
 	"strings"
 )
 
@@ -20,13 +22,15 @@ type goStructInfo struct {
 	FieldNum int
 }
 
+var ErrGoStructNotFound error = errors.New("go struct not found")
+
 // 从语法树获取结构体信息
-func findGOStructInfo(structName string, f *ast.Package) (*goStructInfo, error) {
+func findGOStructInfo(structName string, pkg *ast.Package, fileset *token.FileSet) (*goStructInfo, error) {
 
 	info := new(goStructInfo)
 	info.Fields = make([]goStructField, 0)
 	// 从语法树获取内容
-	ast.Inspect(f, func(node ast.Node) bool {
+	ast.Inspect(pkg, func(node ast.Node) bool {
 		switch node.(type) {
 		case *ast.TypeSpec:
 			structNode := node.(*ast.TypeSpec)
@@ -46,11 +50,31 @@ func findGOStructInfo(structName string, f *ast.Package) (*goStructInfo, error) 
 							tag = getJSONTag(field.Tag.Value, name)
 						}
 						info.FieldNum++
+						baseTyp := baseTypeName(field.Type)
+						fileName := fileset.File(node.Pos()).Name()
+						for k, v := range pkg.Files[fileName].Imports {
+							fmt.Println(k, v.Name,v.Path.Value)
+						}
+						typ := ""
+						if !baseTyp.NotSupport {
+							if baseTyp.IsRep {
+								typ += "[]"
+							}
+							if baseTyp.IsRef {
+								typ += "*"
+							}
+							if baseTyp.PkgName != "" {
+								typ += baseTyp.PkgName + "." + baseTyp.Name
+							} else {
+								typ += baseTyp.Name
+							}
+						}
 						info.Fields = append(info.Fields, goStructField{
 							Name:       name,
 							Comment:    comment,
 							DocComment: field.Doc.Text(),
 							JSONTag:    tag,
+							Type:       typ,
 						})
 
 					}
@@ -67,7 +91,7 @@ func findGOStructInfo(structName string, f *ast.Package) (*goStructInfo, error) 
 		return true
 	})
 	if info.Name == "" {
-		return nil, nil
+		return nil, ErrGoStructNotFound
 	}
 	return info, nil
 }
@@ -83,4 +107,36 @@ func getMidString(src, s, e string) string {
 	sIndex := strings.Index(src, s)
 	eIndex := strings.Index(src[sIndex+len(s)+1:], e) + len(s) + sIndex
 	return src[sIndex+len(s) : eIndex+1]
+}
+
+type baseType struct {
+	Name       string
+	IsRep      bool
+	IsRef      bool
+	PkgName    string
+	NotSupport bool
+}
+
+func baseTypeName(x ast.Expr) *baseType {
+	switch t := x.(type) {
+	case *ast.Ident:
+		return &baseType{Name: t.Name}
+	case *ast.SelectorExpr:
+		if _, ok := t.X.(*ast.Ident); ok {
+			// only possible for qualified type names;
+			// assume type is imported
+			return &baseType{Name: t.Sel.Name, PkgName: t.X.(*ast.Ident).Name}
+		}
+	case *ast.ParenExpr:
+		return baseTypeName(t.X)
+	case *ast.StarExpr:
+		bt := baseTypeName(t.X)
+		bt.IsRef = true
+		return bt
+	case *ast.ArrayType:
+		bt := baseTypeName(t.Elt)
+		bt.IsRep = true
+		return bt
+	}
+	return &baseType{NotSupport: true}
 }

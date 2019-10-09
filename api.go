@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"go/ast"
+	"go/doc"
 	"go/parser"
 	"go/token"
 	"os"
@@ -24,6 +25,7 @@ type API struct {
 	inArgumentLoc  *TypeLocation
 	outArgumentLoc *TypeLocation
 	debug          bool
+	TT []*doc.Mode
 }
 
 func NewAPI(name string, comment string, routerPath string, inArgumentLoc, outArgumentLoc *TypeLocation) *API {
@@ -341,6 +343,74 @@ func (api *API) getObjectInfo(query *TypeLocation, rootObj *Object, dep int) err
 	return nil
 }
 
+func (api *API) getObjectInfoV2(query *TypeLocation, rootObj *Object, dep int) error {
+	if query == nil {
+		return nil
+	}
+	var structInfo *goStructInfo
+	goPaths := GetGOPaths()
+	pkgPaths := make([]string, 0)
+	for _, goPath := range goPaths {
+		f := token.NewFileSet()
+		pkgPath := filepath.Join(goPath, "src", query.PackageName)
+		pkgPaths = append(pkgPaths, pkgPath)
+		pkgs, err := parser.ParseDir(f, pkgPath, nil, parser.ParseComments)
+		if err != nil {
+			return err
+		}
+		for _, pkg := range pkgs {
+			structInfo, err = findGOStructInfo(query.TypeName, pkg,f)
+			if err != nil && err != ErrGoStructNotFound {
+				return err
+			}
+		}
+	}
+
+	if structInfo == nil {
+		return fmt.Errorf("struct %s not found in any of:\n  %s", query, strings.Join(pkgPaths, "\n"))
+	}
+
+	for _, field := range structInfo.Fields {
+		//field.
+		fmt.Printf("%#v\n", field)
+	}
+	return nil
+
+	fields, err := api.getObjectFields(query)
+	if err != nil {
+		return err
+	}
+
+	rootObj.ID = query.String()
+	rootObj.Fields = make([]*ObjectField, 0)
+	for _, v := range fields {
+		t, err := getObjectField(query, v)
+		prefixSpace := ""
+		for i := 0; i < dep; i++ {
+			prefixSpace += "\t\t"
+		}
+		if err != nil {
+			if api.debug {
+				fmt.Printf("%s- %v\n", prefixSpace, err)
+			}
+			return err
+		}
+		if !strings.HasPrefix(t.Name, "XXX_") {
+			rootObj.Fields = append(rootObj.Fields, t)
+			if api.debug {
+				fmt.Printf("%s- %+v\n", prefixSpace, t)
+			}
+			if t.IsRef && dep >= 0 {
+				if err = api.getObjectInfo(newTypeLocation(t.Type), new(Object), dep+1); err != nil {
+					return err
+				}
+			}
+		}
+	}
+	api.ObjectsMap[rootObj.ID] = rootObj
+	return nil
+}
+
 func (api *API) getObjectFields(info *TypeLocation) ([]string, error) {
 	typesMap, err := GetPackageTypesMap(info.PackageName)
 	if err != nil {
@@ -391,7 +461,7 @@ func (api *API) setObjectJSONTagAndComment(obj *Object, astPkgCacheMap map[strin
 	}
 
 	for _, v := range f {
-		i, err := findGOStructInfo(t.TypeName, v)
+		i, err := findGOStructInfo(t.TypeName, v,nil)
 		if err != nil {
 			return err
 		}
