@@ -5,30 +5,30 @@ import (
 	"fmt"
 	"go/ast"
 	"go/token"
+	"path/filepath"
 	"strings"
 )
 
-type goStructField struct {
+type GoStructField struct {
 	Name       string
-	Type       string
 	Comment    string
 	DocComment string
 	JSONTag    string
+	GoType     *GoType
 }
 
-type goStructInfo struct {
-	Name     string
-	Fields   []goStructField
-	FieldNum int
+type GoStructInfo struct {
+	Name   string
+	Fields []*GoStructField
 }
 
 var ErrGoStructNotFound error = errors.New("go struct not found")
 
 // 从语法树获取结构体信息
-func findGOStructInfo(structName string, pkg *ast.Package, fileset *token.FileSet) (*goStructInfo, error) {
+func findGOStructInfo(structName string, pkg *ast.Package, fileset *token.FileSet) (*GoStructInfo, error) {
 
-	info := new(goStructInfo)
-	info.Fields = make([]goStructField, 0)
+	info := new(GoStructInfo)
+	info.Fields = make([]*GoStructField, 0)
 	// 从语法树获取内容
 	ast.Inspect(pkg, func(node ast.Node) bool {
 		switch node.(type) {
@@ -41,40 +41,25 @@ func findGOStructInfo(structName string, pkg *ast.Package, fileset *token.FileSe
 					structFields := (structNode.Type).(*ast.StructType).Fields
 					for _, field := range structFields.List {
 						name := field.Names[0].Name
-						comment := ""
+						var comment, tag string
+
 						if field.Comment != nil && len(field.Comment.List) != 0 {
 							comment = (field.Comment.List[0]).Text
 						}
-						var tag string
+
 						if field.Tag != nil {
 							tag = getJSONTag(field.Tag.Value, name)
 						}
-						info.FieldNum++
-						baseTyp := baseTypeName(field.Type)
-						fileName := fileset.File(node.Pos()).Name()
-						for k, v := range pkg.Files[fileName].Imports {
-							fmt.Println(k, v.Name,v.Path.Value)
-						}
-						typ := ""
-						if !baseTyp.NotSupport {
-							if baseTyp.IsRep {
-								typ += "[]"
-							}
-							if baseTyp.IsRef {
-								typ += "*"
-							}
-							if baseTyp.PkgName != "" {
-								typ += baseTyp.PkgName + "." + baseTyp.Name
-							} else {
-								typ += baseTyp.Name
-							}
-						}
-						info.Fields = append(info.Fields, goStructField{
+						baseTyp := baseType(field.Type)
+						imports := getNodeFileImports(node, pkg, fileset)
+						baseTyp.ImportPkgName = imports[baseTyp.PkgName]
+
+						info.Fields = append(info.Fields, &GoStructField{
 							Name:       name,
 							Comment:    comment,
 							DocComment: field.Doc.Text(),
 							JSONTag:    tag,
-							Type:       typ,
+							GoType:     baseTyp,
 						})
 
 					}
@@ -103,40 +88,92 @@ func getJSONTag(tags, defaultTag string) string {
 	return strings.Replace(getMidString(tags, "json:\"", "\""), ",omitempty", "", -1)
 }
 
+var importCache map[string]map[string]string
+
+func getNodeFileImports(node ast.Node, pkg *ast.Package, fileset *token.FileSet) map[string]string {
+	if importCache == nil {
+		importCache = make(map[string]map[string]string)
+	}
+	fileName := fileset.File(node.Pos()).Name()
+	if importCache[fileName] == nil {
+		importCache[fileName] = make(map[string]string)
+		for _, v := range pkg.Files[fileName].Imports {
+			importName := ""
+			importPath := strings.Replace(v.Path.Value, "\"", "", -1)
+			if v.Name != nil {
+				importName = v.Name.Name
+			} else {
+				importName = filepath.Base(importPath)
+			}
+			importCache[fileName][importName] = importPath
+		}
+		importCache[fileName][""] = pkg.Name
+	}
+	return importCache[fileName]
+}
+
 func getMidString(src, s, e string) string {
 	sIndex := strings.Index(src, s)
 	eIndex := strings.Index(src[sIndex+len(s)+1:], e) + len(s) + sIndex
 	return src[sIndex+len(s) : eIndex+1]
 }
 
-type baseType struct {
-	Name       string
-	IsRep      bool
-	IsRef      bool
-	PkgName    string
-	NotSupport bool
+type GoType struct {
+	Name          string
+	IsRep         bool
+	IsRef         bool
+	PkgName       string
+	ImportPkgName string
+	NotSupport    bool
 }
 
-func baseTypeName(x ast.Expr) *baseType {
+func (t *GoType) String() string {
+	var typ, importInfo string
+	if !t.NotSupport {
+		if t.IsRep {
+			typ += "[]"
+		}
+		if t.IsRef {
+			typ += "*"
+		}
+		if t.PkgName != "" {
+			typ += t.PkgName + "." + t.Name
+		} else {
+			typ += t.Name
+		}
+	}
+	if t.ImportPkgName != "" {
+		importInfo += t.PkgName + " => " + t.ImportPkgName
+	}
+	return fmt.Sprintf("Name: %s\nType:%s\nImport:%s", t.Name, typ, importInfo)
+}
+
+func (t *GoType) Location() *TypeLocation {
+	return &TypeLocation{
+		PackageName: t.ImportPkgName,
+		TypeName:    t.Name,
+		IsRepeated:  t.IsRep,
+	}
+}
+
+func baseType(x ast.Expr) *GoType {
 	switch t := x.(type) {
 	case *ast.Ident:
-		return &baseType{Name: t.Name}
+		return &GoType{Name: t.Name}
 	case *ast.SelectorExpr:
 		if _, ok := t.X.(*ast.Ident); ok {
-			// only possible for qualified type names;
-			// assume type is imported
-			return &baseType{Name: t.Sel.Name, PkgName: t.X.(*ast.Ident).Name}
+			return &GoType{Name: t.Sel.Name, PkgName: t.X.(*ast.Ident).Name}
 		}
 	case *ast.ParenExpr:
-		return baseTypeName(t.X)
+		return baseType(t.X)
 	case *ast.StarExpr:
-		bt := baseTypeName(t.X)
+		bt := baseType(t.X)
 		bt.IsRef = true
 		return bt
 	case *ast.ArrayType:
-		bt := baseTypeName(t.Elt)
+		bt := baseType(t.Elt)
 		bt.IsRep = true
 		return bt
 	}
-	return &baseType{NotSupport: true}
+	return &GoType{NotSupport: true}
 }

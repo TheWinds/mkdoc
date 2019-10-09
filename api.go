@@ -3,11 +3,8 @@ package docspace
 import (
 	"encoding/json"
 	"fmt"
-	"go/ast"
-	"go/doc"
 	"go/parser"
 	"go/token"
-	"os"
 	"path/filepath"
 	"strings"
 )
@@ -25,7 +22,6 @@ type API struct {
 	inArgumentLoc  *TypeLocation
 	outArgumentLoc *TypeLocation
 	debug          bool
-	TT []*doc.Mode
 }
 
 func NewAPI(name string, comment string, routerPath string, inArgumentLoc, outArgumentLoc *TypeLocation) *API {
@@ -42,21 +38,13 @@ func (api *API) Build() error {
 		api.OutArgument = new(Object)
 	}
 	api.ObjectsMap = map[string]*Object{}
-	err := api.getObjectInfo(api.inArgumentLoc, api.InArgument, 0)
+	err := api.getObjectInfoV2(api.inArgumentLoc, api.InArgument, 0)
 	if err != nil {
 		return err
 	}
-	err = api.getObjectInfo(api.outArgumentLoc, api.OutArgument, 0)
+	err = api.getObjectInfoV2(api.outArgumentLoc, api.OutArgument, 0)
 	if err != nil {
 		return err
-	}
-	// set json tag and comment
-	astPkgCacheMap := map[string]map[string]*ast.Package{}
-	for _, obj := range api.ObjectsMap {
-		err = api.setObjectJSONTagAndComment(obj, astPkgCacheMap)
-		if err != nil {
-			return err
-		}
 	}
 	return nil
 }
@@ -304,50 +292,11 @@ func (api *API) writeJSONToken(s string, dep int, sb *strings.Builder) {
 	sb.WriteString(prefix + s)
 }
 
-func (api *API) getObjectInfo(query *TypeLocation, rootObj *Object, dep int) error {
-	if query == nil {
-		return nil
-	}
-	fields, err := api.getObjectFields(query)
-	if err != nil {
-		return err
-	}
-
-	rootObj.ID = query.String()
-	rootObj.Fields = make([]*ObjectField, 0)
-	for _, v := range fields {
-		t, err := getObjectField(query, v)
-		prefixSpace := ""
-		for i := 0; i < dep; i++ {
-			prefixSpace += "\t\t"
-		}
-		if err != nil {
-			if api.debug {
-				fmt.Printf("%s- %v\n", prefixSpace, err)
-			}
-			return err
-		}
-		if !strings.HasPrefix(t.Name, "XXX_") {
-			rootObj.Fields = append(rootObj.Fields, t)
-			if api.debug {
-				fmt.Printf("%s- %+v\n", prefixSpace, t)
-			}
-			if t.IsRef && dep >= 0 {
-				if err = api.getObjectInfo(newTypeLocation(t.Type), new(Object), dep+1); err != nil {
-					return err
-				}
-			}
-		}
-	}
-	api.ObjectsMap[rootObj.ID] = rootObj
-	return nil
-}
-
 func (api *API) getObjectInfoV2(query *TypeLocation, rootObj *Object, dep int) error {
 	if query == nil {
 		return nil
 	}
-	var structInfo *goStructInfo
+	var structInfo *GoStructInfo
 	goPaths := GetGOPaths()
 	pkgPaths := make([]string, 0)
 	for _, goPath := range goPaths {
@@ -359,7 +308,7 @@ func (api *API) getObjectInfoV2(query *TypeLocation, rootObj *Object, dep int) e
 			return err
 		}
 		for _, pkg := range pkgs {
-			structInfo, err = findGOStructInfo(query.TypeName, pkg,f)
+			structInfo, err = findGOStructInfo(query.TypeName, pkg, f)
 			if err != nil && err != ErrGoStructNotFound {
 				return err
 			}
@@ -370,117 +319,35 @@ func (api *API) getObjectInfoV2(query *TypeLocation, rootObj *Object, dep int) e
 		return fmt.Errorf("struct %s not found in any of:\n  %s", query, strings.Join(pkgPaths, "\n"))
 	}
 
-	for _, field := range structInfo.Fields {
-		//field.
-		fmt.Printf("%#v\n", field)
-	}
-	return nil
-
-	fields, err := api.getObjectFields(query)
-	if err != nil {
-		return err
-	}
-
 	rootObj.ID = query.String()
 	rootObj.Fields = make([]*ObjectField, 0)
-	for _, v := range fields {
-		t, err := getObjectField(query, v)
-		prefixSpace := ""
-		for i := 0; i < dep; i++ {
-			prefixSpace += "\t\t"
+
+	for _, field := range structInfo.Fields {
+		if strings.HasPrefix(field.Name, "XXX_") {
+			continue
 		}
-		if err != nil {
-			if api.debug {
-				fmt.Printf("%s- %v\n", prefixSpace, err)
-			}
-			return err
+		// priority use doc comment
+		var comment string
+		if field.DocComment != "" {
+			comment = field.DocComment
+		} else {
+			comment = field.Comment
 		}
-		if !strings.HasPrefix(t.Name, "XXX_") {
-			rootObj.Fields = append(rootObj.Fields, t)
-			if api.debug {
-				fmt.Printf("%s- %+v\n", prefixSpace, t)
-			}
-			if t.IsRef && dep >= 0 {
-				if err = api.getObjectInfo(newTypeLocation(t.Type), new(Object), dep+1); err != nil {
-					return err
-				}
+		objField := &ObjectField{
+			Name:       field.Name,
+			JSONTag:    field.JSONTag,
+			Comment:    comment,
+			Type:       field.GoType.Name,
+			IsRepeated: field.GoType.IsRep,
+			IsRef:      field.GoType.IsRef,
+		}
+		rootObj.Fields = append(rootObj.Fields, objField)
+		if objField.IsRef && dep > 0 && api.ObjectsMap[rootObj.ID] == nil {
+			if err := api.getObjectInfoV2(field.GoType.Location(), new(Object), dep+1); err != nil {
+				return err
 			}
 		}
 	}
 	api.ObjectsMap[rootObj.ID] = rootObj
 	return nil
-}
-
-func (api *API) getObjectFields(info *TypeLocation) ([]string, error) {
-	typesMap, err := GetPackageTypesMap(info.PackageName)
-	if err != nil {
-		return nil, err
-	}
-	body := typesMap[info.TypeName]
-	if len(body) == 0 {
-		return []string{}, nil
-	}
-	prefix := fmt.Sprintf("type %s struct{", info.TypeName)
-	body = strings.Replace(body, prefix, "", 1)
-	body = body[:len(body)-1]
-
-	fields := strings.Split(body, ";")
-	ret := make([]string, 0)
-	for i := range fields {
-		fields[i] = strings.TrimSpace(fields[i])
-		if len(fields[i]) > 0 {
-			ret = append(ret, fields[i])
-		}
-	}
-	return ret, nil
-}
-
-func (api *API) setObjectJSONTagAndComment(obj *Object, astPkgCacheMap map[string]map[string]*ast.Package) error {
-	//TODO:支持多个GOPATH
-	goPath := os.Getenv("GOPATH")
-	t := newTypeLocation(obj.ID)
-	var f map[string]*ast.Package
-	var err error
-	if astPkgCacheMap != nil {
-		if _, ok := astPkgCacheMap[t.PackageName]; !ok {
-			fset := token.NewFileSet()
-			f, err = parser.ParseDir(fset, filepath.Join(goPath, "src", t.PackageName), nil, parser.ParseComments)
-			if err != nil {
-				return err
-			}
-			astPkgCacheMap[t.PackageName] = f
-		} else {
-			f = astPkgCacheMap[t.PackageName]
-		}
-	} else {
-		fset := token.NewFileSet()
-		f, err = parser.ParseDir(fset, filepath.Join(goPath, "src", t.PackageName), nil, parser.ParseComments)
-		if err != nil {
-			return err
-		}
-	}
-
-	for _, v := range f {
-		i, err := findGOStructInfo(t.TypeName, v,nil)
-		if err != nil {
-			return err
-		}
-		for k, field := range obj.Fields {
-			field.Comment = i.Fields[k].DocComment
-			field.JSONTag = i.Fields[k].JSONTag
-		}
-	}
-	return nil
-}
-
-// 添加API页面	CURD
-// API 			CURD
-// Field 		CURD
-// types 搜索
-// 类型连接
-
-type APIGroup struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	APIList     []*API `json:"api_list"`
 }
