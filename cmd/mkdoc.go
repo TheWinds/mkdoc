@@ -2,12 +2,16 @@ package main
 
 import (
 	"docspace"
-	"docspace/scanners"
 	"fmt"
 	"gopkg.in/alecthomas/kingpin.v2"
 	"os"
 	"path/filepath"
 	"strings"
+)
+
+import (
+	_ "docspace/scanners/echocorego"
+	_ "docspace/scanners/gqlcorego"
 )
 
 var (
@@ -17,26 +21,13 @@ var (
 	output      = kingpin.Arg("out", "which file to output").String()
 )
 
-var scannersMap map[string]docspace.APIScanner
-
-func init() {
-	scannerList := []docspace.APIScanner{
-		new(scanners.CoregoGraphQLAPIScanner),
-		new(scanners.CoregoEchoAPIScanner),
-	}
-	scannersMap = map[string]docspace.APIScanner{}
-
-	for _, v := range scannerList {
-		scannersMap[v.GetName()] = v
-	}
-}
-
 func main() {
 	kingpin.Parse()
-	scanner := scannersMap[*scannerName]
+	scanners := docspace.GetScanners()
+	scanner := scanners[*scannerName]
 	if scanner == nil {
 		fmt.Printf("error: scanner \"%s\" is not found,you can choose scanner below :\n", *scannerName)
-		for name := range scannersMap {
+		for name := range scanners {
 			fmt.Printf("    %s\n", name)
 		}
 		return

@@ -1,7 +1,8 @@
-package scanners
+package gqlcorego
 
 import (
 	"docspace"
+	"docspace/scanners"
 	"fmt"
 	"go/ast"
 	"go/parser"
@@ -30,10 +31,10 @@ func init() {
 		"corego/service/boss/schemas/recite_quiz/reciteQuizSchema.go": "/zhike/reciteQuizManage",
 		"corego/service/boss/schemas/zhike/saleSchema.go":             "/zhike/saleManage",
 	}
+	docspace.RegisterScanner(&CoregoGraphQLAPIScanner{})
 }
 
-type CoregoGraphQLAPIScanner struct {
-}
+type CoregoGraphQLAPIScanner struct{}
 
 func (c *CoregoGraphQLAPIScanner) GetName() string {
 	return "gql-corego"
@@ -47,7 +48,7 @@ func (c *CoregoGraphQLAPIScanner) ScanAnnotations(pkg string) ([]docspace.DocAnn
 	}
 	goSrcPath := filepath.Join(goPath, "src") + "/"
 	rootDir := filepath.Join(goSrcPath, pkg)
-	subDirs := getSubDirs(rootDir)
+	subDirs := scanners.GetSubDirs(rootDir)
 	fileImports := map[string]map[string]string{}
 
 	annotations := make([]docspace.DocAnnotation, 0)
@@ -81,9 +82,9 @@ func (c *CoregoGraphQLAPIScanner) ScanAnnotations(pkg string) ([]docspace.DocAnn
 		for _, v := range pkgs {
 			ast.Inspect(v, func(node ast.Node) bool {
 				if kvExpr, ok := node.(*ast.KeyValueExpr); ok {
-					name := readCode(f, kvExpr.Key)
+					name := scanners.ReadCode(f, kvExpr.Key)
 					if strings.HasPrefix(name, "\"") && strings.HasSuffix(name, "\"") {
-						value := readCode(f, kvExpr.Value)
+						value := scanners.ReadCode(f, kvExpr.Value)
 						if strings.HasPrefix(value, "&graphql.Field{") {
 							fileName := f.Position(kvExpr.Pos()).Filename
 							if !strings.Contains(value, "@apidoc") {

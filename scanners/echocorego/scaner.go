@@ -1,7 +1,8 @@
-package scanners
+package echocorego
 
 import (
 	"docspace"
+	"docspace/scanners"
 	"fmt"
 	"go/ast"
 	"go/parser"
@@ -11,13 +12,16 @@ import (
 	"strings"
 )
 
-type CoregoEchoAPIScanner struct {
+func init() {
+	docspace.RegisterScanner(&CoregoEchoAPIScanner{})
 }
+
+type CoregoEchoAPIScanner struct {}
 
 func (c *CoregoEchoAPIScanner) ScanAnnotations(pkg string) ([]docspace.DocAnnotation, error) {
 	goPath := os.Getenv("GOPATH")
 	rootDir := filepath.Join(goPath, "src", pkg)
-	subDirs := getSubDirs(rootDir)
+	subDirs := scanners.GetSubDirs(rootDir)
 	fileImports := map[string]map[string]string{}
 
 	annotations := make([]docspace.DocAnnotation, 0)

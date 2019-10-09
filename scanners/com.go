@@ -1,6 +1,7 @@
 package scanners
 
 import (
+	"fmt"
 	"go/ast"
 	"go/token"
 	"io/ioutil"
@@ -8,7 +9,7 @@ import (
 	"path/filepath"
 )
 
-func getSubDirs(root string) []string {
+func GetSubDirs(root string) []string {
 	subDirs := make([]string, 0)
 	filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 		if info.IsDir() {
@@ -19,11 +20,11 @@ func getSubDirs(root string) []string {
 	return subDirs
 }
 
-func printCode(f *token.FileSet, node ast.Node) {
-	println(readCode(f, node))
+func PrintCode(f *token.FileSet, node ast.Node) {
+	fmt.Println(ReadCode(f, node))
 }
 
-func readCode(f *token.FileSet, node ast.Node) string {
+func ReadCode(f *token.FileSet, node ast.Node) string {
 	ps := f.Position(node.Pos())
 	pe := f.Position(node.End())
 	file, _ := ioutil.ReadFile(ps.Filename)
