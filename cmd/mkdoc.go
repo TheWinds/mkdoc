@@ -41,7 +41,7 @@ func main() {
 		}
 		return
 	}
-	goPaths := getGOPaths()
+	goPaths := docspace.GetGOPaths()
 	pkgExist := false
 	for _, gopath := range goPaths {
 		if _, err := os.Stat(filepath.Join(gopath, "src", *pkg)); err == nil {
@@ -141,12 +141,4 @@ func main() {
 	}
 	file.Close()
 	fmt.Printf("🍺  done!\n")
-}
-
-func getGOPaths() []string {
-	gopath := os.Getenv("GOPATH")
-	if strings.Contains(gopath, ":") {
-		return strings.Split(gopath, ":")
-	}
-	return []string{gopath}
 }
