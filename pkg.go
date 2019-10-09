@@ -3,8 +3,9 @@ package docspace
 import (
 	"fmt"
 	"go/types"
-	"golang.org/x/tools/go/packages"
 	"strings"
+
+	"golang.org/x/tools/go/packages"
 )
 
 type TypeLocation struct {
@@ -14,7 +15,11 @@ type TypeLocation struct {
 }
 
 func (t *TypeLocation) String() string {
-	return fmt.Sprintf("%s.%s", t.PackageName, t.TypeName)
+	rep := ""
+	if t.IsRepeated {
+		rep = "[]"
+	}
+	return fmt.Sprintf("%s%s.%s", rep, t.PackageName, t.TypeName)
 }
 
 func newTypeLocation(raw string) *TypeLocation {
