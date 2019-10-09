@@ -16,17 +16,19 @@ var fileRouterPathMap map[string]string
 
 func init() {
 	fileRouterPathMap = map[string]string{
-		"corego/service/boss/schemas/adminSchema.go":         "/adminManage",
-		"corego/service/boss/schemas/businessSchema.go":      "/channelManage",
-		"corego/service/boss/schemas/competionSchema.go":     "/competitionManage",
-		"corego/service/boss/schemas/customerSchema.go":      "/customerManage",
-		"corego/service/boss/schemas/indexSchema.go":         "/indexManage",
-		"corego/service/boss/schemas/manageSchema.go":        "/manage",
-		"corego/service/boss/schemas/operationSchema.go":     "/operationManage",
-		"corego/service/boss/schemas/payOrderSchema.go":      "/orderManage",
-		"corego/service/boss/schemas/zhike/courseSchema.go":  "/zhike/courseManage",
-		"corego/service/boss/schemas/zhike/teacherSchame.go": "/zhike/teacherManage",
-		"corego/service/boss/schemas/zhike/wordSchema.go":    "/zhike/wordManage",
+		"corego/service/boss/schemas/adminSchema.go":                  "/adminManage",
+		"corego/service/boss/schemas/businessSchema.go":               "/channelManage",
+		"corego/service/boss/schemas/competionSchema.go":              "/competitionManage",
+		"corego/service/boss/schemas/customerSchema.go":               "/customerManage",
+		"corego/service/boss/schemas/indexSchema.go":                  "/indexManage",
+		"corego/service/boss/schemas/manageSchema.go":                 "/manage",
+		"corego/service/boss/schemas/operationSchema.go":              "/operationManage",
+		"corego/service/boss/schemas/payOrderSchema.go":               "/orderManage",
+		"corego/service/boss/schemas/zhike/courseSchema.go":           "/zhike/courseManage",
+		"corego/service/boss/schemas/zhike/teacherSchame.go":          "/zhike/teacherManage",
+		"corego/service/boss/schemas/zhike/wordSchema.go":             "/zhike/wordManage",
+		"corego/service/boss/schemas/recite_quiz/reciteQuizSchema.go": "/zhike/reciteQuizManage",
+		"corego/service/boss/schemas/zhike/saleSchema.go":             "/zhike/saleManage",
 	}
 }
 
