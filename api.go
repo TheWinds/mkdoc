@@ -99,6 +99,11 @@ func (api *API) MakeMarkdown() string {
 		sb.WriteString(fmt.Sprintf("\n"))
 	}
 	sb.WriteString(fmt.Sprintf("```\n"))
+	if api.Type == "graphql" {
+		sb.WriteString(fmt.Sprintf("```\n"))
+		sb.WriteString(api.GQL())
+		sb.WriteString(fmt.Sprintf("\n```\n"))
+	}
 	return sb.String()
 }
 
@@ -168,6 +173,58 @@ func (api *API) JSON(obj *Object) string {
 	return sb.String()
 }
 
+func (api *API) GQL() string {
+	sb := new(strings.Builder)
+	ind := strings.LastIndex(api.Path, ":")
+	opName := api.Path[ind+1:]
+	args := make([]string, 0)
+	argsInner := make([]string, 0)
+	for _, field := range api.InArgument.Fields {
+		var gqlTyp string
+		switch field.Type {
+		case "string":
+			gqlTyp = "String!"
+		case "bool":
+			gqlTyp = "Boolean!"
+		case "int", "int32", "int64", "uint", "uint32", "uint64":
+			gqlTyp = "Int!"
+		case "float", "float32", "float64":
+			gqlTyp = "Float!"
+		}
+		if field.IsRepeated {
+			gqlTyp = "[" + gqlTyp + "]!"
+		}
+		args = append(args, fmt.Sprintf("$%s: %s", field.JSONTag, gqlTyp))
+		argsInner = append(argsInner, fmt.Sprintf("%s: $%s", field.JSONTag, field.JSONTag))
+	}
+	bodykw := "body"
+	if api.outArgumentLoc != nil && api.outArgumentLoc.IsRepeated {
+		bodykw = "bodys"
+	}
+	ql := `%s %s(%s) {
+		%s(%s) {
+		  total
+		  %s%s
+		  errorCode
+		  errorMsg
+		  success
+		}
+	  }`
+	sb.WriteString(
+		fmt.Sprintf(
+			ql,
+			api.Method,
+			opName,
+			strings.Join(args, ","),
+			opName,
+			strings.Join(argsInner, ","),
+			bodykw,
+			api.GQLBody(),
+		))
+
+	return sb.String()
+}
+
 func (api *API) printJSON(obj *Object, dep int, sb *strings.Builder) {
 	api.writeJSONToken("{\n", 0, sb)
 	for i, field := range obj.Fields {
@@ -206,6 +263,35 @@ func (api *API) printJSON(obj *Object, dep int, sb *strings.Builder) {
 		}
 	}
 	api.writeJSONToken("}", dep, sb)
+}
+
+func (api *API) GQLBody() string {
+	sb := new(strings.Builder)
+	api.printGQLBody(api.OutArgument, 0, sb)
+	return sb.String()
+}
+
+func (api *API) printGQLBody(obj *Object, dep int, sb *strings.Builder) {
+	api.writeJSONToken("{\n", 0, sb)
+	for _, field := range obj.Fields {
+		k := fmt.Sprintf("		      %s", field.JSONTag)
+		api.writeJSONToken(k, dep, sb)
+		if !field.IsRef {
+			if field.IsRepeated {
+				api.writeJSONToken("\n", 0, sb)
+			} else {
+				api.writeJSONToken("\n", 0, sb)
+			}
+			continue
+		}
+		if field.IsRepeated {
+			api.printGQLBody(api.ObjectsMap[field.Type], dep+1, sb)
+		} else {
+			api.printGQLBody(api.ObjectsMap[field.Type], dep+1, sb)
+		}
+		api.writeJSONToken(",\n", 0, sb)
+	}
+	api.writeJSONToken("		  }", dep, sb)
 }
 
 func (api *API) writeJSONToken(s string, dep int, sb *strings.Builder) {
