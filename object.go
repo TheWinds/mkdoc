@@ -6,6 +6,7 @@ type ObjectField struct {
 	JSONTag    string `json:"json_tag"`
 	Comment    string `json:"comment"`
 	Type       string `json:"type"`
+	BaseType   string `json:"baseType"`
 	IsRepeated bool   `json:"is_repeated"`
 	IsRef      bool   `json:"is_ref"`
 	//IsMap      bool  暂不支持Map

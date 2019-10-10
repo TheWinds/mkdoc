@@ -78,8 +78,8 @@ func TestDocAnnotation_ParseToAPI(t *testing.T) {
 			`@apidoc in gotype docspace.TestGOTyp
 			 @apidoc out gotype docspace.TestGOTyp`,
 			want: &API{
-				inArgumentLoc:  newTypeLocation("docspace.TestGOTyp"),
-				outArgumentLoc: newTypeLocation("docspace.TestGOTyp"),
+				InArgumentLoc:  newTypeLocation("docspace.TestGOTyp"),
+				OutArgumentLoc: newTypeLocation("docspace.TestGOTyp"),
 			},
 			wantErr: false,
 		},

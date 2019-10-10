@@ -78,13 +78,13 @@ func (annotation DocAnnotation) ParseToAPI() (*API, error) {
 				if pkgMap[loc.PackageName] != "" {
 					loc.PackageName = pkgMap[loc.PackageName]
 				}
-				api.inArgumentLoc = loc
+				api.InArgumentLoc = loc
 			case "out_gotype":
 				loc := newTypeLocation(matchGroups[2])
 				if pkgMap[loc.PackageName] != "" {
 					loc.PackageName = pkgMap[loc.PackageName]
 				}
-				api.outArgumentLoc = loc
+				api.OutArgumentLoc = loc
 			case "in_fileds_block":
 				// TODO: isRepeated := matchGroups[2] != ""
 				fieldStmts := matchGroups[3]

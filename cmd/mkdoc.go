@@ -2,6 +2,7 @@ package main
 
 import (
 	"docspace"
+	"docspace/generators/markdown"
 	"fmt"
 	"gopkg.in/alecthomas/kingpin.v2"
 	"os"
@@ -111,7 +112,8 @@ func main() {
 			fmt.Printf("error: build api %s,%v\n", api.Name, err)
 			return
 		}
-		markdownBuilder.WriteString(api.MakeMarkdown())
+		output, _ := markdown.NewGenerator().Source(api).Gen()
+		markdownBuilder.WriteString(output)
 	}
 	fmt.Println()
 
