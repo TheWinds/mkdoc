@@ -117,6 +117,9 @@ func (api *API) getObjectInfoV2(query *TypeLocation, rootObj *Object, dep int) e
 			if err != nil && err != ErrGoStructNotFound {
 				return err
 			}
+			if structInfo!=nil {
+				break
+			}
 		}
 	}
 
