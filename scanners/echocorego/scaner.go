@@ -16,7 +16,7 @@ func init() {
 	docspace.RegisterScanner(&CoregoEchoAPIScanner{})
 }
 
-type CoregoEchoAPIScanner struct {}
+type CoregoEchoAPIScanner struct{}
 
 func (c *CoregoEchoAPIScanner) ScanAnnotations(pkg string) ([]docspace.DocAnnotation, error) {
 	goPath := os.Getenv("GOPATH")
@@ -54,8 +54,8 @@ func (c *CoregoEchoAPIScanner) ScanAnnotations(pkg string) ([]docspace.DocAnnota
 				if funcNode, ok := node.(*ast.FuncDecl); ok {
 					if strings.Contains(funcNode.Doc.Text(), "@apidoc") {
 						sb := strings.Builder{}
-						sb.WriteString(fmt.Sprintf("@apidoc type echo-http\n"))
 						sb.WriteString(funcNode.Doc.Text())
+						sb.WriteString(fmt.Sprintf("@apidoc type echo-http\n"))
 						fileName := f.Position(node.Pos()).Filename
 						for name, path := range fileImports[fileName] {
 							sb.WriteString(fmt.Sprintf("@apidoc pkg_map %s %s\n", name, path))
