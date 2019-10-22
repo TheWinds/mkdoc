@@ -55,7 +55,7 @@ func (c *CoregoEchoAPIScanner) ScanAnnotations(pkg string) ([]docspace.DocAnnota
 					if strings.Contains(funcNode.Doc.Text(), "@apidoc") {
 						sb := strings.Builder{}
 						sb.WriteString(funcNode.Doc.Text())
-						sb.WriteString(fmt.Sprintf("@apidoc type echo-http\n"))
+						sb.WriteString(fmt.Sprintf("@apidoc type http\n"))
 						fileName := f.Position(node.Pos()).Filename
 						for name, path := range fileImports[fileName] {
 							sb.WriteString(fmt.Sprintf("@apidoc pkg_map %s %s\n", name, path))
