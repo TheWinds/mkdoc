@@ -12,7 +12,7 @@ import (
 
 import (
 	_ "docspace/scanners/funcdoc"
-	_ "docspace/scanners/gqlcorego"
+	_ "github.com/thewinds/gqlcorego"
 )
 
 var (
