@@ -11,7 +11,7 @@ import (
 )
 
 import (
-	_ "docspace/scanners/echocorego"
+	_ "docspace/scanners/funcdoc"
 	_ "docspace/scanners/gqlcorego"
 )
 

@@ -1,4 +1,4 @@
-package echocorego
+package funcdoc
 
 import (
 	"docspace"
@@ -13,12 +13,12 @@ import (
 )
 
 func init() {
-	docspace.RegisterScanner(&CoregoEchoAPIScanner{})
+	docspace.RegisterScanner(&Scanner{})
 }
 
-type CoregoEchoAPIScanner struct{}
+type Scanner struct{}
 
-func (c *CoregoEchoAPIScanner) ScanAnnotations(pkg string) ([]docspace.DocAnnotation, error) {
+func (c *Scanner) ScanAnnotations(pkg string) ([]docspace.DocAnnotation, error) {
 	goPath := os.Getenv("GOPATH")
 	rootDir := filepath.Join(goPath, "src", pkg)
 	subDirs := scanners.GetSubDirs(rootDir)
@@ -70,13 +70,13 @@ func (c *CoregoEchoAPIScanner) ScanAnnotations(pkg string) ([]docspace.DocAnnota
 	return annotations, nil
 }
 
-func (c *CoregoEchoAPIScanner) GetName() string {
-	return "echo-corego"
+func (c *Scanner) GetName() string {
+	return "funcdoc"
 }
 
-func (c *CoregoEchoAPIScanner) SetConfig(map[string]interface{}) {
+func (c *Scanner) SetConfig(map[string]interface{}) {
 }
 
-func (c *CoregoEchoAPIScanner) GetHelp() string {
-	return ""
+func (c *Scanner) GetHelp() string {
+	return "scan doc annotation from go function doc"
 }
