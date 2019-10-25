@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"go/ast"
 	"go/token"
-	"path/filepath"
 	"strings"
 )
 
@@ -51,7 +50,7 @@ func findGOStructInfo(structName string, pkg *ast.Package, fileset *token.FileSe
 							tag = getJSONTag(field.Tag.Value, name)
 						}
 						baseTyp := baseType(field.Type)
-						imports := getNodeFileImports(node, pkg, fileset)
+						imports := GetFileImportsAtNode(node, pkg, fileset)
 						baseTyp.ImportPkgName = imports[baseTyp.PkgName]
 
 						info.Fields = append(info.Fields, &GoStructField{
@@ -86,41 +85,6 @@ func getJSONTag(tags, defaultTag string) string {
 		return defaultTag
 	}
 	return strings.Replace(getMidString(tags, "json:\"", "\""), ",omitempty", "", -1)
-}
-
-var importCache map[string]map[string]string
-
-func getNodeFileImports(node ast.Node, pkg *ast.Package, fileset *token.FileSet) map[string]string {
-	if importCache == nil {
-		importCache = make(map[string]map[string]string)
-	}
-	fileName := fileset.File(node.Pos()).Name()
-	if importCache[fileName] == nil {
-		importCache[fileName] = make(map[string]string)
-		for _, v := range pkg.Files[fileName].Imports {
-			importName := ""
-			importPath := strings.Replace(v.Path.Value, "\"", "", -1)
-			if v.Name != nil {
-				importName = v.Name.Name
-			} else {
-				importName = filepath.Base(importPath)
-			}
-			importCache[fileName][importName] = importPath
-		}
-		importCache[fileName][""] = getPkgPath(fileName)
-	}
-	return importCache[fileName]
-}
-
-func getPkgPath(fileName string) string {
-	goPaths := GetGOPaths()
-	for _, v := range goPaths {
-		v := v + "/src/"
-		if strings.HasPrefix(fileName, v) {
-			return filepath.Dir(fileName[len(v):])
-		}
-	}
-	return ""
 }
 
 func getMidString(src, s, e string) string {
