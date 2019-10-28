@@ -12,7 +12,7 @@ import (
 func GetSubDirs(root string) []string {
 	subDirs := make([]string, 0)
 	filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
-		if info.IsDir() {
+		if info != nil && info.IsDir() {
 			subDirs = append(subDirs, path)
 		}
 		return nil

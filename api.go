@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"go/parser"
 	"go/token"
+	"os"
 	"path/filepath"
 	"strings"
 )
@@ -107,6 +108,9 @@ func (api *API) getObjectInfoV2(query *TypeLocation, rootObj *Object, dep int) e
 	for _, goPath := range goPaths {
 		f := token.NewFileSet()
 		pkgPath := filepath.Join(goPath, "src", query.PackageName)
+		if _, err := os.Stat(pkgPath); err != nil {
+			continue
+		}
 		pkgPaths = append(pkgPaths, pkgPath)
 		pkgs, err := parser.ParseDir(f, pkgPath, nil, parser.ParseComments)
 		if err != nil {
@@ -117,7 +121,7 @@ func (api *API) getObjectInfoV2(query *TypeLocation, rootObj *Object, dep int) e
 			if err != nil && err != ErrGoStructNotFound {
 				return err
 			}
-			if structInfo!=nil {
+			if structInfo != nil {
 				break
 			}
 		}
