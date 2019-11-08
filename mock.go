@@ -36,7 +36,7 @@ func initMockers() {
 			return fmt.Sprintf("\"%d\"", rand.Intn(999999))
 		}
 		if filedContainsName(filedName) {
-			return "\"thewinds\""
+			return "\"str\""
 		}
 		if filedContainsTime(filedName) {
 			return time.Now().String()
@@ -70,6 +70,7 @@ func initMockers() {
 
 }
 
+// MockField will mock a value according fieldType and fieldName
 func MockField(fieldType, fieldName string) string {
 	switch fieldType {
 	case "string":

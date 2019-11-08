@@ -5,6 +5,8 @@ import (
 	"strings"
 )
 
+// TypeLocation go type and package location
+// if this type compose to a slice or array IsRepeated should set to true
 type TypeLocation struct {
 	PackageName string
 	TypeName    string

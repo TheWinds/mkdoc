@@ -31,8 +31,7 @@ func GetGOSrcPaths() []string {
 
 var importCache sync.Map
 
-// GetFileImportsAtNode
-// infer filename from node and then get the file imports
+// GetFileImportsAtNode infer filename from node and then get the file imports
 func GetFileImportsAtNode(node ast.Node, pkg *ast.Package, fileset *token.FileSet) map[string]string {
 	fileName := fileset.File(node.Pos()).Name()
 	m, ok := importCache.Load(fileName)
@@ -55,8 +54,7 @@ func GetFileImportsAtNode(node ast.Node, pkg *ast.Package, fileset *token.FileSe
 	return m.(map[string]string)
 }
 
-// GetFilePkgPath
-// get go package name from absolute file name
+// GetFilePkgPath get go package name from absolute file name
 func GetFilePkgPath(fileName string) string {
 	goSrcPaths := GetGOSrcPaths()
 	for _, v := range goSrcPaths {

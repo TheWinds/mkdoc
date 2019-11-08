@@ -1,6 +1,6 @@
 package docspace
 
-// ObjectField 字段
+// ObjectField filed info
 type ObjectField struct {
 	Name       string `json:"name"`
 	JSONTag    string `json:"json_tag"`
@@ -31,6 +31,7 @@ func isBuiltinType(t string) bool {
 	return builtinTypees[t]
 }
 
+// Object fields and id to describe a type
 type Object struct {
 	ID     string         `json:"id"`
 	Fields []*ObjectField `json:"fields"`

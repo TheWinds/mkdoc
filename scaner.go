@@ -2,8 +2,7 @@ package docspace
 
 import "log"
 
-// API扫描器
-// 实现该接口的扫描器可以从源码获取到API文档注解
+// APIScanner 实现该接口的扫描器可以从源码获取到API文档注解
 type APIScanner interface {
 	// 扫描API注解
 	ScanAnnotations(pkg string) ([]DocAnnotation, error)
@@ -17,7 +16,7 @@ type APIScanner interface {
 
 var scanners map[string]APIScanner
 
-// Register scanner to global scanners
+// RegisterScanner to global scanners
 func RegisterScanner(scanner APIScanner) {
 	if scanners == nil {
 		scanners = make(map[string]APIScanner)

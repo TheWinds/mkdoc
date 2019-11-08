@@ -8,6 +8,7 @@ import (
 	"strings"
 )
 
+// GoStructField some useful filed info of go struct field
 type GoStructField struct {
 	Name       string
 	Comment    string
@@ -16,12 +17,13 @@ type GoStructField struct {
 	GoType     *GoType
 }
 
+// GoStructInfo some useful info of go struct
 type GoStructInfo struct {
 	Name   string
 	Fields []*GoStructField
 }
 
-var ErrGoStructNotFound error = errors.New("go struct not found")
+var errGoStructNotFound = errors.New("go struct not found")
 
 // 从语法树获取结构体信息
 func findGOStructInfo(structName string, pkg *ast.Package, fileset *token.FileSet) (*GoStructInfo, error) {
@@ -75,7 +77,7 @@ func findGOStructInfo(structName string, pkg *ast.Package, fileset *token.FileSe
 		return true
 	})
 	if info.Name == "" {
-		return nil, ErrGoStructNotFound
+		return nil, errGoStructNotFound
 	}
 	return info, nil
 }
@@ -93,6 +95,7 @@ func getMidString(src, s, e string) string {
 	return src[sIndex+len(s) : eIndex+1]
 }
 
+// GoType describe a go type from go ast
 type GoType struct {
 	Name          string
 	IsRep         bool
@@ -123,6 +126,7 @@ func (t *GoType) String() string {
 	return fmt.Sprintf("Name: %s\nIsRef: %v\nImport:%s", typ, t.IsRef, importInfo)
 }
 
+// Location return the location info of go type
 func (t *GoType) Location() *TypeLocation {
 	return &TypeLocation{
 		PackageName: t.ImportPkgName,

@@ -9,6 +9,7 @@ import (
 	"strings"
 )
 
+// API def
 type API struct {
 	Name           string             `json:"name"`
 	Desc           string             `json:"desc"`
@@ -22,10 +23,6 @@ type API struct {
 	InArgumentLoc  *TypeLocation
 	OutArgumentLoc *TypeLocation
 	debug          bool
-}
-
-func NewAPI(name string, comment string, routerPath string, inArgumentLoc, outArgumentLoc *TypeLocation) *API {
-	return &API{Name: name, Desc: comment, Path: routerPath, InArgumentLoc: inArgumentLoc, OutArgumentLoc: outArgumentLoc}
 }
 
 // Build 生成API信息
@@ -49,7 +46,7 @@ func (api *API) Build() error {
 	return nil
 }
 
-func (api *API) LinkField2Field(fromObj *Object, fromFieldName string, toObj *Object, toFieldName string) error {
+func (api *API) linkField2Field(fromObj *Object, fromFieldName string, toObj *Object, toFieldName string) error {
 	fromFieldIndex := -1
 	for k, fromField := range fromObj.Fields {
 		if fromField.Name == fromFieldName {
@@ -81,7 +78,7 @@ func (api *API) LinkField2Field(fromObj *Object, fromFieldName string, toObj *Ob
 	return fmt.Errorf("type %s is not constains field %s", toObj.ID, toFieldName)
 }
 
-func (api *API) LinkField2Object(fromObj *Object, fromFieldName string, toObjID string, isRepeated bool) error {
+func (api *API) linkField2Object(fromObj *Object, fromFieldName string, toObjID string, isRepeated bool) error {
 
 	for _, fromField := range fromObj.Fields {
 		if fromField.Name == fromFieldName {
@@ -90,9 +87,8 @@ func (api *API) LinkField2Object(fromObj *Object, fromFieldName string, toObjID 
 				fromField.Type = toObjID
 				fromField.IsRepeated = isRepeated
 				return nil
-			} else {
-				return fmt.Errorf("link filed should from a interface{} filed but got %s", fromField.Type)
 			}
+			return fmt.Errorf("link filed should from a interface{} filed but got %s", fromField.Type)
 		}
 	}
 	return fmt.Errorf("type %s is not constains field %s", fromObj.ID, fromFieldName)
@@ -118,7 +114,7 @@ func (api *API) getObjectInfoV2(query *TypeLocation, rootObj *Object, dep int) e
 		}
 		for _, pkg := range pkgs {
 			structInfo, err = findGOStructInfo(query.TypeName, pkg, f)
-			if err != nil && err != ErrGoStructNotFound {
+			if err != nil && err != errGoStructNotFound {
 				return err
 			}
 			if structInfo != nil {

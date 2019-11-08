@@ -7,6 +7,7 @@ import (
 	"strings"
 )
 
+// DocAnnotation is a set of annotation command
 type DocAnnotation string
 
 var annotationRegexps map[string]*regexp.Regexp
@@ -30,6 +31,7 @@ func init() {
 	}
 }
 
+// ParseToAPI parse doc annotation to API def struct
 func (annotation DocAnnotation) ParseToAPI() (*API, error) {
 	api := new(API)
 	matchPkgGroups := annotationRegexps["pkg_map"].FindAllStringSubmatch(string(annotation), -1)
