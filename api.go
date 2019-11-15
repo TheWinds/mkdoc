@@ -17,6 +17,7 @@ type API struct {
 	Method         string             `json:"method"` // post get delete patch ; query mutation
 	Type           string             `json:"type"`   // echo_handle graphql
 	Tags           []string           `json:"tags"`
+	Query          map[string]string  `json:"query"`
 	InArgument     *Object            `json:"in_argument"`
 	OutArgument    *Object            `json:"out_argument"`
 	ObjectsMap     map[string]*Object `json:"objects_map"`

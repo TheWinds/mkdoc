@@ -28,12 +28,15 @@ func init() {
 		"out_fileds_block": regexp.MustCompile(`(@apidoc\s+out\s+fields\s+(\[\])?{\s+)((.|\s)+)}`),
 		"field":            regexp.MustCompile(`(\w+)\s+(\w+)\s*(.+)*`),
 		"pkg_map":          regexp.MustCompile(`(@apidoc\s+pkg_map\s+)([^\s]+)\s+([^\s]+)`),
+		"query":            regexp.MustCompile(`(@apidoc\s+query\s+)([^\s]+)\s+([^\s]+)`),
 	}
 }
 
 // ParseToAPI parse doc annotation to API def struct
 func (annotation DocAnnotation) ParseToAPI() (*API, error) {
 	api := new(API)
+	api.Query = make(map[string]string)
+
 	matchPkgGroups := annotationRegexps["pkg_map"].FindAllStringSubmatch(string(annotation), -1)
 	pkgMap := make(map[string]string, len(matchPkgGroups))
 	for _, matchGroup := range matchPkgGroups {
@@ -44,61 +47,67 @@ func (annotation DocAnnotation) ParseToAPI() (*API, error) {
 		}
 	}
 	for command, re := range annotationRegexps {
-		matchGroups := re.FindStringSubmatch(string(annotation))
-		if len(matchGroups) > 0 {
-			switch command {
-			case "name":
-				api.Name = matchGroups[2]
-			case "desc":
-				api.Desc = matchGroups[2]
-			case "name_desc":
-				api.Name = matchGroups[2]
-				api.Desc = matchGroups[4]
-			case "type":
-				api.Type = matchGroups[2]
-			case "path":
-				api.Path = matchGroups[2]
-			case "method":
-				api.Method = matchGroups[2]
-			case "path_method":
-				api.Path = matchGroups[2]
-				api.Method = matchGroups[4]
-			case "tag":
-				tagsStr := matchGroups[2]
-				api.Tags = make([]string, 0)
-				if strings.Contains(tagsStr, ",") {
-					for _, tag := range strings.Split(tagsStr, ",") {
-						if tag != "" {
-							api.Tags = append(api.Tags, strings.TrimSpace(tag))
+		matchGroups := re.FindAllStringSubmatch(string(annotation), -1)
+		for _, matchGroup := range matchGroups {
+			if len(matchGroup) > 0 {
+				switch command {
+				case "name":
+					api.Name = matchGroup[2]
+				case "desc":
+					api.Desc = matchGroup[2]
+				case "name_desc":
+					api.Name = matchGroup[2]
+					api.Desc = matchGroup[4]
+				case "type":
+					api.Type = matchGroup[2]
+				case "path":
+					api.Path = matchGroup[2]
+				case "method":
+					api.Method = matchGroup[2]
+				case "path_method":
+					api.Path = matchGroup[2]
+					api.Method = matchGroup[4]
+				case "tag":
+					tagsStr := matchGroup[2]
+					api.Tags = make([]string, 0)
+					if strings.Contains(tagsStr, ",") {
+						for _, tag := range strings.Split(tagsStr, ",") {
+							if tag != "" {
+								api.Tags = append(api.Tags, strings.TrimSpace(tag))
+							}
 						}
+					} else {
+						api.Tags = append(api.Tags, strings.TrimSpace(tagsStr))
 					}
-				} else {
-					api.Tags = append(api.Tags, strings.TrimSpace(tagsStr))
-				}
-			case "in_gotype":
-				loc := newTypeLocation(matchGroups[2])
-				if pkgMap[loc.PackageName] != "" {
-					loc.PackageName = pkgMap[loc.PackageName]
-				}
-				api.InArgumentLoc = loc
-			case "out_gotype":
-				loc := newTypeLocation(matchGroups[2])
-				if pkgMap[loc.PackageName] != "" {
-					loc.PackageName = pkgMap[loc.PackageName]
-				}
-				api.OutArgumentLoc = loc
-			case "in_fileds_block":
-				// TODO: isRepeated := matchGroups[2] != ""
-				fieldStmts := matchGroups[3]
-				api.InArgument = &Object{
-					ID:     fmt.Sprintf("#obj_%d", rand.Int63()),
-					Fields: parseToObjectFields(fieldStmts),
-				}
-			case "out_fileds_block":
-				fieldStmts := matchGroups[3]
-				api.OutArgument = &Object{
-					ID:     fmt.Sprintf("#obj_%d", rand.Int63()),
-					Fields: parseToObjectFields(fieldStmts),
+				case "in_gotype":
+					loc := newTypeLocation(matchGroup[2])
+					if pkgMap[loc.PackageName] != "" {
+						loc.PackageName = pkgMap[loc.PackageName]
+					}
+					api.InArgumentLoc = loc
+				case "out_gotype":
+					loc := newTypeLocation(matchGroup[2])
+					if pkgMap[loc.PackageName] != "" {
+						loc.PackageName = pkgMap[loc.PackageName]
+					}
+					api.OutArgumentLoc = loc
+				case "in_fileds_block":
+					// TODO: isRepeated := matchGroup[2] != ""
+					fieldStmts := matchGroup[3]
+					api.InArgument = &Object{
+						ID:     fmt.Sprintf("#obj_%d", rand.Int63()),
+						Fields: parseToObjectFields(fieldStmts),
+					}
+				case "out_fileds_block":
+					fieldStmts := matchGroup[3]
+					api.OutArgument = &Object{
+						ID:     fmt.Sprintf("#obj_%d", rand.Int63()),
+						Fields: parseToObjectFields(fieldStmts),
+					}
+				case "query":
+					queryName := matchGroup[2]
+					queryComment := matchGroup[3]
+					api.Query[queryName] = queryComment
 				}
 			}
 		}
