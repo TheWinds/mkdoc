@@ -143,3 +143,15 @@ func parseToObjectFields(fieldStmts string) []*ObjectField {
 	}
 	return fields
 }
+
+const annotationDocToken = "@doc"
+
+// GetAnnotationFromDoc get the annotation from comment doc
+// if not found any annotation return ""
+func GetAnnotationFromComment(s string) string {
+	i := strings.LastIndex(s, annotationDocToken)
+	if i == -1 {
+		return ""
+	}
+	return s[i+len(annotationDocToken):]
+}
