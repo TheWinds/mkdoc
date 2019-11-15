@@ -29,6 +29,7 @@ func init() {
 		"field":            regexp.MustCompile(`(\w+)\s+(\w+)\s*(.+)*`),
 		"pkg_map":          regexp.MustCompile(`(@apidoc\s+pkg_map\s+)([^\s]+)\s+([^\s]+)`),
 		"query":            regexp.MustCompile(`(@apidoc\s+query\s+)([^\s]+)\s+([^\s]+)`),
+		"header":           regexp.MustCompile(`(@apidoc\s+header\s+)([^\s]+)\s+([^\s]+)`),
 	}
 }
 
@@ -36,6 +37,7 @@ func init() {
 func (annotation DocAnnotation) ParseToAPI() (*API, error) {
 	api := new(API)
 	api.Query = make(map[string]string)
+	api.Header = make(map[string]string)
 
 	matchPkgGroups := annotationRegexps["pkg_map"].FindAllStringSubmatch(string(annotation), -1)
 	pkgMap := make(map[string]string, len(matchPkgGroups))
@@ -108,6 +110,10 @@ func (annotation DocAnnotation) ParseToAPI() (*API, error) {
 					queryName := matchGroup[2]
 					queryComment := matchGroup[3]
 					api.Query[queryName] = queryComment
+				case "header":
+					name := matchGroup[2]
+					comment := matchGroup[3]
+					api.Header[name] = comment
 				}
 			}
 		}

@@ -18,6 +18,7 @@ type API struct {
 	Type           string             `json:"type"`   // echo_handle graphql
 	Tags           []string           `json:"tags"`
 	Query          map[string]string  `json:"query"`
+	Header         map[string]string  `json:"header"`
 	InArgument     *Object            `json:"in_argument"`
 	OutArgument    *Object            `json:"out_argument"`
 	ObjectsMap     map[string]*Object `json:"objects_map"`

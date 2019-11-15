@@ -27,7 +27,9 @@ func TestDocAnnotation_ParseToAPI(t *testing.T) {
 			@apidoc  method query
 			@apidoc  tag v1
 			@apidoc query uid 用户ID
-			@apidoc query pwd 密码`,
+			@apidoc query pwd 密码
+			@apidoc header token  jwtToken
+			@apidoc header userId userId`,
 			want: &API{
 				Name:   "abc",
 				Desc:   "测试API",
@@ -36,6 +38,7 @@ func TestDocAnnotation_ParseToAPI(t *testing.T) {
 				Type:   "graphql",
 				Tags:   []string{"v1"},
 				Query:  map[string]string{"uid": "用户ID", "pwd": "密码"},
+				Header: map[string]string{"token": "jwtToken", "userId": "userId"},
 			},
 			wantErr: false,
 		},
@@ -54,6 +57,7 @@ func TestDocAnnotation_ParseToAPI(t *testing.T) {
 				Type:   "graphql",
 				Tags:   []string{"v1"},
 				Query:  map[string]string{},
+				Header: map[string]string{},
 			},
 			wantErr: false,
 		},
@@ -74,6 +78,7 @@ func TestDocAnnotation_ParseToAPI(t *testing.T) {
 				Type:   "graphql",
 				Tags:   []string{"v1", "test"},
 				Query:  map[string]string{},
+				Header: map[string]string{},
 			},
 			wantErr: false,
 		},
@@ -85,7 +90,8 @@ func TestDocAnnotation_ParseToAPI(t *testing.T) {
 			want: &API{
 				InArgumentLoc:  newTypeLocation("docspace.TestGOTyp"),
 				OutArgumentLoc: newTypeLocation("docspace.TestGOTyp"),
-				Query:  map[string]string{},
+				Query:          map[string]string{},
+				Header:         map[string]string{},
 			},
 			wantErr: false,
 		},
@@ -114,6 +120,7 @@ func TestDocAnnotation_ParseToAPI(t *testing.T) {
 					},
 				},
 				Query:  map[string]string{},
+				Header: map[string]string{},
 			},
 			wantErr: false,
 		},
@@ -136,6 +143,7 @@ func TestDocAnnotation_ParseToAPI(t *testing.T) {
 					},
 				},
 				Query:  map[string]string{},
+				Header: map[string]string{},
 			},
 			wantErr: false,
 		},
