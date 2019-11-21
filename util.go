@@ -2,6 +2,7 @@ package docspace
 
 import (
 	"go/ast"
+	"go/parser"
 	"go/token"
 	"os"
 	"path/filepath"
@@ -52,6 +53,32 @@ func GetFileImportsAtNode(node ast.Node, pkg *ast.Package, fileset *token.FileSe
 		importCache.Store(fileName, m)
 	}
 	return m.(map[string]string)
+}
+
+func getFileImportsAtFile(fileName string) (map[string]string, error) {
+	f := token.NewFileSet()
+	file, err := parser.ParseFile(f, fileName, nil, parser.ParseComments)
+	if err != nil {
+		return nil, err
+	}
+	m, ok := importCache.Load(fileName)
+	if !ok {
+		fileImportMap := make(map[string]string)
+		for _, v := range file.Imports {
+			importName := ""
+			importPath := strings.Replace(v.Path.Value, "\"", "", -1)
+			if v.Name != nil {
+				importName = v.Name.Name
+			} else {
+				importName = filepath.Base(importPath)
+			}
+			fileImportMap[importName] = importPath
+		}
+		fileImportMap[""] = GetFilePkgPath(fileName)
+		m = fileImportMap
+		importCache.Store(fileName, m)
+	}
+	return m.(map[string]string), nil
 }
 
 // GetFilePkgPath get go package name from absolute file name

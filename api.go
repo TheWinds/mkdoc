@@ -24,6 +24,7 @@ type API struct {
 	ObjectsMap     map[string]*Object `json:"objects_map"`
 	InArgumentLoc  *TypeLocation
 	OutArgumentLoc *TypeLocation
+	DocLocation    string `json:"doc_location"`
 	debug          bool
 }
 
