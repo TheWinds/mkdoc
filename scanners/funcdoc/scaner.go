@@ -7,7 +7,6 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"os"
 	"path/filepath"
 	"strings"
 )
@@ -19,13 +18,21 @@ func init() {
 type Scanner struct{}
 
 func (c *Scanner) ScanAnnotations(pkg string) ([]docspace.DocAnnotation, error) {
-	goPath := os.Getenv("GOPATH")
-	rootDir := filepath.Join(goPath, "src", pkg)
-	subDirs := scanners.GetSubDirs(rootDir)
+	srcPaths := docspace.GetGOSrcPaths()
+
+	var allDirs []string
+	for _, srcPath := range srcPaths {
+		rootDir := filepath.Join(srcPath, pkg)
+		subDirs := scanners.GetSubDirs(rootDir)
+		// filter path
+		for _, dir := range subDirs {
+			allDirs = append(allDirs, dir)
+		}
+	}
 	fileImports := map[string]map[string]string{}
 
 	annotations := make([]docspace.DocAnnotation, 0)
-	for _, dir := range subDirs {
+	for _, dir := range allDirs {
 		f := token.NewFileSet()
 		pkgs, err := parser.ParseDir(f, dir, nil, parser.ParseComments)
 		if err != nil {
