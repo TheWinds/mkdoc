@@ -48,20 +48,19 @@ func (annotation DocAnnotation) ParseToAPI() (*API, error) {
 		lineFields = append(lineFields, strings.Fields(line))
 	}
 	/*
-	@doc
-	name xxxxx
-	desc sdsdsdssds
-	path /a/b/c
-	method xxxx
-
-	 */
+		@doc
+		name xxxxx
+		desc sdsdsdssds
+		path /a/b/c
+		method xxxx
+	*/
 	// @doc
 	// 获取用户
 	// 撒旦所阿萨德
-	// @type
-	// @name user
-	// @path /a/b method post
-	// @in[json] fields {
+	// type: http
+	// name: user
+	// path: /a/b method: post
+	// in[json] fields {
 	// a int 哈哈
 	// }
 	// out[xml] go_type api.User
@@ -77,20 +76,20 @@ func (annotation DocAnnotation) ParseToAPI() (*API, error) {
 		switch cmd {
 		case "name":
 			api.Name = fields[1]
+			if fieldNum >= 4 && fields[2] == "desc" {
+				api.Desc = strings.Join(fields[3:], " ")
+			}
 		case "desc":
 			api.Desc = fields[1]
-		case "name_desc":
-			api.Name = matchGroup[2]
-			api.Desc = matchGroup[4]
 		case "type":
 			api.Type = fields[1]
 		case "path":
 			api.Path = fields[1]
+			if fieldNum >= 4 && fields[2] == "method" {
+				api.Method = fields[3]
+			}
 		case "method":
 			api.Method = fields[1]
-		case "path_method":
-			api.Path = matchGroup[2]
-			api.Method = matchGroup[4]
 		case "tag":
 			tagsStr := fields[1]
 			api.Tags = make([]string, 0)
