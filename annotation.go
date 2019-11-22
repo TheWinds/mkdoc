@@ -216,8 +216,8 @@ func rmBracket(s string) string {
 }
 
 func (annotation DocAnnotation) AppendMetaData(typ string, fp token.Position) DocAnnotation {
-	t := fmt.Sprintf("%s type %s\n", annotationDocToken, typ)
-	loc := fmt.Sprintf("%s loc %s:%d\n", annotationDocToken, fp.Filename, fp.Column)
+	t := fmt.Sprintf("@type %s\n", typ)
+	loc := fmt.Sprintf("@loc %s:%d\n", fp.Filename, fp.Column)
 	return annotation + DocAnnotation(t+loc)
 }
 
