@@ -49,7 +49,8 @@ Args:
 - 一种是直接根据给定包名和类型名称去引用 GoType ，mkdoc 将会找到Type定义利用其注释信息得出文档所需信息。这种方式支持任意层级的类型嵌套。
 
 ```go
-// @apidoc in/out gotype package.type
+// @doc name
+// @in/@out gotype package.type
 
 // -- 例子
 
@@ -74,8 +75,8 @@ type User struct{
 - 另一种是，是直接写出Type定义,这种方式只支持一层的字段定义。
 
 ```go
-// @doc 
-// @in/out fields {
+// @doc name
+// @in/@out fields {
 //   fieldName filedType comment
 //}
 
