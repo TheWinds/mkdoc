@@ -21,11 +21,13 @@ type API struct {
 	Header         map[string]string  `json:"header"`
 	InArgument     *Object            `json:"in_argument"`
 	OutArgument    *Object            `json:"out_argument"`
+	InArgEncoder   string             `json:"in_arg_encoder"`
+	OutArgEncoder  string             `json:"out_arg_encoder"`
 	ObjectsMap     map[string]*Object `json:"objects_map"`
 	InArgumentLoc  *TypeLocation
 	OutArgumentLoc *TypeLocation
-	DocLocation    string `json:"doc_location"`
-	debug          bool
+	DocLocation    string   `json:"doc_location"`
+	Disables       []string `json:"disables"`
 }
 
 // Build 生成API信息

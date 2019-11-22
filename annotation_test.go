@@ -1,6 +1,9 @@
 package docspace
 
 import (
+	"encoding/json"
+	"fmt"
+	"os"
 	"reflect"
 	"testing"
 )
@@ -11,6 +14,7 @@ type TestGOTyp struct {
 }
 
 func TestDocAnnotation_ParseToAPI(t *testing.T) {
+	dir, _ := os.Getwd()
 	tests := []struct {
 		name       string
 		annotation DocAnnotation
@@ -20,16 +24,16 @@ func TestDocAnnotation_ParseToAPI(t *testing.T) {
 		{
 			name: "basic",
 			annotation:
-			`@apidoc name abc
-			@apidoc  desc 测试API
-			@apidoc  type graphql
-			@apidoc  path /api/v1/abc
-			@apidoc  method query
-			@apidoc  tag v1
-			@apidoc query uid 用户ID
-			@apidoc query pwd 密码
-			@apidoc header token  jwtToken
-			@apidoc header userId userId`,
+			`@doc abc
+			测试API
+			@type graphql
+			@path /api/v1/abc
+			@method query
+			@tag v1
+			@query uid 用户ID
+			@query pwd 密码
+			@header token  jwtToken
+			@header userId userId`,
 			want: &API{
 				Name:   "abc",
 				Desc:   "测试API",
@@ -45,10 +49,11 @@ func TestDocAnnotation_ParseToAPI(t *testing.T) {
 		{
 			name: "command combine",
 			annotation:
-			`@apidoc name abc desc 测试API
-			@apidoc  type graphql
-			@apidoc  path /api/v1/abc method query
-			@apidoc  tag v1`,
+			`@doc abc
+			测试API
+			@type graphql
+			@path /api/v1/abc @method query
+			@tag v1`,
 			want: &API{
 				Name:   "abc",
 				Desc:   "测试API",
@@ -64,12 +69,12 @@ func TestDocAnnotation_ParseToAPI(t *testing.T) {
 		{
 			name: "multi tag",
 			annotation:
-			`@apidoc name abc
-			@apidoc  desc 测试API
-			@apidoc  type graphql
-			@apidoc  path /api/v1/abc
-			@apidoc  method query
-			@apidoc  tag v1,test`,
+			`@doc abc
+			测试API
+			@type graphql
+			@path /api/v1/abc
+			@method query
+			@tag v1,test`,
 			want: &API{
 				Name:   "abc",
 				Desc:   "测试API",
@@ -83,22 +88,26 @@ func TestDocAnnotation_ParseToAPI(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "test gotype",
-			annotation:
-			`@apidoc in gotype docspace.TestGOTyp
-			 @apidoc out gotype docspace.TestGOTyp`,
+			name: "test go type",
+			annotation: DocAnnotation(fmt.Sprintf(
+				`
+			 @in  type TestGOTyp
+			 @out type TestGOTyp
+			 @loc %s/annotation_test.go:1`, dir)),
 			want: &API{
 				InArgumentLoc:  newTypeLocation("docspace.TestGOTyp"),
 				OutArgumentLoc: newTypeLocation("docspace.TestGOTyp"),
 				Query:          map[string]string{},
 				Header:         map[string]string{},
+				DocLocation:    fmt.Sprintf("%s/annotation_test.go:1", dir),
 			},
 			wantErr: false,
 		},
 		{
 			name: "test fields",
 			annotation:
-			`@apidoc in fields {
+			`@doc 
+			 @in fields {
 				name string 这是一个Name
 				age  int    这是一个Age
 			 }`,
@@ -127,7 +136,8 @@ func TestDocAnnotation_ParseToAPI(t *testing.T) {
 		{
 			name: "test field type not support",
 			annotation:
-			`@apidoc in fields {
+			`@doc
+			 @in[json] fields {
 				name string 这是一个Name
 				age  int11    这是一个Age
 			 }`,
@@ -147,6 +157,69 @@ func TestDocAnnotation_ParseToAPI(t *testing.T) {
 			},
 			wantErr: false,
 		},
+		{
+			name: "test go type encoder",
+			annotation: DocAnnotation(fmt.Sprintf(
+				`
+			 @in[json]  type TestGOTyp
+			 @out[xml]  type TestGOTyp
+			 @loc %s/annotation_test.go:1`, dir)),
+			want: &API{
+				InArgumentLoc:  newTypeLocation("docspace.TestGOTyp"),
+				InArgEncoder:   "json",
+				OutArgEncoder:  "xml",
+				OutArgumentLoc: newTypeLocation("docspace.TestGOTyp"),
+				Query:          map[string]string{},
+				Header:         map[string]string{},
+				DocLocation:    fmt.Sprintf("%s/annotation_test.go:1", dir),
+			},
+			wantErr: false,
+		},
+		{
+			name: "test fields encoder",
+			annotation:
+			`@doc 
+			 @in[json] fields {
+				name string 这是一个Name
+				age  int    这是一个Age
+			 }`,
+			want: &API{
+				InArgument: &Object{
+					Fields: []*ObjectField{
+						{
+							Name:    "name",
+							JSONTag: "name",
+							Comment: "这是一个Name",
+							Type:    "string",
+						},
+						{
+							Name:    "age",
+							JSONTag: "age",
+							Comment: "这是一个Age",
+							Type:    "int",
+						},
+					},
+				},
+				InArgEncoder: "json",
+				Query:        map[string]string{},
+				Header:       map[string]string{},
+			},
+			wantErr: false,
+		},
+		{
+			name: "test disable",
+			annotation:
+			`@doc 
+			 @disable common_header
+			 @disable base_type
+			 `,
+			want: &API{
+				Query:    map[string]string{},
+				Header:   map[string]string{},
+				Disables: []string{"common_header", "base_type"},
+			},
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -155,14 +228,19 @@ func TestDocAnnotation_ParseToAPI(t *testing.T) {
 				t.Errorf("ParseToAPI() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if tt.name == "test fields" || tt.name == "test field type not support" {
+			switch tt.name {
+			case "test fields", "test fields encoder", "test field type not support":
 				if !reflect.DeepEqual(got.InArgument.Fields, tt.want.InArgument.Fields) {
 					t.Errorf("ParseToAPI() got = %#v, want %#v", got.InArgument.Fields, tt.want.InArgument.Fields)
 				}
-			} else {
-				if !reflect.DeepEqual(got, tt.want) {
-					t.Errorf("ParseToAPI() got = %#v, want %#v", got, tt.want)
-				}
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("ParseToAPI() got = %#v, want %#v", got, tt.want)
+				b, _ := json.MarshalIndent(got, "", "\t")
+				fmt.Println(string(b))
+				b, _ = json.MarshalIndent(tt.want, "", "\t")
+				fmt.Println(string(b))
 			}
 
 		})
