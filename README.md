@@ -26,20 +26,24 @@ Args:
 >
 > 例如内建的`funcdoc`扫描器将会扫描所有的方法声明上的文档注解
 >
-> - 所有注解以 `@apidoc` 开头,目前支持以下注解
+> - 所有注解以 `@doc` 开头,目前支持以下注解
 
 | 注解命令 | 说明 |
 | ----- | ----- |
-|@apidoc `name <name>`|名称|
-|@apidoc `desc <desc>`|描述|
-|@apidoc `name <name> desc <desc>`|名称+描述|
-|@apidoc `type <type>`|类型|
-|@apidoc `path <path>`|路径|
-|@apidoc `method <method>`|请求方法|
-|@apidoc `path <path> method <method>`|路径+请求方法|
-|@apidoc `tag <tag>`|标签: 多个以`,`分隔|
-|@apidoc `in <params>`|入参类型|
-|@apidoc `out <params>`|出参(返回)类型|
+|`@doc` <name\> |名称 *文档注解起始标志*|
+|`@type` <type\>|类型|
+|`@path` <path\>|路径|
+|`@method` <method\>|请求方法|
+|`@path`  <path\> @method <method\>|路径+请求方法|
+|`@tag` <tag\>|标签: 多个以,分隔|
+|`@in` <params\>|入参类型|
+|`@out` <params\>|出参(返回)类型|
+|`@in[encoder]`  <params\>|指定编码器|
+|`@out[encoder]` <params\>|指定编码器|
+
+> `in` 和 `out` 后的 `[encoder]` 表示编码器的类型,例如如果入参类型是通过json格式传递过来的
+则可以写`@in[json] xxxx`,xml 则写 `@in[xml] xxx` 
+
 其中 `in` 和 `out` 支持两种形式
 
 - 一种是直接根据给定包名和类型名称去引用 GoType ，mkdoc 将会找到Type定义利用其注释信息得出文档所需信息。这种方式支持任意层级的类型嵌套。
@@ -52,9 +56,10 @@ Args:
 // main/xx.go
 // ...
 
-// @apidoc name getUser
+// @doc getUser
+// 获取用户
 // ...
-// @apidoc out gotype model.User
+// @out type model.User
 func GetUser(ctx echo.Context){
   // ...
 }
@@ -69,7 +74,8 @@ type User struct{
 - 另一种是，是直接写出Type定义,这种方式只支持一层的字段定义。
 
 ```go
-// @apidoc in/out fields {
+// @doc 
+// @in/out fields {
 //   fieldName filedType comment
 //}
 
@@ -77,9 +83,9 @@ type User struct{
 // main/xx.go
 // ...
 
-// @apidoc name getUser
+// @doc getUser
 // ...
-// @apidoc out fields {
+// @out fields {
 //   id   int    id
 //   name string 名称
 //}
