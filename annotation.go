@@ -134,11 +134,17 @@ func parseSimple(annotation DocAnnotation, api *API) error {
 			}
 		case "@query":
 			name := fields[1]
-			comment := fields[2]
+			comment := ""
+			if len(fields) >= 3 {
+				comment = fields[2]
+			}
 			api.Query[name] = comment
 		case "@header":
 			name := fields[1]
-			comment := fields[2]
+			comment := ""
+			if len(fields) >= 3 {
+				comment = fields[2]
+			}
 			api.Header[name] = comment
 		case "@loc":
 			api.DocLocation = fields[1]
