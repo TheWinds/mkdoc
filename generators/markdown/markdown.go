@@ -3,6 +3,7 @@ package markdown
 import (
 	"docspace"
 	"fmt"
+	"sort"
 	"strings"
 )
 
@@ -88,12 +89,41 @@ func (g *Generator) Gen() (output string, err error) {
 	if len(strings.TrimSpace(g.api.Desc)) > 0 {
 		g.write(fmt.Sprintf("> %s\n", g.api.Desc))
 	}
+	g.write("\n")
 	g.write(fmt.Sprintf("- %s %s\n", g.api.Method, g.api.Type))
 	g.write(fmt.Sprintf("```\n"))
 	g.write(fmt.Sprintf("[path] %s\n", g.api.Path))
 	g.write(fmt.Sprintf("```\n"))
 
-	g.write("- 参数\n")
+	if len(g.api.Header) > 0 {
+		g.write("- Header\n")
+		g.write("|名称|说明|\n|---|---|\n")
+		keys := make([]string, 0, len(g.api.Header))
+		for k := range g.api.Header {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		for _, key := range keys {
+			g.write(fmt.Sprintf("|`%s`|%s|\n", key, g.api.Header[key]))
+		}
+		g.write("\n")
+	}
+
+	if len(g.api.Query) > 0 {
+		g.write("- Query\n")
+		g.write("|名称|说明|\n|---|---|\n")
+		keys := make([]string, 0, len(g.api.Query))
+		for k := range g.api.Query {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		for _, key := range keys {
+			g.write(fmt.Sprintf("|`%s`|%s|\n", key, g.api.Query[key]))
+		}
+		g.write("\n")
+	}
+
+	g.write("- Req Body\n")
 	g.write(fmt.Sprintf("```json\n"))
 	if g.api.InArgumentLoc != nil && g.api.InArgumentLoc.IsRepeated {
 		g.write(fmt.Sprintf("[\n"))
@@ -105,7 +135,7 @@ func (g *Generator) Gen() (output string, err error) {
 		g.write(fmt.Sprintf("\n"))
 	}
 	g.write(fmt.Sprintf("```\n"))
-	g.write("- 返回\n")
+	g.write("- Resp Body\n")
 
 	g.write(fmt.Sprintf("```json\n"))
 	if g.api.OutArgumentLoc != nil && g.api.OutArgumentLoc.IsRepeated {
