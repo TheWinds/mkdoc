@@ -27,6 +27,7 @@ Args:
 > 例如内建的`funcdoc`扫描器将会扫描所有的方法声明上的文档注解
 >
 > - 所有注解以 `@doc` 开头,目前支持以下注解
+> - @doc 到下一个命令之间的内容为文档描述
 
 | 注解命令 | 说明 |
 | ----- | ----- |
@@ -36,6 +37,8 @@ Args:
 |`@method` <method\>|请求方法|
 |`@path`  <path\> @method <method\>|路径+请求方法|
 |`@tag` <tag\>|标签: 多个以,分隔|
+|`@header` <header 名称\> <header 说明\>|header信息,多个可重复写|
+|`@query`  <query 名称\> <query 说明\>|query信息,多个可重复写|
 |`@in` <params\>|入参类型|
 |`@out` <params\>|出参(返回)类型|
 |`@in[encoder]`  <params\>|指定编码器|
@@ -50,7 +53,7 @@ Args:
 
 ```go
 // @doc name
-// @in/@out gotype package.type
+// @in/@out type package.type
 
 // -- 例子
 
