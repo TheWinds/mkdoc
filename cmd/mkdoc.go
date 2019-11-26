@@ -18,6 +18,7 @@ import (
 var (
 	scannerName = kingpin.Flag("scanner", "which api scanner to use,eg. funcdoc").Required().Short('s').String()
 	tag         = kingpin.Flag("tag", "which tag to filter,eg. v1").Short('t').String()
+	mod         = kingpin.Flag("mod", "use go mod").Short('m').Bool()
 	pkg         = kingpin.Arg("pkg", "which package to scan").Required().String()
 	output      = kingpin.Arg("out", "which file to output").String()
 )
@@ -47,20 +48,41 @@ func main() {
 	if scanners == nil {
 		return
 	}
-	goPaths := docspace.GetGOPaths()
-	pkgExist := false
-	for _, gopath := range goPaths {
-		if _, err := os.Stat(filepath.Join(gopath, "src", *pkg)); err == nil {
-			pkgExist = true
-		}
+	if *mod {
+		docspace.UseGOModule = true
 	}
-	if !pkgExist {
-		fmt.Printf("error: package \"%s\" is not found in any of:\n", *pkg)
+	if !docspace.UseGOModule {
+		// check if package exist
+		goPaths := docspace.GetGOPaths()
+		pkgExist := false
 		for _, gopath := range goPaths {
-			fmt.Println("  ", filepath.Join(gopath, "src", *pkg))
+			if _, err := os.Stat(filepath.Join(gopath, "src", *pkg)); err == nil {
+				pkgExist = true
+			}
 		}
-		return
+		if !pkgExist {
+			fmt.Printf("error: package \"%s\" is not found in any of:\n", *pkg)
+			for _, gopath := range goPaths {
+				fmt.Println("  ", filepath.Join(gopath, "src", *pkg))
+			}
+			return
+		}
+	} else {
+		path := *pkg
+		if !filepath.IsAbs(path) {
+			wd, err := os.Getwd()
+			if err != nil {
+				fmt.Printf("%v\n", err)
+				return
+			}
+			path = filepath.Join(wd, path)
+		}
+		if _, err := os.Stat(path); err != nil {
+			fmt.Printf("no such file or directory: %s\n", path)
+			return
+		}
 	}
+
 	var apis []*docspace.API
 
 	for _, scanner := range scanners {
@@ -80,7 +102,6 @@ func main() {
 		}
 		fmt.Printf("\n")
 	}
-
 
 	// match tags
 	matchTagAPIs := make([]*docspace.API, 0)
