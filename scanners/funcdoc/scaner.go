@@ -40,7 +40,7 @@ func (c *Scanner) ScanAnnotations(pkg string) ([]docspace.DocAnnotation, error) 
 			ast.Inspect(v, func(node ast.Node) bool {
 				if funcNode, ok := node.(*ast.FuncDecl); ok {
 					if annotation := docspace.GetAnnotationFromComment(funcNode.Doc.Text()); annotation != "" {
-						annotation = annotation.AppendMetaData("http", f.Position(node.Pos()))
+						annotation = annotation.AppendMetaData("http", f.Position(funcNode.Doc.Pos()))
 						annotations = append(annotations, annotation)
 					}
 				}
