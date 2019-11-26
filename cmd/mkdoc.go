@@ -16,21 +16,35 @@ import (
 )
 
 var (
-	scannerName = kingpin.Flag("scanner", "which api scanner to use,eg. gql-corego").Required().Short('s').String()
+	scannerName = kingpin.Flag("scanner", "which api scanner to use,eg. funcdoc").Required().Short('s').String()
 	tag         = kingpin.Flag("tag", "which tag to filter,eg. v1").Short('t').String()
 	pkg         = kingpin.Arg("pkg", "which package to scan").Required().String()
 	output      = kingpin.Arg("out", "which file to output").String()
 )
 
+func checkScanner() []docspace.APIScanner {
+	var okScanners []docspace.APIScanner
+	scanners := docspace.GetScanners()
+	if scannerName == nil {
+		return nil
+	}
+	for _, name := range strings.Split(*scannerName, ",") {
+		if scanners[name] == nil {
+			fmt.Printf("error: scanner \"%s\" is not found,you can choose scanner below :\n", name)
+			for n := range scanners {
+				fmt.Printf("    %s\n", n)
+			}
+			return nil
+		}
+		okScanners = append(okScanners, scanners[name])
+	}
+	return okScanners
+}
+
 func main() {
 	kingpin.Parse()
-	scanners := docspace.GetScanners()
-	scanner := scanners[*scannerName]
-	if scanner == nil {
-		fmt.Printf("error: scanner \"%s\" is not found,you can choose scanner below :\n", *scannerName)
-		for name := range scanners {
-			fmt.Printf("    %s\n", name)
-		}
+	scanners := checkScanner()
+	if scanners == nil {
 		return
 	}
 	goPaths := docspace.GetGOPaths()
@@ -47,23 +61,26 @@ func main() {
 		}
 		return
 	}
-	fmt.Printf("🔎  scan doc annotations (use %s)\n", scanner.GetName())
-	annotations, err := scanner.ScanAnnotations(*pkg)
-	if err != nil {
-		fmt.Printf("error: scan annotations %v\n", err)
+	var apis []*docspace.API
+
+	for _, scanner := range scanners {
+		fmt.Printf("🔎  scan doc annotations (use %s)\n", scanner.GetName())
+		annotations, err := scanner.ScanAnnotations(*pkg)
+		if err != nil {
+			fmt.Printf("error: scan annotations %v\n", err)
+		}
+		for k, a := range annotations {
+			fmt.Printf("\r🔥  parse annotation to api [%d/%d]", k+1, len(annotations))
+			api, err := a.ParseToAPI()
+			if err != nil {
+				fmt.Printf("\n❌  annotation can not be parse\n%v\n------\nAnnotation:%s\n------\n", err, a)
+				return
+			}
+			apis = append(apis, api)
+		}
+		fmt.Printf("\n")
 	}
 
-	apis := make([]*docspace.API, 0, len(annotations))
-	for k, a := range annotations {
-		fmt.Printf("\r🔥  parse annotation to api [%d/%d]", k+1, len(annotations))
-		api, err := a.ParseToAPI()
-		if err != nil {
-			fmt.Printf("\n❌  annotation can not be parse\n%v\n------\nAnnotation:%s\n------\n", err, a)
-			return
-		}
-		apis = append(apis, api)
-	}
-	fmt.Printf("\n")
 
 	// match tags
 	matchTagAPIs := make([]*docspace.API, 0)
