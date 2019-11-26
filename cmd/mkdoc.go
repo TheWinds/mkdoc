@@ -58,7 +58,7 @@ func main() {
 		fmt.Printf("\r🔥  parse annotation to api [%d/%d]", k+1, len(annotations))
 		api, err := a.ParseToAPI()
 		if err != nil {
-			fmt.Printf("error: annotation can not be parse,%v\n", err)
+			fmt.Printf("\n❌  annotation can not be parse\n%v\n------\nAnnotation:%s\n------\n", err, a)
 			return
 		}
 		apis = append(apis, api)
@@ -109,7 +109,7 @@ func main() {
 		fmt.Printf("\r🔥  building api '%s' [%d/%d]          ", api.Name, k+1, len(matchTagAPIs))
 		err := api.Build()
 		if err != nil {
-			fmt.Printf("error: build api %s,%v\n", api.Name, err)
+			fmt.Printf("\n❌  build api %s\n%v\n------\nAnnotation:\n%s\n------\n", api.Name, err, api.Annotation)
 			return
 		}
 		output, _ := markdown.NewGenerator().Source(api).Gen()

@@ -26,8 +26,9 @@ type API struct {
 	ObjectsMap     map[string]*Object `json:"objects_map"`
 	InArgumentLoc  *TypeLocation
 	OutArgumentLoc *TypeLocation
-	DocLocation    string   `json:"doc_location"`
-	Disables       []string `json:"disables"`
+	DocLocation    string        `json:"doc_location"`
+	Disables       []string      `json:"disables"`
+	Annotation     DocAnnotation `json:"annotation"`
 }
 
 // Build 生成API信息
@@ -109,10 +110,10 @@ func (api *API) getObjectInfoV2(query *TypeLocation, rootObj *Object, dep int) e
 	for _, goPath := range goPaths {
 		f := token.NewFileSet()
 		pkgPath := filepath.Join(goPath, "src", query.PackageName)
+		pkgPaths = append(pkgPaths, pkgPath)
 		if _, err := os.Stat(pkgPath); err != nil {
 			continue
 		}
-		pkgPaths = append(pkgPaths, pkgPath)
 		pkgs, err := parser.ParseDir(f, pkgPath, nil, parser.ParseComments)
 		if err != nil {
 			return err
@@ -129,7 +130,7 @@ func (api *API) getObjectInfoV2(query *TypeLocation, rootObj *Object, dep int) e
 	}
 
 	if structInfo == nil {
-		return fmt.Errorf("struct %s not found in any of:\n  %s", query, strings.Join(pkgPaths, "\n"))
+		return fmt.Errorf("struct %s not found in any of:\n	%s", query, strings.Join(pkgPaths, "\n	"))
 	}
 
 	rootObj.ID = query.String()

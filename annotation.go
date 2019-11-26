@@ -44,6 +44,7 @@ func init() {
 // ParseToAPI parse doc annotation to API def struct
 func (annotation DocAnnotation) ParseToAPI() (*API, error) {
 	api := new(API)
+	api.Annotation = annotation
 	err := parseSimple(annotation, api)
 	if err != nil {
 		return nil, err
