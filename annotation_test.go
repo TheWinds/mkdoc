@@ -235,6 +235,7 @@ func TestDocAnnotation_ParseToAPI(t *testing.T) {
 				}
 				return
 			}
+			got.Annotation = ""
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("ParseToAPI() got = %#v, want %#v", got, tt.want)
 				b, _ := json.MarshalIndent(got, "", "\t")
