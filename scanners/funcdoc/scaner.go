@@ -2,11 +2,9 @@ package funcdoc
 
 import (
 	"docspace"
-	"docspace/scanners"
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"path/filepath"
 )
 
 func init() {
@@ -15,21 +13,10 @@ func init() {
 
 type Scanner struct{}
 
-func (c *Scanner) ScanAnnotations(pkg string) ([]docspace.DocAnnotation, error) {
-	srcPaths := docspace.GetGOSrcPaths()
-
-	var allDirs []string
-	for _, srcPath := range srcPaths {
-		rootDir := filepath.Join(srcPath, pkg)
-		subDirs := scanners.GetSubDirs(rootDir)
-		// filter path
-		for _, dir := range subDirs {
-			allDirs = append(allDirs, dir)
-		}
-	}
-
+func (c *Scanner) ScanAnnotations(project docspace.Project) ([]docspace.DocAnnotation, error) {
 	annotations := make([]docspace.DocAnnotation, 0)
-	for _, dir := range allDirs {
+	dirs := docspace.GetScanDirs(project.BasePackage, project.UseGOModule, nil)
+	for _, dir := range dirs {
 		f := token.NewFileSet()
 		pkgs, err := parser.ParseDir(f, dir, nil, parser.ParseComments)
 		if err != nil {
