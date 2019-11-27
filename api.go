@@ -130,6 +130,9 @@ func (api *API) getObjectInfoV2(query *TypeLocation, rootObj *Object, dep int) e
 				break
 			}
 		}
+		if structInfo == nil {
+			return fmt.Errorf("struct %s not found\n", query)
+		}
 	} else {
 		goSrcPaths := GetGOSrcPaths()
 		pkgAbsPaths := make([]string, 0)
@@ -184,6 +187,9 @@ func (api *API) getObjectInfoV2(query *TypeLocation, rootObj *Object, dep int) e
 		}
 		rootObj.Fields = append(rootObj.Fields, objField)
 		if objField.IsRef && api.ObjectsMap[rootObj.ID] == nil {
+			if rootObj.ID == objField.Type {
+				continue
+			}
 			if err := api.getObjectInfoV2(field.GoType.Location(), new(Object), dep+1); err != nil {
 				return err
 			}

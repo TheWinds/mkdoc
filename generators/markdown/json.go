@@ -55,10 +55,18 @@ func (o *objJSONMarshaller) marshal(obj *docspace.Object, dep int) {
 		}
 		if field.IsRepeated {
 			o.writeToken("[", 0)
-			o.marshal(o.objMap[field.Type], dep+1)
-			o.writeToken("]", dep)
+			if obj.ID != field.Type {
+				o.marshal(o.objMap[field.Type], dep+1)
+				o.writeToken("]", dep)
+			}else{
+				o.writeToken("]", 0)
+			}
 		} else {
-			o.marshal(o.objMap[field.Type], dep+1)
+			if obj.ID != field.Type {
+				o.marshal(o.objMap[field.Type], dep+1)
+			}else{
+				o.writeToken("null", 0)
+			}
 		}
 		if i != len(obj.Fields)-1 {
 			o.writeToken(",\n", 0)
