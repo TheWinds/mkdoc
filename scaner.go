@@ -5,7 +5,7 @@ import "log"
 // APIScanner 实现该接口的扫描器可以从源码获取到API文档注解
 type APIScanner interface {
 	// 扫描API注解
-	ScanAnnotations(pkg string) ([]DocAnnotation, error)
+	ScanAnnotations(project Project) ([]DocAnnotation, error)
 	// 获取名称
 	GetName() string
 	// 设置配置
