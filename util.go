@@ -1,11 +1,13 @@
 package docspace
 
 import (
+	"bytes"
 	"go/ast"
 	"go/parser"
 	"go/token"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 )
@@ -28,6 +30,42 @@ func GetGOSrcPaths() []string {
 		paths = append(paths, goSrcPath)
 	}
 	return paths
+}
+
+// GetScanDirs get the dirs to scan
+func GetScanDirs(pkg string, mod bool, filter func(dirName string) bool) []string {
+	var dirs []string
+	var roots []string
+
+	if mod {
+		roots = append(roots, pkg)
+	} else {
+		for _, srcPath := range GetGOSrcPaths() {
+			roots = append(roots, filepath.Join(srcPath, pkg))
+		}
+	}
+
+	for _, root := range roots {
+		subDirs := GetSubDirs(root)
+		// filter path
+		for _, dir := range subDirs {
+			if filter == nil || filter(dir) {
+				dirs = append(dirs, dir)
+			}
+		}
+	}
+	return dirs
+}
+
+func GetSubDirs(root string) []string {
+	subDirs := make([]string, 0)
+	filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+		if info != nil && info.IsDir() {
+			subDirs = append(subDirs, path)
+		}
+		return nil
+	})
+	return subDirs
 }
 
 var importCache sync.Map
@@ -90,4 +128,60 @@ func GetFilePkgPath(fileName string) string {
 		}
 	}
 	return ""
+}
+
+var (
+	slashSlash = []byte("//")
+	moduleStr  = []byte("module")
+)
+
+// Copy from go sdk 1.12.7
+// ModulePath returns the module path from the gomod file text.
+// If it cannot find a module path, it returns an empty string.
+// It is tolerant of unrelated problems in the go.mod file.
+func modulePath(mod []byte) string {
+	for len(mod) > 0 {
+		line := mod
+		mod = nil
+		if i := bytes.IndexByte(line, '\n'); i >= 0 {
+			line, mod = line[:i], line[i+1:]
+		}
+		if i := bytes.Index(line, slashSlash); i >= 0 {
+			line = line[:i]
+		}
+		line = bytes.TrimSpace(line)
+		if !bytes.HasPrefix(line, moduleStr) {
+			continue
+		}
+		line = line[len(moduleStr):]
+		n := len(line)
+		line = bytes.TrimSpace(line)
+		if len(line) == n || len(line) == 0 {
+			continue
+		}
+
+		if line[0] == '"' || line[0] == '`' {
+			p, err := strconv.Unquote(string(line))
+			if err != nil {
+				return "" // malformed quoted string or multiline module path
+			}
+			return p
+		}
+
+		return string(line)
+	}
+	return "" // missing module path
+}
+
+// findGOModAbsPath find the first(in dep) absolute path which contains go.mod file
+func findGOModAbsPath(root string) string {
+	absPath := ""
+	filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+		if info != nil && !info.IsDir() && info.Name() == "go.mod" {
+			absPath = filepath.Dir(path)
+			return filepath.SkipDir
+		}
+		return nil
+	})
+	return absPath
 }
