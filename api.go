@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"go/parser"
 	"go/token"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -29,6 +30,7 @@ type API struct {
 	DocLocation    string        `json:"doc_location"`
 	Disables       []string      `json:"disables"`
 	Annotation     DocAnnotation `json:"annotation"`
+	Project        *Project      `json:"-"`
 }
 
 // Build 生成API信息
@@ -104,17 +106,18 @@ func (api *API) getObjectInfoV2(query *TypeLocation, rootObj *Object, dep int) e
 	if query == nil {
 		return nil
 	}
+
 	var structInfo *GoStructInfo
-	goPaths := GetGOPaths()
-	pkgPaths := make([]string, 0)
-	for _, goPath := range goPaths {
-		f := token.NewFileSet()
-		pkgPath := filepath.Join(goPath, "src", query.PackageName)
-		pkgPaths = append(pkgPaths, pkgPath)
-		if _, err := os.Stat(pkgPath); err != nil {
-			continue
+	if api.Project.UseGOModule {
+		data, err := ioutil.ReadFile(filepath.Join(api.Project.BasePackage, "go.mod"))
+		if err != nil {
+			return err
 		}
-		pkgs, err := parser.ParseDir(f, pkgPath, nil, parser.ParseComments)
+		modPath := modulePath(data)
+		modPathAbsPath := findGOModAbsPath(api.Project.BasePackage)
+		pkgAbsPath := strings.Replace(query.PackageName, modPath, modPathAbsPath, 1)
+		f := token.NewFileSet()
+		pkgs, err := parser.ParseDir(f, pkgAbsPath, nil, parser.ParseComments)
 		if err != nil {
 			return err
 		}
@@ -127,17 +130,40 @@ func (api *API) getObjectInfoV2(query *TypeLocation, rootObj *Object, dep int) e
 				break
 			}
 		}
-	}
-
-	if structInfo == nil {
-		return fmt.Errorf("struct %s not found in any of:\n	%s", query, strings.Join(pkgPaths, "\n	"))
+	} else {
+		goSrcPaths := GetGOSrcPaths()
+		pkgAbsPaths := make([]string, 0)
+		for _, p := range goSrcPaths {
+			pkgAbsPath := filepath.Join(p, query.PackageName)
+			pkgAbsPaths = append(pkgAbsPaths, pkgAbsPath)
+			if _, err := os.Stat(pkgAbsPath); err != nil {
+				continue
+			}
+			f := token.NewFileSet()
+			pkgs, err := parser.ParseDir(f, pkgAbsPath, nil, parser.ParseComments)
+			if err != nil {
+				return err
+			}
+			for _, pkg := range pkgs {
+				structInfo, err = findGOStructInfo(query.TypeName, pkg, f)
+				if err != nil && err != errGoStructNotFound {
+					return err
+				}
+				if structInfo != nil {
+					break
+				}
+			}
+		}
+		if structInfo == nil {
+			return fmt.Errorf("struct %s not found in any of:\n	%s", query, strings.Join(pkgAbsPaths, "\n	"))
+		}
 	}
 
 	rootObj.ID = query.String()
 	rootObj.Fields = make([]*ObjectField, 0)
 
 	for _, field := range structInfo.Fields {
-		if strings.HasPrefix(field.Name, "XXX_") {
+		if field.JSONTag == "-" {
 			continue
 		}
 		// priority use doc comment

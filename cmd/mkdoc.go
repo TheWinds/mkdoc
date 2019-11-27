@@ -44,14 +44,15 @@ func checkScanner() []docspace.APIScanner {
 
 func main() {
 	kingpin.Parse()
+	project := docspace.Project{}
 	scanners := checkScanner()
 	if scanners == nil {
 		return
 	}
 	if *mod {
-		docspace.UseGOModule = true
+		project.UseGOModule = true
 	}
-	if !docspace.UseGOModule {
+	if !project.UseGOModule {
 		// check if package exist
 		goPaths := docspace.GetGOPaths()
 		pkgExist := false
@@ -82,12 +83,13 @@ func main() {
 			return
 		}
 	}
+	project.BasePackage = *pkg
 
 	var apis []*docspace.API
 
 	for _, scanner := range scanners {
 		fmt.Printf("🔎  scan doc annotations (use %s)\n", scanner.GetName())
-		annotations, err := scanner.ScanAnnotations(*pkg)
+		annotations, err := scanner.ScanAnnotations(project)
 		if err != nil {
 			fmt.Printf("error: scan annotations %v\n", err)
 		}
@@ -98,6 +100,7 @@ func main() {
 				fmt.Printf("\n❌  annotation can not be parse\n%v\n------\nAnnotation:%s\n------\n", err, a)
 				return
 			}
+			api.Project = &project
 			apis = append(apis, api)
 		}
 		fmt.Printf("\n")
