@@ -10,6 +10,8 @@ type Project struct {
 	BaseType     string    `yaml:"base_type"`     // models.BaseType
 	UseGOModule  bool      `yaml:"use_go_mod"`
 	Scanner      []string  `yaml:"scanner"`
+
+	OnScanners []APIScanner `yaml:"-"`
 }
 
 type Header struct {

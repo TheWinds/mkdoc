@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 )
 
@@ -54,34 +55,20 @@ func checkScanner(project *docspace.Project) []docspace.APIScanner {
 	return okScanners
 }
 
-func makeDoc(ctx *kingpin.ParseContext) error {
-	project, err := readProjectConfig()
-	if err != nil {
-		return fmt.Errorf("fail to read config file: %v", err)
-	}
-
+func checkConfig(project *docspace.Project) error {
+	// check scanners
 	scanners := checkScanner(project)
 	if scanners == nil {
-		return nil
+		return fmt.Errorf("please config scanner in conf.yaml")
+	}
+	project.OnScanners = scanners
+
+	// check if the pkg to scan is exist
+	if project.BasePackage == "" {
+		return fmt.Errorf("please config a pkg to scan in conf.yaml")
 	}
 
-	if !project.UseGOModule {
-		// check if package exist
-		goPaths := docspace.GetGOPaths()
-		pkgExist := false
-		for _, gopath := range goPaths {
-			if _, err := os.Stat(filepath.Join(gopath, "src", project.BasePackage)); err == nil {
-				pkgExist = true
-			}
-		}
-		if !pkgExist {
-			fmt.Printf("error: package \"%s\" is not found in any of:\n", project.BasePackage)
-			for _, gopath := range goPaths {
-				fmt.Println("  ", filepath.Join(gopath, "src", project.BasePackage))
-			}
-			return nil
-		}
-	} else {
+	if project.UseGOModule {
 		path := project.BasePackage
 		if !filepath.IsAbs(path) {
 			wd, err := os.Getwd()
@@ -91,108 +78,199 @@ func makeDoc(ctx *kingpin.ParseContext) error {
 			path = filepath.Join(wd, path)
 		}
 		if _, err := os.Stat(path); err != nil {
-			fmt.Printf("no such file or directory: %s\n", path)
-			return nil
+			return fmt.Errorf("no such file or directory: %s\n", path)
+		}
+	} else {
+		goPaths := docspace.GetGOPaths()
+		pkgExist := false
+		for _, gopath := range goPaths {
+			if _, err := os.Stat(filepath.Join(gopath, "src", project.BasePackage)); err == nil {
+				pkgExist = true
+			}
+		}
+		if !pkgExist {
+			sb := strings.Builder{}
+			sb.WriteString(fmt.Sprintf("error: package \"%s\" is not found in any of:\n", project.BasePackage))
+			for _, gopath := range goPaths {
+				sb.WriteString(fmt.Sprintln("  ", filepath.Join(gopath, "src", project.BasePackage)))
+			}
+			return fmt.Errorf("%s", sb.String())
 		}
 	}
+	return nil
+}
 
+func scanAPIs(project *docspace.Project) ([]*docspace.API, error) {
 	var apis []*docspace.API
-
-	for _, scanner := range scanners {
+	for _, scanner := range project.OnScanners {
 		fmt.Printf("🔎  scan doc annotations (use %s)\n", scanner.GetName())
 		annotations, err := scanner.ScanAnnotations(*project)
 		if err != nil {
-			fmt.Printf("error: scan annotations %v\n", err)
+			return nil, fmt.Errorf("scan annotations %v\n", err)
 		}
 		for k, a := range annotations {
 			fmt.Printf("\r🔥  parse annotation to api [%d/%d]", k+1, len(annotations))
 			api, err := a.ParseToAPI()
 			if err != nil {
-				fmt.Printf("\n❌  annotation can not be parse\n%v\n------\nAnnotation:%s\n------\n", err, a)
-				return nil
+				fmt.Println()
+				return nil, fmt.Errorf("annotation can not be parse\n%v\n------\nAnnotation:%s\n------\n", err, a)
 			}
 			api.Project = project
 			apis = append(apis, api)
 		}
 		fmt.Printf("\n")
 	}
+	return apis, nil
+}
 
-	// match tags
-	matchTagAPIs := make([]*docspace.API, 0)
-	tagsMap := map[string]bool{}
-	allTags := make([]string, 0)
-
-	tag := *makeDocTag
-	if tag != "" {
-		for _, api := range apis {
-			for _, t := range api.Tags {
-				if _, exist := tagsMap[t]; !exist {
-					tagsMap[t] = true
-					allTags = append(allTags, t)
-				}
-				if t == tag {
-					matchTagAPIs = append(matchTagAPIs, api)
-					break
-				}
-			}
+func getAllTags(apis []*docspace.API) []string {
+	tagsMap := make(map[string]bool)
+	for _, api := range apis {
+		for _, t := range api.Tags {
+			tagsMap[t] = true
 		}
-	} else {
-		matchTagAPIs = apis
+	}
+	var tags []string
+	for tag := range tagsMap {
+		tags = append(tags, tag)
+	}
+	sort.Strings(tags)
+	return tags
+}
+
+func filterAPIByTag(apis []*docspace.API, tag string) []*docspace.API {
+	var matched []*docspace.API
+
+	if tag == "" {
+		return apis
 	}
 
-	if len(matchTagAPIs) == 0 {
+	for _, api := range apis {
+		for _, t := range api.Tags {
+			if t == tag {
+				matched = append(matched, api)
+				break
+			}
+		}
+	}
+	return matched
+}
+
+func buildAPI(apis []*docspace.API) error {
+	for k, api := range apis {
+		fmt.Printf("\r🔥  building api '%s' [%d/%d]          ", api.Name, k+1, len(apis))
+		err := api.Build()
+		if err != nil {
+			fmt.Println()
+			return fmt.Errorf("build api %s\n%v\n------\nAnnotation:\n%s\n------\n", api.Name, err, api.Annotation)
+		}
+	}
+	fmt.Println()
+	return nil
+}
+
+func makeDoc(ctx *kingpin.ParseContext) error {
+	project, err := readProjectConfig()
+	if err != nil {
+		return showErr("fail to read config file: %v", err)
+	}
+
+	if err := checkConfig(project); err != nil {
+		return showErr("%v", err)
+	}
+
+	apis, err := scanAPIs(project)
+	if err != nil {
+		return showErr("%v", err)
+	}
+
+	tag := *makeDocTag
+
+	matchedAPIs := filterAPIByTag(apis, tag)
+
+	if len(matchedAPIs) == 0 {
 		fmt.Printf("👽  no tag is matched,all tags:\n")
-		for _, t := range allTags {
+		for _, t := range getAllTags(apis) {
 			fmt.Printf("    %s\n", t)
 		}
 		return nil
 	}
 
 	if tag != "" {
-		fmt.Printf("👽  tag '%s' match %d api\n", tag, len(matchTagAPIs))
+		fmt.Printf("👽  tag '%s' match %d api\n", tag, len(matchedAPIs))
 	} else {
-		fmt.Printf("👽  %d api is matched \n", len(matchTagAPIs))
+		fmt.Printf("👽  %d api is matched \n", len(matchedAPIs))
 	}
-	// generate markdown
 
+	if err := buildAPI(matchedAPIs); err != nil {
+		return showErr("%v", err)
+	}
+
+	if err := genMarkdown(project, matchedAPIs, tag); err != nil {
+		return showErr("%v", err)
+	}
+	fmt.Printf("🍺  done!\n")
+	return nil
+}
+
+func genMarkdown(project *docspace.Project, apis []*docspace.API, tag string) error {
 	markdownBuilder := strings.Builder{}
-	markdownBuilder.WriteString(fmt.Sprintf("# %s API\n", tag))
-	markdownBuilder.WriteString("[TOC]\n")
-	for k, api := range matchTagAPIs {
-		fmt.Printf("\r🔥  building api '%s' [%d/%d]          ", api.Name, k+1, len(matchTagAPIs))
-		err := api.Build()
-		if err != nil {
-			fmt.Printf("\n❌  build api %s\n%v\n------\nAnnotation:\n%s\n------\n", api.Name, err, api.Annotation)
-			return nil
-		}
+	if tag == "" {
+		tag = "all"
+	}
+	header := `
+# %s
+
+> %s 
+
+##  Summary
+
+| 📖 **Tag**     | %s |
+| ------------- | ------ |
+| 🔮 **API Num** | %s   |
+
+[TOC]
+
+# API List
+`
+	markdownBuilder.WriteString(fmt.Sprintf(header,
+		project.Name,
+		project.Description,
+		"`"+tag+"`",
+		fmt.Sprintf("`%d`", len(apis))))
+
+	for _, api := range apis {
 		output, _ := markdown.NewGenerator().Source(api).Gen()
 		markdownBuilder.WriteString(output)
 	}
 	fmt.Println()
+
 	path, err := os.Getwd()
 	if err != nil {
 		return err
 	}
-	if tag == "" {
-		tag = "mydoc"
-	}
+
 	outputFileName := fmt.Sprintf("%s.md", tag)
 	out := *makeDocOut
 	if out != "" {
 		outputFileName = out
 	}
-	fmt.Printf("📖  write api doc to '%s'\n", outputFileName)
-	file, err := os.OpenFile(filepath.Join(path, "docs", outputFileName), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
-	if err != nil {
-		fmt.Printf("error: witre file ,%v\n", err)
-		return nil
+	fmt.Printf("📖  write api doc to './docs/md/%s'\n", outputFileName)
+	mdPath := filepath.Join(path, "docs/md")
+	if _, err = os.Stat(mdPath); err != nil {
+		err = os.Mkdir(mdPath, 0755)
+		if err != nil {
+			return err
+		}
 	}
+	file, err := os.OpenFile(filepath.Join(mdPath, outputFileName), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	if err != nil {
+		return fmt.Errorf("witre file ,%v\n", err)
+	}
+	defer file.Close()
 	_, err = file.WriteString(markdownBuilder.String())
 	if err != nil {
-		fmt.Printf("error: witre file ,%v\n", err)
-		return nil
+		return fmt.Errorf("witre file ,%v\n", err)
 	}
-	file.Close()
-	fmt.Printf("🍺  done!\n")
 	return nil
 }
