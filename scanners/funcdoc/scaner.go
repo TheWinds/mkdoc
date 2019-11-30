@@ -15,7 +15,7 @@ type Scanner struct{}
 
 func (c *Scanner) ScanAnnotations(project docspace.Project) ([]docspace.DocAnnotation, error) {
 	annotations := make([]docspace.DocAnnotation, 0)
-	dirs := docspace.GetScanDirs(project.BasePackage, project.UseGOModule, nil)
+	dirs := docspace.GetScanDirs(project.Config.Package, project.Config.UseGOModule, nil)
 	for _, dir := range dirs {
 		f := token.NewFileSet()
 		pkgs, err := parser.ParseDir(f, dir, nil, parser.ParseComments)

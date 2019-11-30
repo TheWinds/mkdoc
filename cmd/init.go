@@ -23,7 +23,7 @@ func initProject(ctx *kingpin.ParseContext) error {
 		fmt.Printf("mkdoc init: config file alreadly exist")
 		os.Exit(0)
 	}
-	cfg := &docspace.Project{
+	cfg := &docspace.Config{
 		Name:        "my doc",
 		Description: "my doc project",
 		APIBaseURL:  "http://",
@@ -35,7 +35,7 @@ func initProject(ctx *kingpin.ParseContext) error {
 				Default: "",
 			},
 		},
-		BasePackage: "",
+		Package:     "",
 		BaseType:    "",
 		UseGOModule: false,
 		Scanner:     []string{"funcdoc"},

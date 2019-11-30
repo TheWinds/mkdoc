@@ -19,7 +19,7 @@ import (
 	_ "github.com/thewinds/gqlcorego"
 )
 
-func readProjectConfig() (*docspace.Project, error) {
+func readConfig() (*docspace.Config, error) {
 	path, err := os.Getwd()
 	if err != nil {
 		return nil, err
@@ -29,47 +29,41 @@ func readProjectConfig() (*docspace.Project, error) {
 	if err != nil {
 		return nil, err
 	}
-	project := new(docspace.Project)
-	err = yaml.Unmarshal(b, project)
-	return project, err
+	config := new(docspace.Config)
+	err = yaml.Unmarshal(b, config)
+	return config, err
 }
 
-func checkScanner(project *docspace.Project) []docspace.APIScanner {
+func checkScanner(project *docspace.Project) bool {
 	var okScanners []docspace.APIScanner
 	scanners := docspace.GetScanners()
-	if len(project.Scanner) == 0 {
-		fmt.Printf("error: please use at least one scanner \n")
-		return nil
+	if len(project.Config.Scanner) == 0 {
+		showWarn("please use at least one scanner \n")
+		return false
 	}
 
-	for _, name := range project.Scanner {
+	for _, name := range project.Config.Scanner {
 		if scanners[name] == nil {
-			fmt.Printf("error: scanner \"%s\" is not found,you can choose scanner below :\n", name)
+			showErr("scanner \"%s\" is not found,you can choose scanner below :\n", name)
 			for n := range scanners {
 				fmt.Printf("    %s\n", n)
 			}
-			return nil
+			return false
 		}
 		okScanners = append(okScanners, scanners[name])
 	}
-	return okScanners
+	project.Scanners = okScanners
+	return true
 }
 
-func checkConfig(project *docspace.Project) error {
-	// check scanners
-	scanners := checkScanner(project)
-	if scanners == nil {
-		return fmt.Errorf("please config scanner in conf.yaml")
-	}
-	project.OnScanners = scanners
-
+func checkConfig(config *docspace.Config) error {
 	// check if the pkg to scan is exist
-	if project.BasePackage == "" {
+	if config.Package == "" {
 		return fmt.Errorf("please config a pkg to scan in conf.yaml")
 	}
 
-	if project.UseGOModule {
-		path := project.BasePackage
+	if config.UseGOModule {
+		path := config.Package
 		if !filepath.IsAbs(path) {
 			wd, err := os.Getwd()
 			if err != nil {
@@ -84,15 +78,15 @@ func checkConfig(project *docspace.Project) error {
 		goPaths := docspace.GetGOPaths()
 		pkgExist := false
 		for _, gopath := range goPaths {
-			if _, err := os.Stat(filepath.Join(gopath, "src", project.BasePackage)); err == nil {
+			if _, err := os.Stat(filepath.Join(gopath, "src", config.Package)); err == nil {
 				pkgExist = true
 			}
 		}
 		if !pkgExist {
 			sb := strings.Builder{}
-			sb.WriteString(fmt.Sprintf("error: package \"%s\" is not found in any of:\n", project.BasePackage))
+			sb.WriteString(fmt.Sprintf("error: package \"%s\" is not found in any of:\n", config.Package))
 			for _, gopath := range goPaths {
-				sb.WriteString(fmt.Sprintln("  ", filepath.Join(gopath, "src", project.BasePackage)))
+				sb.WriteString(fmt.Sprintln("  ", filepath.Join(gopath, "src", config.Package)))
 			}
 			return fmt.Errorf("%s", sb.String())
 		}
@@ -102,7 +96,7 @@ func checkConfig(project *docspace.Project) error {
 
 func scanAPIs(project *docspace.Project) ([]*docspace.API, error) {
 	var apis []*docspace.API
-	for _, scanner := range project.OnScanners {
+	for _, scanner := range project.Scanners {
 		fmt.Printf("🔎  scan doc annotations (use %s)\n", scanner.GetName())
 		annotations, err := scanner.ScanAnnotations(*project)
 		if err != nil {
@@ -170,13 +164,21 @@ func buildAPI(apis []*docspace.API) error {
 }
 
 func makeDoc(ctx *kingpin.ParseContext) error {
-	project, err := readProjectConfig()
+	config, err := readConfig()
 	if err != nil {
 		return showErr("fail to read config file: %v", err)
 	}
 
-	if err := checkConfig(project); err != nil {
+	if err := checkConfig(config); err != nil {
 		return showErr("%v", err)
+	}
+
+	project := &docspace.Project{
+		Config: config,
+	}
+
+	if ok := checkScanner(project); !ok {
+		return nil
 	}
 
 	apis, err := scanAPIs(project)
@@ -234,8 +236,8 @@ func genMarkdown(project *docspace.Project, apis []*docspace.API, tag string) er
 # API List
 `
 	markdownBuilder.WriteString(fmt.Sprintf(header,
-		project.Name,
-		project.Description,
+		project.Config.Name,
+		project.Config.Description,
 		"`"+tag+"`",
 		fmt.Sprintf("`%d`", len(apis))))
 

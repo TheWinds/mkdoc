@@ -108,13 +108,13 @@ func (api *API) getObjectInfoV2(query *TypeLocation, rootObj *Object, dep int) e
 	}
 
 	var structInfo *GoStructInfo
-	if api.Project.UseGOModule {
-		data, err := ioutil.ReadFile(filepath.Join(api.Project.BasePackage, "go.mod"))
+	if api.Project.Config.UseGOModule {
+		data, err := ioutil.ReadFile(filepath.Join(api.Project.Config.Package, "go.mod"))
 		if err != nil {
 			return err
 		}
 		modPath := modulePath(data)
-		modPathAbsPath := findGOModAbsPath(api.Project.BasePackage)
+		modPathAbsPath := findGOModAbsPath(api.Project.Config.Package)
 		pkgAbsPath := strings.Replace(query.PackageName, modPath, modPathAbsPath, 1)
 		f := token.NewFileSet()
 		pkgs, err := parser.ParseDir(f, pkgAbsPath, nil, parser.ParseComments)
