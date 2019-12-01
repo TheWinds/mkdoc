@@ -81,6 +81,8 @@ func MockField(fieldType, fieldName string) string {
 		return mockers["int"](fieldName)
 	case "float", "float32", "float64":
 		return mockers["float"](fieldName)
+	case "interface{}":
+		return "{}"
 	default:
 		return ""
 	}
