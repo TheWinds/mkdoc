@@ -51,6 +51,48 @@ func (api *API) Build() error {
 	if err != nil {
 		return err
 	}
+	return api.LinkBaseType()
+}
+
+func (api *API) LinkBaseType() error {
+	if api.Project.Config.BaseType == "" {
+		return nil
+	}
+	baseTyp := new(Object)
+	err := api.getObjectInfoV2(newTypeLocation(api.Project.Config.BaseType), baseTyp, 0)
+	if err != nil {
+		return err
+	}
+	var repeated bool
+	if api.OutArgumentLoc != nil {
+		repeated = api.OutArgumentLoc.IsRepeated
+	}
+
+	var linkFieldName string
+	for _, v := range baseTyp.Fields {
+		if v.DocTag == "[]T" && repeated {
+			linkFieldName = v.Name
+			break
+		}
+		if v.DocTag == "T" {
+			linkFieldName = v.Name
+		}
+	}
+	if linkFieldName == "" {
+		return nil
+	}
+	if api.OutArgument == nil {
+		api.OutArgument = baseTyp
+		api.OutArgumentLoc = nil
+		return nil
+	}
+
+	err = api.linkField2Object(baseTyp, linkFieldName, api.OutArgument.ID, repeated)
+	if err != nil {
+		return err
+	}
+	api.OutArgument = baseTyp
+	api.OutArgumentLoc = nil
 	return nil
 }
 
@@ -90,7 +132,7 @@ func (api *API) linkField2Object(fromObj *Object, fromFieldName string, toObjID 
 
 	for _, fromField := range fromObj.Fields {
 		if fromField.Name == fromFieldName {
-			if fromField.Type == "interface{}" {
+			if fromField.BaseType == "interface{}" {
 				fromField.IsRef = true
 				fromField.Type = toObjID
 				fromField.IsRepeated = isRepeated
@@ -166,6 +208,7 @@ func (api *API) getObjectInfoV2(query *TypeLocation, rootObj *Object, dep int) e
 	rootObj.Fields = make([]*ObjectField, 0)
 
 	for _, field := range structInfo.Fields {
+		// TODO: filter by encoder
 		if field.JSONTag == "-" {
 			continue
 		}
@@ -179,6 +222,8 @@ func (api *API) getObjectInfoV2(query *TypeLocation, rootObj *Object, dep int) e
 		objField := &ObjectField{
 			Name:       field.Name,
 			JSONTag:    field.JSONTag,
+			XMLTag:     field.XMLTag,
+			DocTag:     field.DocTag,
 			Comment:    comment,
 			Type:       field.GoType.Location().String(),
 			BaseType:   field.GoType.Name,
