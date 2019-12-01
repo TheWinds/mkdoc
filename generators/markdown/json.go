@@ -30,6 +30,10 @@ func (o *objJSONMarshaller) marshal(obj *docspace.Object, dep int) {
 	if o.err != nil {
 		return
 	}
+	if obj == nil {
+		o.writeToken("null", 0)
+		return
+	}
 	o.writeToken("{\n", 0)
 	for i, field := range obj.Fields {
 		k := fmt.Sprintf("    \"%s\" : ", field.JSONTag)
@@ -58,13 +62,13 @@ func (o *objJSONMarshaller) marshal(obj *docspace.Object, dep int) {
 			if obj.ID != field.Type {
 				o.marshal(o.objMap[field.Type], dep+1)
 				o.writeToken("]", dep)
-			}else{
+			} else {
 				o.writeToken("]", 0)
 			}
 		} else {
 			if obj.ID != field.Type {
 				o.marshal(o.objMap[field.Type], dep+1)
-			}else{
+			} else {
 				o.writeToken("null", 0)
 			}
 		}
