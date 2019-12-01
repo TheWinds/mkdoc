@@ -4,6 +4,8 @@ package docspace
 type ObjectField struct {
 	Name       string `json:"name"`
 	JSONTag    string `json:"json_tag"`
+	XMLTag     string `json:"xml_tag"`
+	DocTag     string `json:"doc_tag"`
 	Comment    string `json:"comment"`
 	Type       string `json:"type"`
 	BaseType   string `json:"baseType"`

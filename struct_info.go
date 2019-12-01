@@ -13,7 +13,9 @@ type GoStructField struct {
 	Name       string
 	Comment    string
 	DocComment string
-	JSONTag    string
+	JSONTag    string `json:"json_tag"`
+	XMLTag     string `json:"xml_tag"`
+	DocTag     string `json:"doc_tag"`
 	GoType     *GoType
 }
 
@@ -42,26 +44,27 @@ func findGOStructInfo(structName string, pkg *ast.Package, fileset *token.FileSe
 					structFields := (structNode.Type).(*ast.StructType).Fields
 					for _, field := range structFields.List {
 						name := field.Names[0].Name
-						var comment, tag string
+						var comment string
 
 						if field.Comment != nil && len(field.Comment.List) != 0 {
 							comment = (field.Comment.List[0]).Text
 						}
 
-						if field.Tag != nil {
-							tag = getJSONTag(field.Tag.Value, name)
-						}
 						baseTyp := baseType(field.Type)
 						imports := GetFileImportsAtNode(node, pkg, fileset)
 						baseTyp.ImportPkgName = imports[baseTyp.PkgName]
-
-						info.Fields = append(info.Fields, &GoStructField{
+						structField := &GoStructField{
 							Name:       name,
 							Comment:    comment,
 							DocComment: field.Doc.Text(),
-							JSONTag:    tag,
 							GoType:     baseTyp,
-						})
+						}
+						if field.Tag != nil {
+							structField.JSONTag = getTag(field.Tag.Value, "json", name)
+							structField.XMLTag = getTag(field.Tag.Value, "xml", name)
+							structField.DocTag = getTag(field.Tag.Value, "doc", name)
+						}
+						info.Fields = append(info.Fields, structField)
 
 					}
 				case *ast.Ident:
@@ -82,11 +85,16 @@ func findGOStructInfo(structName string, pkg *ast.Package, fileset *token.FileSe
 	return info, nil
 }
 
-func getJSONTag(tags, defaultTag string) string {
-	if !strings.Contains(tags, "json") {
+func getTag(tags, tagName, defaultTag string) string {
+	if !strings.Contains(tags, tagName) {
 		return defaultTag
 	}
-	return strings.Replace(getMidString(tags, "json:\"", "\""), ",omitempty", "", -1)
+	v := getMidString(tags, tagName+":\"", "\"")
+	i := strings.Index(v, ",")
+	if i == -1 {
+		return v
+	}
+	return v[:i]
 }
 
 func getMidString(src, s, e string) string {
@@ -153,6 +161,8 @@ func baseType(x ast.Expr) *GoType {
 		bt := baseType(t.Elt)
 		bt.IsRep = true
 		return bt
+	case *ast.InterfaceType:
+		return &GoType{Name: "interface{}"}
 	}
 	return &GoType{NotSupport: true}
 }
