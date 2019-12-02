@@ -6,7 +6,7 @@ import (
 )
 
 var makeDocTag *string
-var makeDocOut *string
+var makeDocVersion *string
 
 func main() {
 	app := kingpin.New("mkdoc", "make doc from go source code")
@@ -20,9 +20,9 @@ func main() {
 		Flag("tag", "which tag to filter,eg. v1").
 		Short('t').
 		String()
-	makeDocOut = cmdMake.
-		Flag("out", "out file name").
-		Short('o').
+	makeDocVersion = cmdMake.
+		Flag("version", "doc version").
+		Short('v').
 		String()
 
 	kingpin.MustParse(app.Parse(os.Args[1:]))
