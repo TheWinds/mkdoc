@@ -58,6 +58,12 @@ func (api *API) LinkBaseType() error {
 	if api.Project.Config.BaseType == "" {
 		return nil
 	}
+	for _, d := range api.Disables {
+		if d == "base_type" {
+			return nil
+		}
+	}
+
 	baseTyp := new(Object)
 	err := api.getObjectInfoV2(newTypeLocation(api.Project.Config.BaseType), baseTyp, 0)
 	if err != nil {
