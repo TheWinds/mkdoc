@@ -3,7 +3,6 @@ package main
 
 import (
 	"docspace"
-	"docspace/generators/markdown"
 	"fmt"
 	"gopkg.in/alecthomas/kingpin.v2"
 	"gopkg.in/yaml.v2"
@@ -15,6 +14,7 @@ import (
 )
 
 import (
+	_ "docspace/generators/markdown"
 	_ "docspace/scanners/funcdoc"
 	_ "github.com/thewinds/gqlcorego"
 )
@@ -53,6 +53,28 @@ func checkScanner(project *docspace.Project) bool {
 		okScanners = append(okScanners, scanners[name])
 	}
 	project.Scanners = okScanners
+	return true
+}
+
+func checkGenerator(project *docspace.Project) bool {
+	var okGenerators []docspace.DocGenerator
+	generators := docspace.GetGenerators()
+	if len(project.Config.Generator) == 0 {
+		showWarn("please use at least one generator \n")
+		return false
+	}
+
+	for _, name := range project.Config.Generator {
+		if generators[name] == nil {
+			showErr("generator \"%s\" is not found,you can choose generator below :\n", name)
+			for n := range generators {
+				fmt.Printf("    %s\n", n)
+			}
+			return false
+		}
+		okGenerators = append(okGenerators, generators[name])
+	}
+	project.Generators = okGenerators
 	return true
 }
 
@@ -181,6 +203,10 @@ func makeDoc(ctx *kingpin.ParseContext) error {
 		return nil
 	}
 
+	if ok := checkGenerator(project); !ok {
+		return nil
+	}
+
 	apis, err := scanAPIs(project)
 	if err != nil {
 		return showErr("%v", err)
@@ -213,23 +239,12 @@ func makeDoc(ctx *kingpin.ParseContext) error {
 	}
 
 	genCtx := &docspace.DocGenContext{
-		Tag:     tag,
-		APIs:    matchedAPIs,
-		Config:  *config,
+		Tag:    tag,
+		APIs:   matchedAPIs,
+		Config: *config,
 	}
 
-	out, err := gen("markdown", genCtx)
-	if err != nil {
-		return showErr("%v", err)
-	}
-
-	var fileName string
-	if makeDocOut == nil || *makeDocOut == "" {
-		fileName = tag
-	} else {
-		fileName = *makeDocOut
-	}
-	err = writeFile("markdown", fileName+".md", out)
+	err = gen(project, genCtx)
 	if err != nil {
 		return showErr("%v", err)
 	}
@@ -238,15 +253,27 @@ func makeDoc(ctx *kingpin.ParseContext) error {
 	return nil
 }
 
-func gen(generatorName string, ctx *docspace.DocGenContext) ([]byte, error) {
-	var generator docspace.DocGenerator
-	switch generatorName {
-	case "markdown":
-		generator = markdown.NewGenerator()
-	default:
-		return nil, fmt.Errorf("generator %s is not found ", generatorName)
+func gen(project *docspace.Project, ctx *docspace.DocGenContext) error {
+	var version string
+	if makeDocVersion != nil && *makeDocVersion != "" {
+		version = *makeDocVersion
 	}
-	return generator.Gen(ctx)
+	docName := ctx.Tag
+	if version != "" {
+		docName += "_" + version
+	}
+	for _, generator := range project.Generators {
+		out, err := generator.Gen(ctx)
+		if err != nil {
+			return err
+		}
+		fileName := docName + "." + generator.FileExt()
+		err = writeFile(generator.Name(), fileName, out)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func writeFile(dir, name string, data []byte) error {
