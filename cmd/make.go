@@ -208,69 +208,67 @@ func makeDoc(ctx *kingpin.ParseContext) error {
 		return showErr("%v", err)
 	}
 
-	if err := genMarkdown(project, matchedAPIs, tag); err != nil {
+	if tag == "" {
+		tag = "all"
+	}
+
+	genCtx := &docspace.DocGenContext{
+		Tag:     tag,
+		APIs:    matchedAPIs,
+		Config:  *config,
+	}
+
+	out, err := gen("markdown", genCtx)
+	if err != nil {
 		return showErr("%v", err)
 	}
+
+	var fileName string
+	if makeDocOut == nil || *makeDocOut == "" {
+		fileName = tag
+	} else {
+		fileName = *makeDocOut
+	}
+	err = writeFile("markdown", fileName+".md", out)
+	if err != nil {
+		return showErr("%v", err)
+	}
+
 	fmt.Printf("🍺  done!\n")
 	return nil
 }
 
-func genMarkdown(project *docspace.Project, apis []*docspace.API, tag string) error {
-	markdownBuilder := strings.Builder{}
-	if tag == "" {
-		tag = "all"
+func gen(generatorName string, ctx *docspace.DocGenContext) ([]byte, error) {
+	var generator docspace.DocGenerator
+	switch generatorName {
+	case "markdown":
+		generator = markdown.NewGenerator()
+	default:
+		return nil, fmt.Errorf("generator %s is not found ", generatorName)
 	}
-	header := `
-# %s
+	return generator.Gen(ctx)
+}
 
-> %s 
-
-##  Summary
-
-| 📖 **Tag**     | %s |
-| ------------- | ------ |
-| 🔮 **API Num** | %s   |
-
-[TOC]
-
-# API List
-`
-	markdownBuilder.WriteString(fmt.Sprintf(header,
-		project.Config.Name,
-		project.Config.Description,
-		"`"+tag+"`",
-		fmt.Sprintf("`%d`", len(apis))))
-
-	for _, api := range apis {
-		output, _ := markdown.NewGenerator().Source(api).Gen()
-		markdownBuilder.WriteString(output)
-	}
-	fmt.Println()
-
+func writeFile(dir, name string, data []byte) error {
 	path, err := os.Getwd()
 	if err != nil {
 		return err
 	}
 
-	outputFileName := fmt.Sprintf("%s.md", tag)
-	out := *makeDocOut
-	if out != "" {
-		outputFileName = out
-	}
-	fmt.Printf("📖  write api doc to './docs/md/%s'\n", outputFileName)
-	mdPath := filepath.Join(path, "docs/md")
+	fmt.Printf("📖  write api doc to './docs/%s/%s'\n", dir, name)
+	mdPath := filepath.Join(path, "docs", dir)
 	if _, err = os.Stat(mdPath); err != nil {
 		err = os.Mkdir(mdPath, 0755)
 		if err != nil {
 			return err
 		}
 	}
-	file, err := os.OpenFile(filepath.Join(mdPath, outputFileName), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	file, err := os.OpenFile(filepath.Join(mdPath, name), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
 		return fmt.Errorf("witre file ,%v\n", err)
 	}
 	defer file.Close()
-	_, err = file.WriteString(markdownBuilder.String())
+	_, err = file.Write(data)
 	if err != nil {
 		return fmt.Errorf("witre file ,%v\n", err)
 	}

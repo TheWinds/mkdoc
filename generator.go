@@ -1,9 +1,15 @@
 package docspace
 
-// DocGenerator receive a API def and output a doc for this API def
+// DocGenerator receive a DocGenContext output a doc
 type DocGenerator interface {
-	// Set source object
-	Source(api *API) DocGenerator
 	// Generate doc
-	Gen() (output string,err error)
+	Gen(ctx *DocGenContext) (output []byte, err error)
+	// Generator Name
+	Name() string
+}
+
+type DocGenContext struct {
+	Tag     string
+	APIs    []*API
+	Config  Config
 }

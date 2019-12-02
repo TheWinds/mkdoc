@@ -7,37 +7,24 @@ import (
 	"strings"
 )
 
-type Generator struct {
-	api *docspace.API
-	sb  *strings.Builder
-}
+type Generator struct{}
 
 func NewGenerator() *Generator {
 	return &Generator{}
 }
 
-func (g *Generator) Source(api *docspace.API) docspace.DocGenerator {
-	g.api = api
-	g.sb = new(strings.Builder)
-	return g
-}
-
-func (g *Generator) write(s string) {
-	g.sb.WriteString(s)
-}
-
-func (g *Generator) json(obj *docspace.Object) string {
-	o, _ := newObjJSONMarshaller(g.api, obj).Marshal()
+func (g *Generator) json(api *docspace.API, obj *docspace.Object) string {
+	o, _ := newObjJSONMarshaller(api, obj).Marshal()
 	return o
 }
 
-func (g *Generator) gql() string {
+func (g *Generator) gql(api *docspace.API) string {
 	sb := new(strings.Builder)
-	ind := strings.LastIndex(g.api.Path, ":")
-	opName := g.api.Path[ind+1:]
+	ind := strings.LastIndex(api.Path, ":")
+	opName := api.Path[ind+1:]
 	args := make([]string, 0)
 	argsInner := make([]string, 0)
-	for _, field := range g.api.InArgument.Fields {
+	for _, field := range api.InArgument.Fields {
 		var gqlTyp string
 		switch field.BaseType {
 		case "string":
@@ -56,7 +43,7 @@ func (g *Generator) gql() string {
 		argsInner = append(argsInner, fmt.Sprintf("%s: $%s", field.JSONTag, field.JSONTag))
 	}
 	bodykw := "body"
-	if g.api.OutArgumentLoc != nil && g.api.OutArgumentLoc.IsRepeated {
+	if api.OutArgumentLoc != nil && api.OutArgumentLoc.IsRepeated {
 		bodykw = "bodys"
 	}
 	ql := `%s %s(%s) {
@@ -68,11 +55,11 @@ func (g *Generator) gql() string {
 		  success
 		}
 	  }`
-	gqlBody, _ := newObjGQLMarshaller(g.api, g.api.OutArgument).Marshal()
+	gqlBody, _ := newObjGQLMarshaller(api, api.OutArgument).Marshal()
 	sb.WriteString(
 		fmt.Sprintf(
 			ql,
-			g.api.Method,
+			api.Method,
 			opName,
 			strings.Join(args, ","),
 			opName,
@@ -84,78 +71,110 @@ func (g *Generator) gql() string {
 	return sb.String()
 }
 
-func (g *Generator) Gen() (output string, err error) {
-	g.write(fmt.Sprintf("### %s\n", g.api.Name))
-	if len(strings.TrimSpace(g.api.Desc)) > 0 {
-		g.write(fmt.Sprintf("> %s\n", g.api.Desc))
-	}
-	g.write("\n")
-	g.write(fmt.Sprintf("- %s %s\n", g.api.Method, g.api.Type))
-	g.write(fmt.Sprintf("```\n"))
-	g.write(fmt.Sprintf("[path] %s\n", g.api.Path))
-	g.write(fmt.Sprintf("```\n"))
+func (g *Generator) Gen(ctx *docspace.DocGenContext) (output []byte, err error) {
+	markdownBuilder := strings.Builder{}
+	header := `
+# %s
 
-	if len(g.api.Header) > 0 {
-		g.write("- Header\n")
-		g.write("|名称|说明|\n|---|---|\n")
-		keys := make([]string, 0, len(g.api.Header))
-		for k := range g.api.Header {
-			keys = append(keys, k)
+> %s 
+
+##  Summary
+
+| 📖 **Tag**     | %s |
+| ------------- | ------ |
+| 🔮 **API Num** | %s   |
+
+[TOC]
+
+# API List
+`
+	markdownBuilder.WriteString(fmt.Sprintf(header,
+		ctx.Config.Name,
+		ctx.Config.Description,
+		"`"+ctx.Tag+"`",
+		fmt.Sprintf("`%d`", len(ctx.APIs))))
+
+	markdownBuilder.WriteString("\n")
+
+	for _, api := range ctx.APIs {
+		markdownBuilder.WriteString(fmt.Sprintf("### %s\n", api.Name))
+		if len(strings.TrimSpace(api.Desc)) > 0 {
+			markdownBuilder.WriteString(fmt.Sprintf("> %s\n", api.Desc))
 		}
-		sort.Strings(keys)
-		for _, key := range keys {
-			g.write(fmt.Sprintf("|`%s`|%s|\n", key, g.api.Header[key]))
+		markdownBuilder.WriteString("\n")
+		markdownBuilder.WriteString(fmt.Sprintf("- %s %s\n", api.Method, api.Type))
+		markdownBuilder.WriteString(fmt.Sprintf("```\n"))
+		markdownBuilder.WriteString(fmt.Sprintf("[path] %s\n", api.Path))
+		markdownBuilder.WriteString(fmt.Sprintf("```\n"))
+
+		if len(api.Header) > 0 {
+			markdownBuilder.WriteString("- Header\n")
+			markdownBuilder.WriteString("|名称|说明|\n|---|---|\n")
+			keys := make([]string, 0, len(api.Header))
+			for k := range api.Header {
+				keys = append(keys, k)
+			}
+			sort.Strings(keys)
+			for _, key := range keys {
+				markdownBuilder.WriteString(fmt.Sprintf("|`%s`|%s|\n", key, api.Header[key]))
+			}
+			markdownBuilder.WriteString("\n")
 		}
-		g.write("\n")
-	}
 
-	if len(g.api.Query) > 0 {
-		g.write("- Query\n")
-		g.write("|名称|说明|\n|---|---|\n")
-		keys := make([]string, 0, len(g.api.Query))
-		for k := range g.api.Query {
-			keys = append(keys, k)
+		if len(api.Query) > 0 {
+			markdownBuilder.WriteString("- Query\n")
+			markdownBuilder.WriteString("|名称|说明|\n|---|---|\n")
+			keys := make([]string, 0, len(api.Query))
+			for k := range api.Query {
+				keys = append(keys, k)
+			}
+			sort.Strings(keys)
+			for _, key := range keys {
+				markdownBuilder.WriteString(fmt.Sprintf("|`%s`|%s|\n", key, api.Query[key]))
+			}
+			markdownBuilder.WriteString("\n")
 		}
-		sort.Strings(keys)
-		for _, key := range keys {
-			g.write(fmt.Sprintf("|`%s`|%s|\n", key, g.api.Query[key]))
+
+		markdownBuilder.WriteString("- Req Body\n")
+		markdownBuilder.WriteString(fmt.Sprintf("```json\n"))
+		if api.InArgumentLoc != nil && api.InArgumentLoc.IsRepeated {
+			markdownBuilder.WriteString(fmt.Sprintf("[\n"))
 		}
-		g.write("\n")
+		markdownBuilder.WriteString(g.json(api, api.InArgument))
+		if api.InArgumentLoc != nil && api.InArgumentLoc.IsRepeated {
+			markdownBuilder.WriteString(fmt.Sprintf("]\n"))
+		} else {
+			markdownBuilder.WriteString(fmt.Sprintf("\n"))
+		}
+		markdownBuilder.WriteString(fmt.Sprintf("```\n"))
+		markdownBuilder.WriteString("- Resp Body\n")
+
+		markdownBuilder.WriteString(fmt.Sprintf("```json\n"))
+		if api.OutArgumentLoc != nil && api.OutArgumentLoc.IsRepeated {
+			markdownBuilder.WriteString(fmt.Sprintf("["))
+		}
+		markdownBuilder.WriteString(g.json(api, api.OutArgument))
+		if api.OutArgumentLoc != nil && api.OutArgumentLoc.IsRepeated {
+			markdownBuilder.WriteString(fmt.Sprintf("]\n"))
+		} else {
+			markdownBuilder.WriteString(fmt.Sprintf("\n"))
+		}
+		markdownBuilder.WriteString(fmt.Sprintf("```\n"))
+
+		if api.Type == "graphql" {
+			//markdownBuilder.WriteString("<details>\n")
+			//markdownBuilder.WriteString("<summary>查看GraphQL</summary>")
+			markdownBuilder.WriteString(fmt.Sprintf("```\n"))
+			markdownBuilder.WriteString(g.gql(api))
+			markdownBuilder.WriteString(fmt.Sprintf("\n```\n"))
+			//markdownBuilder.WriteString("</details>\n")
+		}
+		markdownBuilder.WriteString("\n")
 	}
 
-	g.write("- Req Body\n")
-	g.write(fmt.Sprintf("```json\n"))
-	if g.api.InArgumentLoc != nil && g.api.InArgumentLoc.IsRepeated {
-		g.write(fmt.Sprintf("[\n"))
-	}
-	g.write(g.json(g.api.InArgument))
-	if g.api.InArgumentLoc != nil && g.api.InArgumentLoc.IsRepeated {
-		g.write(fmt.Sprintf("]\n"))
-	} else {
-		g.write(fmt.Sprintf("\n"))
-	}
-	g.write(fmt.Sprintf("```\n"))
-	g.write("- Resp Body\n")
+	return []byte(markdownBuilder.String()), nil
+}
 
-	g.write(fmt.Sprintf("```json\n"))
-	if g.api.OutArgumentLoc != nil && g.api.OutArgumentLoc.IsRepeated {
-		g.write(fmt.Sprintf("["))
-	}
-	g.write(g.json(g.api.OutArgument))
-	if g.api.OutArgumentLoc != nil && g.api.OutArgumentLoc.IsRepeated {
-		g.write(fmt.Sprintf("]\n"))
-	} else {
-		g.write(fmt.Sprintf("\n"))
-	}
-	g.write(fmt.Sprintf("```\n"))
-
-	if g.api.Type == "graphql" {
-		//g.write("<details>\n")
-		//g.write("<summary>查看GraphQL</summary>")
-		g.write(fmt.Sprintf("```\n"))
-		g.write(g.gql())
-		g.write(fmt.Sprintf("\n```\n"))
-		//g.write("</details>\n")
-	}
-	return g.sb.String(), nil
+func (g *Generator) Name() string {
+	return "markdown"
 }
