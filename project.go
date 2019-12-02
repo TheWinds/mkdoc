@@ -1,8 +1,9 @@
 package docspace
 
 type Project struct {
-	Config   *Config
-	Scanners []APIScanner `yaml:"-"`
+	Config     *Config
+	Scanners   []APIScanner   `yaml:"-"`
+	Generators []DocGenerator `yaml:"-"`
 }
 
 type Header struct {
@@ -21,4 +22,5 @@ type Config struct {
 	BaseType     string    `yaml:"base_type"`     // models.BaseType
 	UseGOModule  bool      `yaml:"use_go_mod"`
 	Scanner      []string  `yaml:"scanner"`
+	Generator    []string  `yaml:"generator"`
 }
