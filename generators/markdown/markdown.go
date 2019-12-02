@@ -9,8 +9,8 @@ import (
 
 type Generator struct{}
 
-func NewGenerator() *Generator {
-	return &Generator{}
+func init() {
+	docspace.RegisterGenerator(&Generator{})
 }
 
 func (g *Generator) json(api *docspace.API, obj *docspace.Object) string {
@@ -177,4 +177,8 @@ func (g *Generator) Gen(ctx *docspace.DocGenContext) (output []byte, err error) 
 
 func (g *Generator) Name() string {
 	return "markdown"
+}
+
+func (g *Generator) FileExt() string {
+	return "md"
 }
