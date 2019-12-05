@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"go/ast"
+	"go/parser"
 	"go/token"
 	"strings"
 )
@@ -27,62 +28,94 @@ type GoStructInfo struct {
 
 var errGoStructNotFound = errors.New("go struct not found")
 
-// 从语法树获取结构体信息
-func findGOStructInfo(structName string, pkg *ast.Package, fileset *token.FileSet) (*GoStructInfo, error) {
+type StructFinder struct {
+	EnableGoMod bool
+}
 
-	info := new(GoStructInfo)
-	info.Fields = make([]*GoStructField, 0)
-	// 从语法树获取内容
-	ast.Inspect(pkg, func(node ast.Node) bool {
-		switch node.(type) {
-		case *ast.TypeSpec:
-			structNode := node.(*ast.TypeSpec)
-			if structNode.Name.Name == structName {
-				info.Name = structNode.Name.Name
-				switch structNode.Type.(type) {
-				case *ast.StructType:
-					structFields := (structNode.Type).(*ast.StructType).Fields
-					for _, field := range structFields.List {
-						name := field.Names[0].Name
-						var comment string
+type walkCtx struct {
+	structName string
+	pkg        *ast.Package
+	fileset    *token.FileSet
+	finder     *StructFinder
+	result     *GoStructInfo
+	err        error
+}
 
-						if field.Comment != nil && len(field.Comment.List) != 0 {
-							comment = (field.Comment.List[0]).Text
-						}
+func (s *StructFinder) Find(pkgDir string, structName string) (*GoStructInfo, error) {
+	fmt.Println("Find",pkgDir,structName)
+	ctx := &walkCtx{
+		structName: structName,
+		finder:     s,
+		result:     new(GoStructInfo),
+		fileset:    token.NewFileSet(),
+	}
+	ctx.result.Fields = make([]*GoStructField, 0)
 
-						baseTyp := baseType(field.Type)
-						imports := GetFileImportsAtNode(node, pkg, fileset)
-						baseTyp.ImportPkgName = imports[baseTyp.PkgName]
-						structField := &GoStructField{
-							Name:       name,
-							Comment:    comment,
-							DocComment: field.Doc.Text(),
-							GoType:     baseTyp,
-						}
-						if field.Tag != nil {
-							structField.JSONTag = getTag(field.Tag.Value, "json", name)
-							structField.XMLTag = getTag(field.Tag.Value, "xml", name)
-							structField.DocTag = getTag(field.Tag.Value, "doc", name)
-						}
-						info.Fields = append(info.Fields, structField)
+	pkgs, err := parser.ParseDir(ctx.fileset, pkgDir, nil, parser.ParseComments)
+	if err != nil {
+		return nil, err
+	}
 
-					}
-				case *ast.Ident:
-					structNode := (structNode.Type).(*ast.Ident)
-					info.Name = structNode.Name
-				default:
-					fmt.Printf("WARNING: only support `type <TypeName> <StructName>` go syntax,plase check %s \n", info.Name)
-				}
-
-			}
-
-		}
-		return true
-	})
-	if info.Name == "" {
+	for _, pkg := range pkgs {
+		ctx.pkg = pkg
+		ast.Inspect(pkg, s.genWalkForStruct(ctx))
+	}
+	if ctx.err != nil {
+		return nil, err
+	}
+	if ctx.result.Name == "" {
 		return nil, errGoStructNotFound
 	}
-	return info, nil
+	return ctx.result, nil
+}
+
+func (s *StructFinder) genWalkForStruct(ctx *walkCtx) func(node ast.Node) bool {
+	return func(node ast.Node) bool {
+		switch t := node.(type) {
+		case *ast.TypeSpec:
+			if t.Name.Name == ctx.structName {
+				s.walkTypeSpec(t, ctx)
+			}
+		}
+		return true
+	}
+}
+
+func (s *StructFinder) walkTypeSpec(spec *ast.TypeSpec, ctx *walkCtx) {
+	ctx.result.Name = spec.Name.Name
+	switch t := spec.Type.(type) {
+	case *ast.StructType:
+		fields := t.Fields
+		for _, field := range fields.List {
+			name := field.Names[0].Name
+			var comment string
+
+			if field.Comment != nil && len(field.Comment.List) != 0 {
+				comment = (field.Comment.List[0]).Text
+			}
+
+			baseTyp := baseType(field.Type)
+			imports := GetFileImportsAtNode(spec, ctx.pkg, ctx.fileset)
+			baseTyp.ImportPkgName = imports[baseTyp.PkgName]
+			structField := &GoStructField{
+				Name:       name,
+				Comment:    comment,
+				DocComment: field.Doc.Text(),
+				GoType:     baseTyp,
+			}
+			if field.Tag != nil {
+				structField.JSONTag = getTag(field.Tag.Value, "json", name)
+				structField.XMLTag = getTag(field.Tag.Value, "xml", name)
+				structField.DocTag = getTag(field.Tag.Value, "doc", name)
+			}
+			ctx.result.Fields = append(ctx.result.Fields, structField)
+
+		}
+	case *ast.Ident:
+		ctx.result.Name = t.Name
+	default:
+		fmt.Printf("WARNING: only support `type <TypeName> <StructName>` go syntax,plase check %s \n", ctx.result.Name)
+	}
 }
 
 func getTag(tags, tagName, defaultTag string) string {

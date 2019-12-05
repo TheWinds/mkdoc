@@ -4,6 +4,8 @@ type Project struct {
 	Config     *Config
 	Scanners   []APIScanner   `yaml:"-"`
 	Generators []DocGenerator `yaml:"-"`
+	ModulePkg  string
+	ModulePath string
 }
 
 type Header struct {

@@ -185,6 +185,16 @@ func buildAPI(apis []*docspace.API) error {
 	return nil
 }
 
+func initGoModule(project *docspace.Project) error {
+	data, err := ioutil.ReadFile(filepath.Join(project.Config.Package, "go.mod"))
+	if err != nil {
+		return err
+	}
+	project.ModulePkg = docspace.ModulePath(data)
+	project.ModulePath = docspace.FindGOModAbsPath(project.Config.Package)
+	return nil
+}
+
 func makeDoc(ctx *kingpin.ParseContext) error {
 	config, err := readConfig()
 	if err != nil {
@@ -197,6 +207,12 @@ func makeDoc(ctx *kingpin.ParseContext) error {
 
 	project := &docspace.Project{
 		Config: config,
+	}
+
+	if config.UseGOModule {
+		if err := initGoModule(project); err != nil {
+			return showErr("%v", err)
+		}
 	}
 
 	if ok := checkScanner(project); !ok {

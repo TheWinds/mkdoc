@@ -2,9 +2,6 @@ package docspace
 
 import (
 	"fmt"
-	"go/parser"
-	"go/token"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -157,26 +154,10 @@ func (api *API) getObjectInfoV2(query *TypeLocation, rootObj *Object, dep int) e
 
 	var structInfo *GoStructInfo
 	if api.Project.Config.UseGOModule {
-		data, err := ioutil.ReadFile(filepath.Join(api.Project.Config.Package, "go.mod"))
+		pkgAbsPath := strings.Replace(query.PackageName, api.Project.ModulePkg, api.Project.ModulePath, 1)
+		structInfo, err := new(StructFinder).Find(pkgAbsPath, query.TypeName)
 		if err != nil {
 			return err
-		}
-		modPath := modulePath(data)
-		modPathAbsPath := findGOModAbsPath(api.Project.Config.Package)
-		pkgAbsPath := strings.Replace(query.PackageName, modPath, modPathAbsPath, 1)
-		f := token.NewFileSet()
-		pkgs, err := parser.ParseDir(f, pkgAbsPath, nil, parser.ParseComments)
-		if err != nil {
-			return err
-		}
-		for _, pkg := range pkgs {
-			structInfo, err = findGOStructInfo(query.TypeName, pkg, f)
-			if err != nil && err != errGoStructNotFound {
-				return err
-			}
-			if structInfo != nil {
-				break
-			}
 		}
 		if structInfo == nil {
 			return fmt.Errorf("struct %s not found\n", query)
@@ -190,19 +171,12 @@ func (api *API) getObjectInfoV2(query *TypeLocation, rootObj *Object, dep int) e
 			if _, err := os.Stat(pkgAbsPath); err != nil {
 				continue
 			}
-			f := token.NewFileSet()
-			pkgs, err := parser.ParseDir(f, pkgAbsPath, nil, parser.ParseComments)
-			if err != nil {
+			structInfo, err := new(StructFinder).Find(pkgAbsPath, query.TypeName)
+			if err != nil && err != errGoStructNotFound {
 				return err
 			}
-			for _, pkg := range pkgs {
-				structInfo, err = findGOStructInfo(query.TypeName, pkg, f)
-				if err != nil && err != errGoStructNotFound {
-					return err
-				}
-				if structInfo != nil {
-					break
-				}
+			if structInfo != nil {
+				break
 			}
 		}
 		if structInfo == nil {

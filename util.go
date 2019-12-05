@@ -135,11 +135,11 @@ var (
 	moduleStr  = []byte("module")
 )
 
-// Copy from go sdk 1.12.7
 // ModulePath returns the module path from the gomod file text.
 // If it cannot find a module path, it returns an empty string.
 // It is tolerant of unrelated problems in the go.mod file.
-func modulePath(mod []byte) string {
+// Copy from go sdk 1.12.7
+func ModulePath(mod []byte) string {
 	for len(mod) > 0 {
 		line := mod
 		mod = nil
@@ -173,8 +173,8 @@ func modulePath(mod []byte) string {
 	return "" // missing module path
 }
 
-// findGOModAbsPath find the first(in dep) absolute path which contains go.mod file
-func findGOModAbsPath(root string) string {
+// FindGOModAbsPath find the first(in dep) absolute path which contains go.mod file
+func FindGOModAbsPath(root string) string {
 	absPath := ""
 	filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 		if info != nil && !info.IsDir() && info.Name() == "go.mod" {
