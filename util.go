@@ -86,7 +86,7 @@ func GetFileImportsAtNode(node ast.Node, pkg *ast.Package, fileset *token.FileSe
 			}
 			fileImportMap[importName] = importPath
 		}
-		fileImportMap[""] = GetFilePkgPath(fileName)
+		fileImportMap[""] = getFilePkgPath(fileName)
 		m = fileImportMap
 		importCache.Store(fileName, m)
 	}
@@ -112,22 +112,29 @@ func getFileImportsAtFile(fileName string) (map[string]string, error) {
 			}
 			fileImportMap[importName] = importPath
 		}
-		fileImportMap[""] = GetFilePkgPath(fileName)
+		fileImportMap[""] = getFilePkgPath(fileName)
 		m = fileImportMap
 		importCache.Store(fileName, m)
 	}
 	return m.(map[string]string), nil
 }
 
-// GetFilePkgPath get go package name from absolute file name
-func GetFilePkgPath(fileName string) string {
-	goSrcPaths := GetGOSrcPaths()
-	for _, v := range goSrcPaths {
-		if strings.HasPrefix(fileName, v) {
-			return filepath.Dir(fileName[len(v):])
+// getFilePkgPath get go package name from absolute file name
+func getFilePkgPath(fileName string) string {
+	project := GetProject()
+	if !project.Config.UseGOModule {
+		goSrcPaths := GetGOSrcPaths()
+		for _, v := range goSrcPaths {
+			if strings.HasPrefix(fileName, v) {
+				return filepath.Dir(fileName[len(v):])
+			}
 		}
+		return ""
 	}
-	return ""
+	rel := strings.Replace(fileName, project.ModulePath, "", 1)
+	rel = filepath.Dir(rel)
+	rel = strings.TrimRight(rel, string(os.PathSeparator))
+	return filepath.Join(project.ModulePkg, rel)
 }
 
 var (
