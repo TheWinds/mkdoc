@@ -28,9 +28,7 @@ type GoStructInfo struct {
 
 var errGoStructNotFound = errors.New("go struct not found")
 
-type StructFinder struct {
-	EnableGoMod bool
-}
+type StructFinder struct{}
 
 type walkCtx struct {
 	structName string
@@ -42,7 +40,6 @@ type walkCtx struct {
 }
 
 func (s *StructFinder) Find(pkgDir string, structName string) (*GoStructInfo, error) {
-	fmt.Println("Find",pkgDir,structName)
 	ctx := &walkCtx{
 		structName: structName,
 		finder:     s,
