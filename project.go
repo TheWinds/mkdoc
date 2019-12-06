@@ -1,5 +1,7 @@
 package docspace
 
+import "sync"
+
 type Project struct {
 	Config     *Config
 	Scanners   []APIScanner   `yaml:"-"`
@@ -25,4 +27,20 @@ type Config struct {
 	UseGOModule  bool      `yaml:"use_go_mod"`
 	Scanner      []string  `yaml:"scanner"`
 	Generator    []string  `yaml:"generator"`
+}
+
+var projectOnce sync.Once
+var _project *Project
+
+func SetProject(project *Project) {
+	projectOnce.Do(func() {
+		_project = project
+	})
+}
+
+func GetProject() *Project {
+	if _project == nil {
+		panic("_project is nil")
+	}
+	return _project
 }

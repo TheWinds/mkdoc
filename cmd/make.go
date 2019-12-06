@@ -131,7 +131,6 @@ func scanAPIs(project *docspace.Project) ([]*docspace.API, error) {
 				fmt.Println()
 				return nil, fmt.Errorf("annotation can not be parse\n%v\n------\nAnnotation:%s\n------\n", err, a)
 			}
-			api.Project = project
 			apis = append(apis, api)
 		}
 		fmt.Printf("\n")
@@ -222,7 +221,7 @@ func makeDoc(ctx *kingpin.ParseContext) error {
 	if ok := checkGenerator(project); !ok {
 		return nil
 	}
-
+	docspace.SetProject(project)
 	apis, err := scanAPIs(project)
 	if err != nil {
 		return showErr("%v", err)

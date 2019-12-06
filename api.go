@@ -27,7 +27,6 @@ type API struct {
 	DocLocation    string        `json:"doc_location"`
 	Disables       []string      `json:"disables"`
 	Annotation     DocAnnotation `json:"annotation"`
-	Project        *Project      `json:"-"`
 }
 
 // Build 生成API信息
@@ -52,7 +51,8 @@ func (api *API) Build() error {
 }
 
 func (api *API) LinkBaseType() error {
-	if api.Project.Config.BaseType == "" {
+	project := GetProject()
+	if project.Config.BaseType == "" {
 		return nil
 	}
 	for _, d := range api.Disables {
@@ -62,7 +62,7 @@ func (api *API) LinkBaseType() error {
 	}
 
 	baseTyp := new(Object)
-	err := api.getObjectInfoV2(newTypeLocation(api.Project.Config.BaseType), baseTyp, 0)
+	err := api.getObjectInfoV2(newTypeLocation(project.Config.BaseType), baseTyp, 0)
 	if err != nil {
 		return err
 	}
@@ -151,11 +151,13 @@ func (api *API) getObjectInfoV2(query *TypeLocation, rootObj *Object, dep int) e
 	if query == nil {
 		return nil
 	}
-
+	project := GetProject()
 	var structInfo *GoStructInfo
-	if api.Project.Config.UseGOModule {
-		pkgAbsPath := strings.Replace(query.PackageName, api.Project.ModulePkg, api.Project.ModulePath, 1)
-		structInfo, err := new(StructFinder).Find(pkgAbsPath, query.TypeName)
+	var err error
+
+	if project.Config.UseGOModule {
+		pkgAbsPath := strings.Replace(query.PackageName, project.ModulePkg, project.ModulePath, 1)
+		structInfo, err = new(StructFinder).Find(pkgAbsPath, query.TypeName)
 		if err != nil {
 			return err
 		}
@@ -171,7 +173,7 @@ func (api *API) getObjectInfoV2(query *TypeLocation, rootObj *Object, dep int) e
 			if _, err := os.Stat(pkgAbsPath); err != nil {
 				continue
 			}
-			structInfo, err := new(StructFinder).Find(pkgAbsPath, query.TypeName)
+			structInfo, err = new(StructFinder).Find(pkgAbsPath, query.TypeName)
 			if err != nil && err != errGoStructNotFound {
 				return err
 			}
