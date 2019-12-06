@@ -5,12 +5,9 @@ import (
 	"docspace"
 	"fmt"
 	"gopkg.in/alecthomas/kingpin.v2"
-	"gopkg.in/yaml.v2"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sort"
-	"strings"
 )
 
 import (
@@ -18,103 +15,6 @@ import (
 	_ "docspace/scanners/funcdoc"
 	_ "github.com/thewinds/gqlcorego"
 )
-
-func readConfig() (*docspace.Config, error) {
-	path, err := os.Getwd()
-	if err != nil {
-		return nil, err
-	}
-	confFilePath := filepath.Join(path, configFileName)
-	b, err := ioutil.ReadFile(confFilePath)
-	if err != nil {
-		return nil, err
-	}
-	config := new(docspace.Config)
-	err = yaml.Unmarshal(b, config)
-	return config, err
-}
-
-func checkScanner(project *docspace.Project) bool {
-	var okScanners []docspace.APIScanner
-	scanners := docspace.GetScanners()
-	if len(project.Config.Scanner) == 0 {
-		showWarn("please use at least one scanner \n")
-		return false
-	}
-
-	for _, name := range project.Config.Scanner {
-		if scanners[name] == nil {
-			showErr("scanner \"%s\" is not found,you can choose scanner below :\n", name)
-			for n := range scanners {
-				fmt.Printf("    %s\n", n)
-			}
-			return false
-		}
-		okScanners = append(okScanners, scanners[name])
-	}
-	project.Scanners = okScanners
-	return true
-}
-
-func checkGenerator(project *docspace.Project) bool {
-	var okGenerators []docspace.DocGenerator
-	generators := docspace.GetGenerators()
-	if len(project.Config.Generator) == 0 {
-		showWarn("please use at least one generator \n")
-		return false
-	}
-
-	for _, name := range project.Config.Generator {
-		if generators[name] == nil {
-			showErr("generator \"%s\" is not found,you can choose generator below :\n", name)
-			for n := range generators {
-				fmt.Printf("    %s\n", n)
-			}
-			return false
-		}
-		okGenerators = append(okGenerators, generators[name])
-	}
-	project.Generators = okGenerators
-	return true
-}
-
-func checkConfig(config *docspace.Config) error {
-	// check if the pkg to scan is exist
-	if config.Package == "" {
-		return fmt.Errorf("please config a pkg to scan in conf.yaml")
-	}
-
-	if config.UseGOModule {
-		path := config.Package
-		if !filepath.IsAbs(path) {
-			wd, err := os.Getwd()
-			if err != nil {
-				return err
-			}
-			path = filepath.Join(wd, path)
-		}
-		if _, err := os.Stat(path); err != nil {
-			return fmt.Errorf("no such file or directory: %s\n", path)
-		}
-	} else {
-		goPaths := docspace.GetGOPaths()
-		pkgExist := false
-		for _, gopath := range goPaths {
-			if _, err := os.Stat(filepath.Join(gopath, "src", config.Package)); err == nil {
-				pkgExist = true
-			}
-		}
-		if !pkgExist {
-			sb := strings.Builder{}
-			sb.WriteString(fmt.Sprintf("error: package \"%s\" is not found in any of:\n", config.Package))
-			for _, gopath := range goPaths {
-				sb.WriteString(fmt.Sprintln("  ", filepath.Join(gopath, "src", config.Package)))
-			}
-			return fmt.Errorf("%s", sb.String())
-		}
-	}
-	return nil
-}
 
 func scanAPIs(project *docspace.Project) ([]*docspace.API, error) {
 	var apis []*docspace.API
@@ -184,44 +84,18 @@ func buildAPI(apis []*docspace.API) error {
 	return nil
 }
 
-func initGoModule(project *docspace.Project) error {
-	data, err := ioutil.ReadFile(filepath.Join(project.Config.Package, "go.mod"))
-	if err != nil {
-		return err
-	}
-	project.ModulePkg = docspace.ModulePath(data)
-	project.ModulePath = docspace.FindGOModAbsPath(project.Config.Package)
-	return nil
-}
-
 func makeDoc(ctx *kingpin.ParseContext) error {
-	config, err := readConfig()
+	config, err := docspace.LoadDefaultConfig()
 	if err != nil {
 		return showErr("fail to read config file: %v", err)
 	}
 
-	if err := checkConfig(config); err != nil {
+	project, err := docspace.NewProject(config)
+	if err != nil {
 		return showErr("%v", err)
 	}
-
-	project := &docspace.Project{
-		Config: config,
-	}
-
-	if config.UseGOModule {
-		if err := initGoModule(project); err != nil {
-			return showErr("%v", err)
-		}
-	}
-
-	if ok := checkScanner(project); !ok {
-		return nil
-	}
-
-	if ok := checkGenerator(project); !ok {
-		return nil
-	}
 	docspace.SetProject(project)
+
 	apis, err := scanAPIs(project)
 	if err != nil {
 		return showErr("%v", err)
