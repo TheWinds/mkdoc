@@ -6,16 +6,22 @@
 ### 快速开始
 
 ```
-usage: mkdoc --scanner=SCANNER [<flags>] <pkg> [<out>]
+usage: mkdoc [<flags>] <command> [<args> ...]
+
+make doc from go source code
 
 Flags:
-      --help             Show context-sensitive help (also try --help-long and --help-man).
-  -s, --scanner=SCANNER  which api scanner to use,eg. gql-corego
-  -t, --tag=TAG          which tag to filter,eg. v1
+  --help  Show context-sensitive help (also try --help-long and --help-man).
 
-Args:
-  <pkg>    which package to scan
-  [<out>]  which file to output
+Commands:
+  help [<command>...]
+    Show help.
+
+  init
+    init project,create a default config file and doc dir
+
+  make [<flags>]
+    make doc
 ```
 
 
