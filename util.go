@@ -2,6 +2,7 @@ package docspace
 
 import (
 	"bytes"
+	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/token"
@@ -134,6 +135,7 @@ func getFilePkgPath(fileName string) string {
 	rel := strings.Replace(fileName, project.ModulePath, "", 1)
 	rel = filepath.Dir(rel)
 	rel = strings.TrimRight(rel, string(os.PathSeparator))
+	fmt.Println(fileName,"rel",rel,filepath.Join(project.ModulePkg, rel))
 	return filepath.Join(project.ModulePkg, rel)
 }
 
@@ -185,7 +187,7 @@ func FindGOModAbsPath(root string) string {
 	absPath := ""
 	filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 		if info != nil && !info.IsDir() && info.Name() == "go.mod" {
-			absPath = filepath.Dir(path)
+			absPath, _ = filepath.Abs(filepath.Dir(path))
 			return filepath.SkipDir
 		}
 		return nil
