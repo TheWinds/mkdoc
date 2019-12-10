@@ -86,6 +86,8 @@ func (g *Generator) Gen(ctx *mkdoc.DocGenContext) (output []byte, err error) {
 
 > %s 
 
+- BaseURL: *%s*
+
 ##  Summary
 
 | 📖 **Tag**     | %s |
@@ -99,6 +101,7 @@ func (g *Generator) Gen(ctx *mkdoc.DocGenContext) (output []byte, err error) {
 	markdownBuilder.WriteString(fmt.Sprintf(header,
 		ctx.Config.Name,
 		ctx.Config.Description,
+		ctx.Config.APIBaseURL,
 		"`"+ctx.Tag+"`",
 		fmt.Sprintf("`%d`", len(ctx.APIs))))
 
