@@ -7,7 +7,7 @@ common_header:
     desc: ""
     default: ""
 pkg: "./src"
-base_type: ""
+base_type: "github.com/thewinds/mkdoc/example/view.BaseView"
 use_go_mod: true
 scanner:
   - funcdoc
