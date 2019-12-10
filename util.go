@@ -2,7 +2,6 @@ package mkdoc
 
 import (
 	"bytes"
-	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/token"
@@ -135,7 +134,6 @@ func getFilePkgPath(fileName string) string {
 	rel := strings.Replace(fileName, project.ModulePath, "", 1)
 	rel = filepath.Dir(rel)
 	rel = strings.TrimRight(rel, string(os.PathSeparator))
-	fmt.Println(fileName,"rel",rel,filepath.Join(project.ModulePkg, rel))
 	return filepath.Join(project.ModulePkg, rel)
 }
 
