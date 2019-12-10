@@ -46,8 +46,16 @@ func (g *Generator) gql(api *docspace.API) string {
 	if api.OutArgumentLoc != nil && api.OutArgumentLoc.IsRepeated {
 		bodykw = "bodys"
 	}
-	ql := `%s %s(%s) {
-		%s(%s) {
+	var tArgs string
+	var tArgsInner string
+	if len(args) > 0 {
+		tArgs = fmt.Sprintf("(%s)", strings.Join(args, ","))
+	}
+	if len(argsInner) > 0 {
+		tArgsInner = fmt.Sprintf("(%s)", strings.Join(argsInner, ","))
+	}
+	ql := `%s %s%s {
+		%s%s {
 		  total
 		  %s%s
 		  errorCode
@@ -61,9 +69,9 @@ func (g *Generator) gql(api *docspace.API) string {
 			ql,
 			api.Method,
 			opName,
-			strings.Join(args, ","),
+			tArgs,
 			opName,
-			strings.Join(argsInner, ","),
+			tArgsInner,
 			bodykw,
 			gqlBody,
 		))
