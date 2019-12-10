@@ -1,20 +1,20 @@
 package markdown
 
 import (
-	"docspace"
 	"fmt"
+	"github.com/thewinds/mkdoc"
 	"strings"
 )
 
 type objGQLMarshaller struct {
-	api     *docspace.API
+	api     *mkdoc.API
 	sb      *strings.Builder
-	objMap  map[string]*docspace.Object
-	rootObj *docspace.Object
+	objMap  map[string]*mkdoc.Object
+	rootObj *mkdoc.Object
 	err     error
 }
 
-func newObjGQLMarshaller(api *docspace.API, obj *docspace.Object) *objGQLMarshaller {
+func newObjGQLMarshaller(api *mkdoc.API, obj *mkdoc.Object) *objGQLMarshaller {
 	return &objGQLMarshaller{api: api, sb: new(strings.Builder), objMap: api.ObjectsMap, rootObj: obj}
 }
 
@@ -26,7 +26,7 @@ func (o *objGQLMarshaller) Marshal() (string, error) {
 	return o.sb.String(), nil
 }
 
-func (o *objGQLMarshaller) marshal(obj *docspace.Object, dep int) {
+func (o *objGQLMarshaller) marshal(obj *mkdoc.Object, dep int) {
 	o.writeToken("{\n", 0)
 	for _, field := range obj.Fields {
 		k := fmt.Sprintf("		      %s", field.JSONTag)

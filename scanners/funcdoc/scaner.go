@@ -1,21 +1,21 @@
 package funcdoc
 
 import (
-	"docspace"
+	"github.com/thewinds/mkdoc"
 	"go/ast"
 	"go/parser"
 	"go/token"
 )
 
 func init() {
-	docspace.RegisterScanner(&Scanner{})
+	mkdoc.RegisterScanner(&Scanner{})
 }
 
 type Scanner struct{}
 
-func (c *Scanner) ScanAnnotations(project docspace.Project) ([]docspace.DocAnnotation, error) {
-	annotations := make([]docspace.DocAnnotation, 0)
-	dirs := docspace.GetScanDirs(project.Config.Package, project.Config.UseGOModule, nil)
+func (c *Scanner) ScanAnnotations(project mkdoc.Project) ([]mkdoc.DocAnnotation, error) {
+	annotations := make([]mkdoc.DocAnnotation, 0)
+	dirs := mkdoc.GetScanDirs(project.Config.Package, project.Config.UseGOModule, nil)
 	for _, dir := range dirs {
 		f := token.NewFileSet()
 		pkgs, err := parser.ParseDir(f, dir, nil, parser.ParseComments)
@@ -26,7 +26,7 @@ func (c *Scanner) ScanAnnotations(project docspace.Project) ([]docspace.DocAnnot
 		for _, v := range pkgs {
 			ast.Inspect(v, func(node ast.Node) bool {
 				if funcNode, ok := node.(*ast.FuncDecl); ok {
-					if annotation := docspace.GetAnnotationFromComment(funcNode.Doc.Text()); annotation != "" {
+					if annotation := mkdoc.GetAnnotationFromComment(funcNode.Doc.Text()); annotation != "" {
 						annotation = annotation.AppendMetaData("http", f.Position(funcNode.Doc.Pos()))
 						annotations = append(annotations, annotation)
 					}

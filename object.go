@@ -1,4 +1,4 @@
-package docspace
+package mkdoc
 
 // ObjectField filed info
 type ObjectField struct {

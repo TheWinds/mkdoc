@@ -1,8 +1,8 @@
 package markdown
 
 import (
-	"docspace"
 	"fmt"
+	"github.com/thewinds/mkdoc"
 	"sort"
 	"strings"
 )
@@ -10,15 +10,15 @@ import (
 type Generator struct{}
 
 func init() {
-	docspace.RegisterGenerator(&Generator{})
+	mkdoc.RegisterGenerator(&Generator{})
 }
 
-func (g *Generator) json(api *docspace.API, obj *docspace.Object) string {
+func (g *Generator) json(api *mkdoc.API, obj *mkdoc.Object) string {
 	o, _ := newObjJSONMarshaller(api, obj).Marshal()
 	return o
 }
 
-func (g *Generator) gql(api *docspace.API) string {
+func (g *Generator) gql(api *mkdoc.API) string {
 	sb := new(strings.Builder)
 	ind := strings.LastIndex(api.Path, ":")
 	opName := api.Path[ind+1:]
@@ -79,7 +79,7 @@ func (g *Generator) gql(api *docspace.API) string {
 	return sb.String()
 }
 
-func (g *Generator) Gen(ctx *docspace.DocGenContext) (output []byte, err error) {
+func (g *Generator) Gen(ctx *mkdoc.DocGenContext) (output []byte, err error) {
 	markdownBuilder := strings.Builder{}
 	header := `
 # %s

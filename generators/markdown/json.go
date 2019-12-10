@@ -1,20 +1,20 @@
 package markdown
 
 import (
-	"docspace"
 	"fmt"
+	"github.com/thewinds/mkdoc"
 	"strings"
 )
 
 type objJSONMarshaller struct {
-	api     *docspace.API
+	api     *mkdoc.API
 	sb      *strings.Builder
-	objMap  map[string]*docspace.Object
-	rootObj *docspace.Object
+	objMap  map[string]*mkdoc.Object
+	rootObj *mkdoc.Object
 	err     error
 }
 
-func newObjJSONMarshaller(api *docspace.API, obj *docspace.Object) *objJSONMarshaller {
+func newObjJSONMarshaller(api *mkdoc.API, obj *mkdoc.Object) *objJSONMarshaller {
 	return &objJSONMarshaller{api: api, sb: new(strings.Builder), objMap: api.ObjectsMap, rootObj: obj}
 }
 
@@ -26,7 +26,7 @@ func (o *objJSONMarshaller) Marshal() (string, error) {
 	return o.sb.String(), nil
 }
 
-func (o *objJSONMarshaller) marshal(obj *docspace.Object, dep int) {
+func (o *objJSONMarshaller) marshal(obj *mkdoc.Object, dep int) {
 	if o.err != nil {
 		return
 	}
@@ -49,7 +49,7 @@ func (o *objJSONMarshaller) marshal(obj *docspace.Object, dep int) {
 					o.writeToken("\n", 0)
 				}
 			} else {
-				o.writeToken(docspace.MockField(field.BaseType, field.JSONTag), 0)
+				o.writeToken(mkdoc.MockField(field.BaseType, field.JSONTag), 0)
 				if i != len(obj.Fields)-1 {
 					o.writeToken(",", 0)
 				}

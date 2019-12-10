@@ -1,6 +1,7 @@
-package docspace
+package mkdoc
 
 import (
+	"encoding/json"
 	"fmt"
 	"go/token"
 	"math/rand"
@@ -43,6 +44,7 @@ func init() {
 
 // ParseToAPI parse doc annotation to API def struct
 func (annotation DocAnnotation) ParseToAPI() (*API, error) {
+	fmt.Println(annotation)
 	api := new(API)
 	api.Annotation = annotation
 	err := parseSimple(annotation, api)
@@ -70,6 +72,11 @@ func (annotation DocAnnotation) ParseToAPI() (*API, error) {
 	if api.OutArgumentLoc != nil {
 		api.OutArgumentLoc.PackageName = imports[api.OutArgumentLoc.PackageName]
 	}
+	jjj:= func(i interface{}) string{
+		b,_:=json.MarshalIndent(i,"","\t")
+		return string(b)
+	}
+	fmt.Printf("\n## API %s", jjj(api))
 	return api, nil
 }
 

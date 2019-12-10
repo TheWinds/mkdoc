@@ -1,4 +1,4 @@
-package docspace
+package mkdoc
 
 import (
 	"bytes"

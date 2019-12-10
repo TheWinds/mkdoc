@@ -2,22 +2,16 @@
 package main
 
 import (
-	"docspace"
 	"fmt"
+	"github.com/thewinds/mkdoc"
 	"gopkg.in/alecthomas/kingpin.v2"
 	"os"
 	"path/filepath"
 	"sort"
 )
 
-import (
-	_ "docspace/generators/markdown"
-	_ "docspace/scanners/funcdoc"
-	_ "github.com/thewinds/gqlcorego"
-)
-
-func scanAPIs(project *docspace.Project) ([]*docspace.API, error) {
-	var apis []*docspace.API
+func scanAPIs(project *mkdoc.Project) ([]*mkdoc.API, error) {
+	var apis []*mkdoc.API
 	for _, scanner := range project.Scanners {
 		fmt.Printf("🔎  scan doc annotations (use %s)\n", scanner.GetName())
 		annotations, err := scanner.ScanAnnotations(*project)
@@ -38,7 +32,7 @@ func scanAPIs(project *docspace.Project) ([]*docspace.API, error) {
 	return apis, nil
 }
 
-func getAllTags(apis []*docspace.API) []string {
+func getAllTags(apis []*mkdoc.API) []string {
 	tagsMap := make(map[string]bool)
 	for _, api := range apis {
 		for _, t := range api.Tags {
@@ -53,8 +47,8 @@ func getAllTags(apis []*docspace.API) []string {
 	return tags
 }
 
-func filterAPIByTag(apis []*docspace.API, tag string) []*docspace.API {
-	var matched []*docspace.API
+func filterAPIByTag(apis []*mkdoc.API, tag string) []*mkdoc.API {
+	var matched []*mkdoc.API
 
 	if tag == "" {
 		return apis
@@ -71,7 +65,7 @@ func filterAPIByTag(apis []*docspace.API, tag string) []*docspace.API {
 	return matched
 }
 
-func buildAPI(apis []*docspace.API) error {
+func buildAPI(apis []*mkdoc.API) error {
 	for k, api := range apis {
 		fmt.Printf("\r🔥  building api '%s' [%d/%d]          ", api.Name, k+1, len(apis))
 		err := api.Build()
@@ -85,16 +79,16 @@ func buildAPI(apis []*docspace.API) error {
 }
 
 func makeDoc(ctx *kingpin.ParseContext) error {
-	config, err := docspace.LoadDefaultConfig()
+	config, err := mkdoc.LoadDefaultConfig()
 	if err != nil {
 		return showErr("fail to read config file: %v", err)
 	}
 
-	project, err := docspace.NewProject(config)
+	project, err := mkdoc.NewProject(config)
 	if err != nil {
 		return showErr("%v", err)
 	}
-	docspace.SetProject(project)
+	mkdoc.SetProject(project)
 
 	apis, err := scanAPIs(project)
 	if err != nil {
@@ -127,7 +121,7 @@ func makeDoc(ctx *kingpin.ParseContext) error {
 		tag = "all"
 	}
 
-	genCtx := &docspace.DocGenContext{
+	genCtx := &mkdoc.DocGenContext{
 		Tag:    tag,
 		APIs:   matchedAPIs,
 		Config: *config,
@@ -142,7 +136,7 @@ func makeDoc(ctx *kingpin.ParseContext) error {
 	return nil
 }
 
-func gen(project *docspace.Project, ctx *docspace.DocGenContext) error {
+func gen(project *mkdoc.Project, ctx *mkdoc.DocGenContext) error {
 	var version string
 	if makeDocVersion != nil && *makeDocVersion != "" {
 		version = *makeDocVersion

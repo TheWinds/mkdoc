@@ -2,12 +2,12 @@
 package main
 
 import (
-	"docspace"
+	"github.com/thewinds/mkdoc"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 func initProject(ctx *kingpin.ParseContext) error {
-	err := docspace.CreateDefaultConfig()
+	err := mkdoc.CreateDefaultConfig()
 	if err != nil {
 		return showWarn("init: %v", err)
 	}

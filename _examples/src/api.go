@@ -1,6 +1,11 @@
 package src
 
-import "context"
+import (
+	"context"
+	"github.com/thewinds/mkdoc/example/model"
+)
+
+var user *model.User
 
 // @doc 创建用户
 // create a user
