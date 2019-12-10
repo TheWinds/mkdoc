@@ -32,12 +32,12 @@ func newTypeLocation(raw string) *TypeLocation {
 		t.IsRepeated = true
 		raw = raw[2:]
 	}
-	e := strings.Split(raw, ".")
-	if len(e) == 1 {
-		t.TypeName = e[0]
-	}
-	if len(e) > 1 {
-		t.PackageName, t.TypeName = e[0], e[1]
+	i := strings.LastIndex(raw, ".")
+	if i == -1 {
+		t.TypeName = raw
+	} else {
+		t.PackageName = raw[:i]
+		t.TypeName = raw[i+1:]
 	}
 	return t
 }
