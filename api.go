@@ -9,19 +9,18 @@ import (
 
 // API def
 type API struct {
-	Name           string             `json:"name"`
-	Desc           string             `json:"desc"`
-	Path           string             `json:"path"`
-	Method         string             `json:"method"` // post get delete patch ; query mutation
-	Type           string             `json:"type"`   // echo_handle graphql
-	Tags           []string           `json:"tags"`
-	Query          map[string]string  `json:"query"`
-	Header         map[string]string  `json:"header"`
-	InArgument     *Object            `json:"in_argument"`
-	OutArgument    *Object            `json:"out_argument"`
-	InArgEncoder   string             `json:"in_arg_encoder"`
-	OutArgEncoder  string             `json:"out_arg_encoder"`
-	ObjectsMap     map[string]*Object `json:"objects_map"`
+	Name           string            `json:"name"`
+	Desc           string            `json:"desc"`
+	Path           string            `json:"path"`
+	Method         string            `json:"method"` // post get delete patch ; query mutation
+	Type           string            `json:"type"`   // echo_handle graphql
+	Tags           []string          `json:"tags"`
+	Query          map[string]string `json:"query"`
+	Header         map[string]string `json:"header"`
+	InArgument     *Object           `json:"in_argument"`
+	OutArgument    *Object           `json:"out_argument"`
+	InArgEncoder   string            `json:"in_arg_encoder"`
+	OutArgEncoder  string            `json:"out_arg_encoder"`
 	InArgumentLoc  *TypeLocation
 	OutArgumentLoc *TypeLocation
 	DocLocation    string        `json:"doc_location"`
@@ -38,7 +37,6 @@ func (api *API) Build() error {
 	if api.OutArgument == nil {
 		api.OutArgument = new(Object)
 	}
-	api.ObjectsMap = map[string]*Object{}
 	err := api.getObjectInfoV2(api.InArgumentLoc, api.InArgument, 0)
 	if err != nil {
 		return err
@@ -213,7 +211,7 @@ func (api *API) getObjectInfoV2(query *TypeLocation, rootObj *Object, dep int) e
 			IsRef:      field.GoType.IsRef,
 		}
 		rootObj.Fields = append(rootObj.Fields, objField)
-		if objField.IsRef && api.ObjectsMap[rootObj.ID] == nil {
+		if objField.IsRef && project.GetObject(rootObj.ID) == nil {
 			if rootObj.ID == objField.Type {
 				continue
 			}
@@ -222,6 +220,6 @@ func (api *API) getObjectInfoV2(query *TypeLocation, rootObj *Object, dep int) e
 			}
 		}
 	}
-	api.ObjectsMap[rootObj.ID] = rootObj
+	project.AddObject(rootObj.ID, rootObj)
 	return nil
 }

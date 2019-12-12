@@ -14,6 +14,8 @@ type Project struct {
 	Generators []DocGenerator `yaml:"-"`
 	ModulePkg  string
 	ModulePath string
+	refObjects map[string]*Object
+	muObj      sync.Mutex
 }
 
 func NewProject(config *Config) (*Project, error) {
@@ -33,6 +35,7 @@ func NewProject(config *Config) (*Project, error) {
 			return nil, err
 		}
 	}
+	project.refObjects = make(map[string]*Object)
 	return project, nil
 }
 
@@ -104,4 +107,16 @@ func (project *Project) initGoModule() error {
 	project.ModulePkg = ModulePath(data)
 	project.ModulePath = FindGOModAbsPath(project.Config.Package)
 	return nil
+}
+
+func (project *Project) AddObject(id string, value *Object) {
+	project.muObj.Lock()
+	defer project.muObj.Unlock()
+	project.refObjects[id] = value
+}
+
+func (project *Project) GetObject(id string) *Object {
+	project.muObj.Lock()
+	defer project.muObj.Unlock()
+	return project.refObjects[id]
 }
