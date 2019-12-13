@@ -15,7 +15,7 @@ type objJSONMarshaller struct {
 }
 
 func newObjJSONMarshaller(api *mkdoc.API, obj *mkdoc.Object) *objJSONMarshaller {
-	return &objJSONMarshaller{api: api, sb: new(strings.Builder), objMap: api.ObjectsMap, rootObj: obj}
+	return &objJSONMarshaller{api: api, sb: new(strings.Builder), rootObj: obj}
 }
 
 func (o *objJSONMarshaller) Marshal() (string, error) {

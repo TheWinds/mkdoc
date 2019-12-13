@@ -18,69 +18,11 @@ func (g *Generator) json(api *mkdoc.API, obj *mkdoc.Object) string {
 	return o
 }
 
-func (g *Generator) gql(api *mkdoc.API) string {
-	sb := new(strings.Builder)
-	ind := strings.LastIndex(api.Path, ":")
-	opName := api.Path[ind+1:]
-	args := make([]string, 0)
-	argsInner := make([]string, 0)
-	for _, field := range api.InArgument.Fields {
-		var gqlTyp string
-		switch field.BaseType {
-		case "string":
-			gqlTyp = "String!"
-		case "bool":
-			gqlTyp = "Boolean!"
-		case "int", "int32", "int64", "uint", "uint32", "uint64":
-			gqlTyp = "Int!"
-		case "float", "float32", "float64":
-			gqlTyp = "Float!"
-		}
-		if field.IsRepeated {
-			gqlTyp = "[" + gqlTyp + "]!"
-		}
-		args = append(args, fmt.Sprintf("$%s: %s", field.JSONTag, gqlTyp))
-		argsInner = append(argsInner, fmt.Sprintf("%s: $%s", field.JSONTag, field.JSONTag))
-	}
-	bodykw := "body"
-	if api.OutArgumentLoc != nil && api.OutArgumentLoc.IsRepeated {
-		bodykw = "bodys"
-	}
-	var tArgs string
-	var tArgsInner string
-	if len(args) > 0 {
-		tArgs = fmt.Sprintf("(%s)", strings.Join(args, ","))
-	}
-	if len(argsInner) > 0 {
-		tArgsInner = fmt.Sprintf("(%s)", strings.Join(argsInner, ","))
-	}
-	ql := `%s %s%s {
-		%s%s {
-		  total
-		  %s%s
-		  errorCode
-		  errorMsg
-		  success
-		}
-	  }`
-	gqlBody, _ := newObjGQLMarshaller(api, api.OutArgument).Marshal()
-	sb.WriteString(
-		fmt.Sprintf(
-			ql,
-			api.Method,
-			opName,
-			tArgs,
-			opName,
-			tArgsInner,
-			bodykw,
-			gqlBody,
-		))
-
-	return sb.String()
-}
-
 func (g *Generator) Gen(ctx *mkdoc.DocGenContext) (output []byte, err error) {
 	markdownBuilder := strings.Builder{}
+	writef := func(format string, v ...interface{}) {
+		markdownBuilder.WriteString(fmt.Sprintf(format, v...))
+	}
 	header := `
 # %s
 
@@ -98,89 +40,80 @@ func (g *Generator) Gen(ctx *mkdoc.DocGenContext) (output []byte, err error) {
 
 # API List
 `
-	markdownBuilder.WriteString(fmt.Sprintf(header,
+	writef(header,
 		ctx.Config.Name,
 		ctx.Config.Description,
 		ctx.Config.APIBaseURL,
 		"`"+ctx.Tag+"`",
-		fmt.Sprintf("`%d`", len(ctx.APIs))))
+		fmt.Sprintf("`%d`", len(ctx.APIs)))
 
-	markdownBuilder.WriteString("\n")
+	writef("\n")
 
 	for _, api := range ctx.APIs {
-		markdownBuilder.WriteString(fmt.Sprintf("### %s\n", api.Name))
+		writef("### %s\n", api.Name)
 		if len(strings.TrimSpace(api.Desc)) > 0 {
-			markdownBuilder.WriteString(fmt.Sprintf("> %s\n", api.Desc))
+			writef("> %s\n", api.Desc)
 		}
-		markdownBuilder.WriteString("\n")
-		markdownBuilder.WriteString(fmt.Sprintf("- %s %s\n", api.Method, api.Type))
-		markdownBuilder.WriteString(fmt.Sprintf("```\n"))
-		markdownBuilder.WriteString(fmt.Sprintf("[path] %s\n", api.Path))
-		markdownBuilder.WriteString(fmt.Sprintf("```\n"))
+		writef("\n")
+		writef("- %s %s\n", api.Method, api.Type)
+		writef("```\n")
+		writef("[path] %s\n", api.Path)
+		writef("```\n")
 
 		if len(api.Header) > 0 {
-			markdownBuilder.WriteString("- Header\n")
-			markdownBuilder.WriteString("|名称|说明|\n|---|---|\n")
+			writef("- Header\n")
+			writef("|名称|说明|\n|---|---|\n")
 			keys := make([]string, 0, len(api.Header))
 			for k := range api.Header {
 				keys = append(keys, k)
 			}
 			sort.Strings(keys)
 			for _, key := range keys {
-				markdownBuilder.WriteString(fmt.Sprintf("|`%s`|%s|\n", key, api.Header[key]))
+				writef("|`%s`|%s|\n", key, api.Header[key])
 			}
-			markdownBuilder.WriteString("\n")
+			writef("\n")
 		}
 
 		if len(api.Query) > 0 {
-			markdownBuilder.WriteString("- Query\n")
-			markdownBuilder.WriteString("|名称|说明|\n|---|---|\n")
+			writef("- Query\n")
+			writef("|名称|说明|\n|---|---|\n")
 			keys := make([]string, 0, len(api.Query))
 			for k := range api.Query {
 				keys = append(keys, k)
 			}
 			sort.Strings(keys)
 			for _, key := range keys {
-				markdownBuilder.WriteString(fmt.Sprintf("|`%s`|%s|\n", key, api.Query[key]))
+				writef("|`%s`|%s|\n", key, api.Query[key])
 			}
-			markdownBuilder.WriteString("\n")
+			writef("\n")
 		}
 
-		markdownBuilder.WriteString("- Req Body\n")
-		markdownBuilder.WriteString(fmt.Sprintf("```json\n"))
+		writef("- Req Body\n")
+		writef("```json\n")
 		if api.InArgumentLoc != nil && api.InArgumentLoc.IsRepeated {
-			markdownBuilder.WriteString(fmt.Sprintf("[\n"))
+			writef("[\n")
 		}
-		markdownBuilder.WriteString(g.json(api, api.InArgument))
+		writef(g.json(api, api.InArgument))
 		if api.InArgumentLoc != nil && api.InArgumentLoc.IsRepeated {
-			markdownBuilder.WriteString(fmt.Sprintf("]\n"))
+			writef("]\n")
 		} else {
-			markdownBuilder.WriteString(fmt.Sprintf("\n"))
+			writef("\n")
 		}
-		markdownBuilder.WriteString(fmt.Sprintf("```\n"))
-		markdownBuilder.WriteString("- Resp Body\n")
+		writef("```\n")
+		writef("- Resp Body\n")
 
-		markdownBuilder.WriteString(fmt.Sprintf("```json\n"))
+		writef("```json\n")
 		if api.OutArgumentLoc != nil && api.OutArgumentLoc.IsRepeated {
-			markdownBuilder.WriteString(fmt.Sprintf("["))
+			writef("[")
 		}
-		markdownBuilder.WriteString(g.json(api, api.OutArgument))
+		writef(g.json(api, api.OutArgument))
 		if api.OutArgumentLoc != nil && api.OutArgumentLoc.IsRepeated {
-			markdownBuilder.WriteString(fmt.Sprintf("]\n"))
+			writef("]\n")
 		} else {
-			markdownBuilder.WriteString(fmt.Sprintf("\n"))
+			writef("\n")
 		}
-		markdownBuilder.WriteString(fmt.Sprintf("```\n"))
-
-		if api.Type == "graphql" {
-			//markdownBuilder.WriteString("<details>\n")
-			//markdownBuilder.WriteString("<summary>查看GraphQL</summary>")
-			markdownBuilder.WriteString(fmt.Sprintf("```\n"))
-			markdownBuilder.WriteString(g.gql(api))
-			markdownBuilder.WriteString(fmt.Sprintf("\n```\n"))
-			//markdownBuilder.WriteString("</details>\n")
-		}
-		markdownBuilder.WriteString("\n")
+		writef("```\n")
+		writef("\n")
 	}
 
 	return []byte(markdownBuilder.String()), nil
