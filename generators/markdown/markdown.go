@@ -3,22 +3,27 @@ package markdown
 import (
 	"fmt"
 	"github.com/thewinds/mkdoc"
+	"github.com/thewinds/mkdoc/generators/objmock"
 	"sort"
 	"strings"
 )
 
-type Generator struct{}
+type Generator struct {
+	refObj map[string]*mkdoc.Object
+}
 
 func init() {
 	mkdoc.RegisterGenerator(&Generator{})
 }
 
 func (g *Generator) json(api *mkdoc.API, obj *mkdoc.Object) string {
-	o, _ := newObjJSONMarshaller(api, obj).Marshal()
+	mocker := new(objmock.JSONMocker)
+	o, _ := mocker.Mock(obj, g.refObj)
 	return o
 }
 
 func (g *Generator) Gen(ctx *mkdoc.DocGenContext) (output []byte, err error) {
+	g.refObj = ctx.RefObj
 	markdownBuilder := strings.Builder{}
 	writef := func(format string, v ...interface{}) {
 		markdownBuilder.WriteString(fmt.Sprintf(format, v...))
@@ -88,31 +93,37 @@ func (g *Generator) Gen(ctx *mkdoc.DocGenContext) (output []byte, err error) {
 			writef("\n")
 		}
 
-		writef("- Req Body\n")
-		writef("```json\n")
-		if api.InArgumentLoc != nil && api.InArgumentLoc.IsRepeated {
-			writef("[\n")
+		writef("- Request Example\n")
+		switch api.InArgEncoder {
+		case "json":
+			writef("```json\n")
+			if api.InArgumentLoc != nil && api.InArgumentLoc.IsRepeated {
+				writef("[\n")
+			}
+			writef(g.json(api, api.InArgument))
+			if api.InArgumentLoc != nil && api.InArgumentLoc.IsRepeated {
+				writef("]\n")
+			} else {
+				writef("\n")
+			}
+			writef("```\n")
 		}
-		writef(g.json(api, api.InArgument))
-		if api.InArgumentLoc != nil && api.InArgumentLoc.IsRepeated {
-			writef("]\n")
-		} else {
-			writef("\n")
-		}
-		writef("```\n")
-		writef("- Resp Body\n")
 
-		writef("```json\n")
-		if api.OutArgumentLoc != nil && api.OutArgumentLoc.IsRepeated {
-			writef("[")
+		writef("- Response Example\n")
+		switch api.OutArgEncoder {
+		case "json":
+			writef("```json\n")
+			if api.OutArgumentLoc != nil && api.OutArgumentLoc.IsRepeated {
+				writef("[")
+			}
+			writef(g.json(api, api.OutArgument))
+			if api.OutArgumentLoc != nil && api.OutArgumentLoc.IsRepeated {
+				writef("]\n")
+			} else {
+				writef("\n")
+			}
+			writef("```\n")
 		}
-		writef(g.json(api, api.OutArgument))
-		if api.OutArgumentLoc != nil && api.OutArgumentLoc.IsRepeated {
-			writef("]\n")
-		} else {
-			writef("\n")
-		}
-		writef("```\n")
 		writef("\n")
 	}
 
