@@ -31,6 +31,12 @@ type API struct {
 // Build 生成API信息
 // 得到所有依赖类型的信息、字段JSONTag以及DocComment
 func (api *API) Build() error {
+	if api.InArgEncoder == "" {
+		api.InArgEncoder = GetProject().Config.BodyEncoder
+	}
+	if api.OutArgEncoder == "" {
+		api.OutArgEncoder = GetProject().Config.BodyEncoder
+	}
 	if api.InArgument == nil {
 		api.InArgument = new(Object)
 	}
