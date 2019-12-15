@@ -22,24 +22,31 @@
 ```
 [path] /api/user
 ```
-- Req Body
+- Request Example
 ```json
 {
-    "name" : ,	# 用户名
-    "pwd" : ,	# 密码
-    "age" : 	# 年龄
+    "name": , // 用户名
+    "pwd": ,  // 密码
+    "age":    // 年龄
 }
 ```
-- Resp Body
+- Response Example
 ```json
 {
-    "code" : 0,	# 状态码
-    "msg" : "",	# 提示消息
-    "data" : {
-        "id" : 729906,	# ID
-        "name" : "str",	# 用户名
-        "pwd" : "",	# 密码
-        "age" : 0	# 年龄
+    "code": 10,        // 状态码
+
+    "msg": "str",      // 提示消息
+
+    "data": {          // Data
+
+        "id": 10,      // ID
+
+        "name": "str", // 用户名
+
+        "pwd": "str",  // 密码
+
+        "age": 10      // 年龄
+
     }
 }
 ```
@@ -56,24 +63,34 @@
 |---|---|
 |`uid`|用户ID|
 
-- Req Body
+- Request Example
 ```json
 {
-    "name" : "str",	# 用户名
-    "pwd" : "",	# 密码
-    "age" : 0	# 年龄
+    "name": "str", // 用户名
+
+    "pwd": "str",  // 密码
+
+    "age": 10      // 年龄
+
 }
 ```
-- Resp Body
+- Response Example
 ```json
 {
-    "code" : 0,	# 状态码
-    "msg" : "",	# 提示消息
-    "data" : {
-        "id" : 133274,	# ID
-        "name" : "str",	# 用户名
-        "pwd" : "",	# 密码
-        "age" : 0	# 年龄
+    "code": 10,        // 状态码
+
+    "msg": "str",      // 提示消息
+
+    "data": {          // Data
+
+        "id": 10,      // ID
+
+        "name": "str", // 用户名
+
+        "pwd": "str",  // 密码
+
+        "age": 10      // 年龄
+
     }
 }
 ```
@@ -92,21 +109,29 @@
 |`name`|名称|
 |`uid`|用户ID|
 
-- Req Body
+- Request Example
 ```json
 {
+
 }
 ```
-- Resp Body
+- Response Example
 ```json
 {
-    "code" : 0,	# 状态码
-    "msg" : "",	# 提示消息
-    "data" : [{
-        "id" : 984998,	# ID
-        "name" : "str",	# 用户名
-        "pwd" : "",	# 密码
-        "age" : 0	# 年龄
+    "code": 10,        // 状态码
+
+    "msg": "str",      // 提示消息
+
+    "data": [{         // Data
+
+        "id": 10,      // ID
+
+        "name": "str", // 用户名
+
+        "pwd": "str",  // 密码
+
+        "age": 10      // 年龄
+
     }]
 }
 ```
