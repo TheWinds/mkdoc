@@ -120,3 +120,9 @@ func (project *Project) GetObject(id string) *Object {
 	defer project.muObj.Unlock()
 	return project.refObjects[id]
 }
+
+func (project *Project) Objects() map[string]*Object{
+	project.muObj.Lock()
+	defer project.muObj.Unlock()
+	return project.refObjects
+}
