@@ -16,6 +16,7 @@ type DocGenContext struct {
 	Tag    string
 	APIs   []*API
 	Config Config
+	RefObj map[string]*Object
 }
 
 var generators map[string]DocGenerator

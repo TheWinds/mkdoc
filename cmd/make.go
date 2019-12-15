@@ -125,6 +125,7 @@ func makeDoc(ctx *kingpin.ParseContext) error {
 		Tag:    tag,
 		APIs:   matchedAPIs,
 		Config: *config,
+		RefObj: project.Objects(),
 	}
 
 	err = gen(project, genCtx)
