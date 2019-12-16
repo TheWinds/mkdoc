@@ -8,7 +8,7 @@
   - [ ] Refactor: impl of TypeLocation
   - [ ] Feature:  resolve all go type at a step
 - [ ] Generator
-  - [ ] Fix: JSON object mocker recursive object ref check
+  - [x] Fix: JSON object mocker object circle ref check
   - [ ] Feature: XML object mocker
   - [ ] Feature: HTML generator
 - [ ] Build

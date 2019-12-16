@@ -14,7 +14,7 @@ type JSONMocker struct {
 	data      strings.Builder
 	comment   map[int]string
 	commented map[string]bool
-	noRef     bool
+	refPath   []string
 }
 
 func (j *JSONMocker) Mock(object *mkdoc.Object, refs map[string]*mkdoc.Object) (string, error) {
@@ -22,6 +22,7 @@ func (j *JSONMocker) Mock(object *mkdoc.Object, refs map[string]*mkdoc.Object) (
 	j.comment = make(map[int]string)
 	j.commented = make(map[string]bool)
 	j.dep = -1
+	j.pushRefPath(object.ID)
 	j.mock(object)
 	if j.err != nil {
 		return "", j.err
@@ -34,6 +35,7 @@ func (j *JSONMocker) MockNoComment(object *mkdoc.Object, refs map[string]*mkdoc.
 	j.comment = make(map[int]string)
 	j.commented = make(map[string]bool)
 	j.dep = -1
+	j.pushRefPath(object.ID)
 	j.mock(object)
 	if j.err != nil {
 		return "", j.err
@@ -72,16 +74,11 @@ func (j *JSONMocker) mock(obj *mkdoc.Object) {
 				return
 			}
 			// avoid circle ref
-			if refObj.ID == field.Type {
-				if j.noRef {
-					j.write("null")
-				} else {
-					j.noRef = true
-					j.mock(refObj)
-					j.noRef = false
-				}
-			} else {
+			if j.pushRefPath(refObj.ID) {
 				j.mock(refObj)
+				j.popRefPath()
+			} else {
+				j.write("null")
 			}
 		} else {
 			j.writeValue(field)
@@ -89,6 +86,7 @@ func (j *JSONMocker) mock(obj *mkdoc.Object) {
 		if field.IsRepeated {
 			j.write("]")
 		}
+		// a -> b -> a -> b
 	}
 	j.write("\n")
 	j.line++
@@ -157,4 +155,29 @@ func (j *JSONMocker) lineComment(obj *mkdoc.Object, field *mkdoc.ObjectField) {
 		j.commented[key] = true
 		j.comment[j.line] = field.Comment
 	}
+}
+
+func (j *JSONMocker) pushRefPath(objTyp string) bool {
+	i := -1
+	for k, v := range j.refPath {
+		if v == objTyp {
+			i = k
+			break
+		}
+	}
+	// a->a        ok
+	// a->a->a 	  !ok
+	// a->a->b->a !ok
+	if i == -1 || len(j.refPath)-i <= 1 {
+		j.refPath = append(j.refPath, objTyp)
+		return true
+	}
+	return false
+}
+
+func (j *JSONMocker) popRefPath() {
+	if len(j.refPath) == 0 {
+		return
+	}
+	j.refPath = j.refPath[:len(j.refPath)-1]
 }
