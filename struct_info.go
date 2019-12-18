@@ -142,13 +142,13 @@ func (t *GoType) String() string {
 }
 
 // Location return the location info of go type
-func (t *GoType) Location() *TypeLocation {
-	return &TypeLocation{
-		PackageName: t.ImportPkgName,
-		TypeName:    t.Name,
-		IsRepeated:  t.IsRep,
-	}
-}
+//func (t *GoType) Location() *TypeLocation {
+	//return &TypeLocation{
+	//	PackageName: t.ImportPkgName,
+	//	TypeName:    t.Name,
+	//	IsRepeated:  t.IsRep,
+	//}
+//}
 
 func baseType(x ast.Expr) *GoType {
 	switch t := x.(type) {

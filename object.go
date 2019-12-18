@@ -2,7 +2,9 @@ package mkdoc
 
 import (
 	"fmt"
+	"math/rand"
 	"strings"
+	"time"
 )
 
 func isBuiltinType(t string) bool {
@@ -127,6 +129,61 @@ type ObjectField struct {
 
 // Object info
 type Object struct {
+	ID     string
 	Type   *ObjectType
 	Fields []*ObjectField
+	Loaded bool
+}
+
+func init() {
+	rand.Seed(time.Now().Unix())
+}
+
+func randObjectID(s string) string {
+	return fmt.Sprintf("obj_%s_#%d", s, rand.Int63())
+}
+
+func createRootObject(pkgTyp string) (*Object, map[string]*Object, error) {
+	var i int
+	for i = 0; i < len(pkgTyp); i += 2 {
+		if pkgTyp[i] == '[' {
+			if i+1 >= len(pkgTyp) || pkgTyp[i+1] != ']' {
+				return nil, nil, fmt.Errorf("invaild type '%s'", pkgTyp)
+			}
+			continue
+		}
+		break
+	}
+	arrDep := i / 2
+	pkgTypPath := pkgTyp[i:]
+	leaf := &Object{
+		ID:     pkgTypPath,
+		Type:   nil,
+		Fields: nil,
+		Loaded: false,
+	}
+	if isBuiltinType(pkgTypPath) {
+		leaf.Loaded = true
+		leaf.Type = &ObjectType{
+			Name: pkgTypPath,
+		}
+		leaf.ID = fmt.Sprintf("builtin.%s", pkgTypPath)
+	}
+	root := leaf
+	m := make(map[string]*Object)
+	m[leaf.ID] = leaf
+	for k := 0; k < arrDep; k++ {
+		obj := &Object{
+			ID: randObjectID("arr"),
+			Type: &ObjectType{
+				Name:       "object",
+				Ref:        root.ID,
+				IsRepeated: true,
+			},
+			Loaded: true,
+		}
+		root = obj
+		m[root.ID] = root
+	}
+	return root, m, nil
 }

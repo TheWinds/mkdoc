@@ -9,23 +9,21 @@ import (
 
 // API def
 type API struct {
-	Name           string            `json:"name"`
-	Desc           string            `json:"desc"`
-	Path           string            `json:"path"`
-	Method         string            `json:"method"` // post get delete patch ; query mutation
-	Type           string            `json:"type"`   // echo_handle graphql
-	Tags           []string          `json:"tags"`
-	Query          map[string]string `json:"query"`
-	Header         map[string]string `json:"header"`
-	InArgument     *Object           `json:"in_argument"`
-	OutArgument    *Object           `json:"out_argument"`
-	InArgEncoder   string            `json:"in_arg_encoder"`
-	OutArgEncoder  string            `json:"out_arg_encoder"`
-	InArgumentLoc  *TypeLocation
-	OutArgumentLoc *TypeLocation
-	DocLocation    string        `json:"doc_location"`
-	Disables       []string      `json:"disables"`
-	Annotation     DocAnnotation `json:"annotation"`
+	Name          string            `json:"name"`
+	Desc          string            `json:"desc"`
+	Path          string            `json:"path"`
+	Method        string            `json:"method"` // post get delete patch ; query mutation
+	Type          string            `json:"type"`   // echo_handle graphql
+	Tags          []string          `json:"tags"`
+	Query         map[string]string `json:"query"`
+	Header        map[string]string `json:"header"`
+	InArgument    *Object           `json:"in_argument"`
+	OutArgument   *Object           `json:"out_argument"`
+	InArgEncoder  string            `json:"in_arg_encoder"`
+	OutArgEncoder string            `json:"out_arg_encoder"`
+	DocLocation   string            `json:"doc_location"`
+	Disables      []string          `json:"disables"`
+	Annotation    DocAnnotation     `json:"annotation"`
 }
 
 // Build 生成API信息
@@ -43,14 +41,14 @@ func (api *API) Build() error {
 	if api.OutArgument == nil {
 		api.OutArgument = new(Object)
 	}
-	err := api.getObjectInfoV2(api.InArgumentLoc, api.InArgument, 0)
-	if err != nil {
-		return err
-	}
-	err = api.getObjectInfoV2(api.OutArgumentLoc, api.OutArgument, 0)
-	if err != nil {
-		return err
-	}
+	//err := api.getObjectInfo(api.InArgumentLoc, api.InArgument, 0)
+	//if err != nil {
+	//	return err
+	//}
+	//err = api.getObjectInfo(api.OutArgumentLoc, api.OutArgument, 0)
+	//if err != nil {
+	//	return err
+	//}
 	return api.LinkBaseType()
 }
 
@@ -66,14 +64,14 @@ func (api *API) LinkBaseType() error {
 	}
 
 	baseTyp := new(Object)
-	err := api.getObjectInfoV2(newTypeLocation(project.Config.BaseType), baseTyp, 0)
-	if err != nil {
-		return err
-	}
+	//err := api.getObjectInfo(newTypeLocation(project.Config.BaseType), baseTyp, 0)
+	//if err != nil {
+	//	return err
+	//}
 	var repeated bool
-	if api.OutArgumentLoc != nil {
-		repeated = api.OutArgumentLoc.IsRepeated
-	}
+	//if api.OutArgumentLoc != nil {
+	//	repeated = api.OutArgumentLoc.IsRepeated
+	//}
 
 	var linkFieldName string
 	for _, v := range baseTyp.Fields {
@@ -91,16 +89,16 @@ func (api *API) LinkBaseType() error {
 	}
 	if api.OutArgument == nil {
 		api.OutArgument = baseTyp
-		api.OutArgumentLoc = nil
+		//api.OutArgumentLoc = nil
 		return nil
 	}
 
-	err = api.linkField2Object(baseTyp, linkFieldName, api.OutArgument.ID, repeated)
-	if err != nil {
-		return err
-	}
+	//err = api.linkField2Object(baseTyp, linkFieldName, api.OutArgument.ID, repeated)
+	//if err != nil {
+	//	return err
+	//}
 	api.OutArgument = baseTyp
-	api.OutArgumentLoc = nil
+	//api.OutArgumentLoc = nil
 	return nil
 }
 
@@ -112,7 +110,7 @@ func (api *API) linkField2Field(fromObj *Object, fromFieldName string, toObj *Ob
 				fromFieldIndex = k
 				break
 			} else {
-				return fmt.Errorf("link filed should from a interface{} filed but got %s", fromField.Type)
+				return fmt.Errorf("link filed should from a interface{} filed but got %v", fromField.Type)
 			}
 		}
 	}
@@ -123,12 +121,12 @@ func (api *API) linkField2Field(fromObj *Object, fromFieldName string, toObj *Ob
 
 	for _, toField := range toObj.Fields {
 		if toField.Name == toFieldName {
-			if !toField.IsRef {
-				return fmt.Errorf("filed must link to a pointer filed")
-			}
-			fromObj.Fields[fromFieldIndex].IsRepeated = toField.IsRepeated
-			fromObj.Fields[fromFieldIndex].Type = toField.Type
-			fromObj.Fields[fromFieldIndex].IsRef = true
+			//if !toField.IsRef {
+			//	return fmt.Errorf("filed must link to a pointer filed")
+			//}
+			//fromObj.Fields[fromFieldIndex].IsRepeated = toField.IsRepeated
+			//fromObj.Fields[fromFieldIndex].Type = toField.Type
+			//fromObj.Fields[fromFieldIndex].IsRef = true
 			return nil
 		}
 	}
@@ -140,19 +138,19 @@ func (api *API) linkField2Object(fromObj *Object, fromFieldName string, toObjID 
 
 	for _, fromField := range fromObj.Fields {
 		if fromField.Name == fromFieldName {
-			if fromField.BaseType == "interface{}" {
-				fromField.IsRef = true
-				fromField.Type = toObjID
-				fromField.IsRepeated = isRepeated
-				return nil
-			}
-			return fmt.Errorf("link filed should from a interface{} filed but got %s", fromField.Type)
+			//if fromField.BaseType == "interface{}" {
+			//	fromField.IsRef = true
+			//	fromField.Type = toObjID
+			//	fromField.IsRepeated = isRepeated
+			//	return nil
+			//}
+			return fmt.Errorf("link filed should from a interface{} filed but got %v", fromField.Type)
 		}
 	}
 	return fmt.Errorf("type %s is not constains field %s", fromObj.ID, fromFieldName)
 }
 
-func (api *API) getObjectInfoV2(query *TypeLocation, rootObj *Object, dep int) error {
+func (api *API) getObjectInfo(query *PkgType, rootObj *Object, dep int) error {
 	if query == nil {
 		return nil
 	}
@@ -161,7 +159,7 @@ func (api *API) getObjectInfoV2(query *TypeLocation, rootObj *Object, dep int) e
 	var err error
 
 	if project.Config.UseGOModule {
-		pkgAbsPath := strings.Replace(query.PackageName, project.ModulePkg, project.ModulePath, 1)
+		pkgAbsPath := strings.Replace(query.Package, project.ModulePkg, project.ModulePath, 1)
 		structInfo, err = new(StructFinder).Find(pkgAbsPath, query.TypeName)
 		if err != nil {
 			return err
@@ -173,7 +171,7 @@ func (api *API) getObjectInfoV2(query *TypeLocation, rootObj *Object, dep int) e
 		goSrcPaths := GetGOSrcPaths()
 		pkgAbsPaths := make([]string, 0)
 		for _, p := range goSrcPaths {
-			pkgAbsPath := filepath.Join(p, query.PackageName)
+			pkgAbsPath := filepath.Join(p, query.Package)
 			pkgAbsPaths = append(pkgAbsPaths, pkgAbsPath)
 			if _, err := os.Stat(pkgAbsPath); err != nil {
 				continue
@@ -193,43 +191,43 @@ func (api *API) getObjectInfoV2(query *TypeLocation, rootObj *Object, dep int) e
 
 	rootObj.Type = &ObjectType{
 		Name:       query.TypeName,
-		Ref:        query.String(),
+		//Ref:        query.String(),
 		IsRepeated: false,
 	}
 	rootObj.Fields = make([]*ObjectField, 0)
 
 	for _, field := range structInfo.Fields {
 		// TODO: filter by encoder
-		if field.JSONTag == "-" {
-			continue
-		}
+		//if field.JSONTag == "-" {
+		//	continue
+		//}
 		// priority use doc comment
-		var comment string
-		if field.DocComment != "" {
-			comment = field.DocComment
-		} else {
-			comment = field.Comment
-		}
+		//var comment string
+		//if field.DocComment != "" {
+		//	comment = field.DocComment
+		//} else {
+		//	comment = field.Comment
+		//}
 		objField := &ObjectField{
 			Name:       field.Name,
-			JSONTag:    field.JSONTag,
-			XMLTag:     field.XMLTag,
-			DocTag:     field.DocTag,
-			Comment:    comment,
-			Type:       field.GoType.Location().String(),
-			BaseType:   field.GoType.Name,
-			IsRepeated: field.GoType.IsRep,
-			IsRef:      field.GoType.IsRef,
+			//JSONTag:    field.JSONTag,
+			//XMLTag:     field.XMLTag,
+			//DocTag:     field.DocTag,
+			//Comment:    comment,
+			//Type:       field.GoType.Location().String(),
+			//BaseType:   field.GoType.Name,
+			//IsRepeated: field.GoType.IsRep,
+			//IsRef:      field.GoType.IsRef,
 		}
 		rootObj.Fields = append(rootObj.Fields, objField)
-		if objField.IsRef && project.GetObject(rootObj.ID) == nil {
-			if rootObj.ID == objField.Type {
-				continue
-			}
-			if err := api.getObjectInfoV2(field.GoType.Location(), new(Object), dep+1); err != nil {
-				return err
-			}
-		}
+		//if objField.IsRef && project.GetObject(rootObj.ID) == nil {
+		//	if rootObj.ID == objField.Type {
+		//		continue
+		//	}
+		//	if err := api.getObjectInfo(field.GoType.Location(), new(Object), dep+1); err != nil {
+		//		return err
+		//	}
+		//}
 	}
 	project.AddObject(rootObj.ID, rootObj)
 	return nil

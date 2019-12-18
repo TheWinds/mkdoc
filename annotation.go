@@ -62,16 +62,16 @@ func (annotation DocAnnotation) ParseToAPI() (*API, error) {
 	}
 	fileName := fl[0]
 	fileName, _ = filepath.Abs(fileName)
-	imports, err := getFileImportsAtFile(fileName)
+	//imports, err := getFileImportsAtFile(fileName)
 	if err != nil {
 		return nil, err
 	}
-	if api.InArgumentLoc != nil {
-		api.InArgumentLoc.PackageName = imports[api.InArgumentLoc.PackageName]
-	}
-	if api.OutArgumentLoc != nil {
-		api.OutArgumentLoc.PackageName = imports[api.OutArgumentLoc.PackageName]
-	}
+	//if api.InArgumentLoc != nil {
+	//	api.InArgumentLoc.PackageName = imports[api.InArgumentLoc.PackageName]
+	//}
+	//if api.OutArgumentLoc != nil {
+	//	api.OutArgumentLoc.PackageName = imports[api.OutArgumentLoc.PackageName]
+	//}
 	return api, nil
 }
 
@@ -168,10 +168,18 @@ func parseInOut(annotation DocAnnotation, api *API) error {
 				switch command {
 				case "in_go_type":
 					api.InArgEncoder = rmBracket(matchGroup[2])
-					api.InArgumentLoc = newTypeLocation(matchGroup[3])
+					//obj := &Object{
+					//	Type: &ObjectType{
+					//		Name:       "",
+					//		Ref:        matchGroup[3],
+					//		IsRepeated: false,
+					//	},
+					//	Fields: nil,
+					//}
+					//api.InArgumentLoc = newTypeLocation(matchGroup[3])
 				case "out_go_type":
 					api.OutArgEncoder = rmBracket(matchGroup[2])
-					api.OutArgumentLoc = newTypeLocation(matchGroup[3])
+					//api.OutArgumentLoc = newTypeLocation(matchGroup[3])
 				case "in_fields_block":
 					api.InArgEncoder = rmBracket(matchGroup[2])
 					// TODO: isRepeated := matchGroup[2] != ""
@@ -205,12 +213,12 @@ func parseToObjectFields(fieldStmts string) []*ObjectField {
 			}
 
 			fields = append(fields, &ObjectField{
-				Name:       matchGroups[1],
-				JSONTag:    matchGroups[1],
-				Comment:    strings.TrimSpace(matchGroups[3]),
-				Type:       matchGroups[2],
-				IsRepeated: false,
-				IsRef:      false,
+				//Name:       matchGroups[1],
+				//JSONTag:    matchGroups[1],
+				//Comment:    strings.TrimSpace(matchGroups[3]),
+				//Type:       matchGroups[2],
+				//IsRepeated: false,
+				//IsRef:      false,
 			})
 		}
 	}
