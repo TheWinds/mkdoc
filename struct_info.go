@@ -6,7 +6,6 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"strings"
 )
 
 // GoStructField some useful filed info of go struct field
@@ -14,9 +13,7 @@ type GoStructField struct {
 	Name       string
 	Comment    string
 	DocComment string
-	JSONTag    string `json:"json_tag"`
-	XMLTag     string `json:"xml_tag"`
-	DocTag     string `json:"doc_tag"`
+	Tag        string
 	GoType     *GoType
 }
 
@@ -101,9 +98,7 @@ func (s *StructFinder) walkTypeSpec(spec *ast.TypeSpec, ctx *walkCtx) {
 				GoType:     baseTyp,
 			}
 			if field.Tag != nil {
-				structField.JSONTag = getTag(field.Tag.Value, "json", name)
-				structField.XMLTag = getTag(field.Tag.Value, "xml", name)
-				structField.DocTag = getTag(field.Tag.Value, "doc", name)
+				structField.Tag = field.Tag.Value
 			}
 			ctx.result.Fields = append(ctx.result.Fields, structField)
 
@@ -113,24 +108,6 @@ func (s *StructFinder) walkTypeSpec(spec *ast.TypeSpec, ctx *walkCtx) {
 	default:
 		fmt.Printf("WARNING: only support `type <TypeName> <StructName>` go syntax,plase check %s \n", ctx.result.Name)
 	}
-}
-
-func getTag(tags, tagName, defaultTag string) string {
-	if !strings.Contains(tags, tagName) {
-		return defaultTag
-	}
-	v := getMidString(tags, tagName+":\"", "\"")
-	i := strings.Index(v, ",")
-	if i == -1 {
-		return v
-	}
-	return v[:i]
-}
-
-func getMidString(src, s, e string) string {
-	sIndex := strings.Index(src, s)
-	eIndex := strings.Index(src[sIndex+len(s)+1:], e) + len(s) + sIndex
-	return src[sIndex+len(s) : eIndex+1]
 }
 
 // GoType describe a go type from go ast

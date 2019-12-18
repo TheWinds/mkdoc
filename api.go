@@ -77,11 +77,12 @@ func (api *API) LinkBaseType() error {
 
 	var linkFieldName string
 	for _, v := range baseTyp.Fields {
-		if v.DocTag == "[]T" && repeated {
+		tagName := v.Tag.GetTagName("doc")
+		if tagName == "[]T" && repeated {
 			linkFieldName = v.Name
 			break
 		}
-		if v.DocTag == "T" {
+		if tagName == "T" {
 			linkFieldName = v.Name
 		}
 	}
@@ -107,7 +108,7 @@ func (api *API) linkField2Field(fromObj *Object, fromFieldName string, toObj *Ob
 	fromFieldIndex := -1
 	for k, fromField := range fromObj.Fields {
 		if fromField.Name == fromFieldName {
-			if fromField.Type == "interface{}" {
+			if fromField.Type.Name == "interface{}" {
 				fromFieldIndex = k
 				break
 			} else {
@@ -190,7 +191,11 @@ func (api *API) getObjectInfoV2(query *TypeLocation, rootObj *Object, dep int) e
 		}
 	}
 
-	rootObj.ID = query.String()
+	rootObj.Type = &ObjectType{
+		Name:       query.TypeName,
+		Ref:        query.String(),
+		IsRepeated: false,
+	}
 	rootObj.Fields = make([]*ObjectField, 0)
 
 	for _, field := range structInfo.Fields {
