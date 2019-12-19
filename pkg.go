@@ -23,11 +23,26 @@ func (p *PkgType) parse() error {
 	return nil
 }
 
-func NewPkgType(fullPath string) (*PkgType, error) {
+func newPkgType(fullPath string) (*PkgType, error) {
 	pt := &PkgType{fullPath: fullPath}
 	err := pt.parse()
 	if err != nil {
 		return nil, err
 	}
 	return pt, nil
+}
+
+func replacePkg(fullPath string, imports map[string]string) string {
+	var i int
+	for i := 0; i < len(fullPath); i += 2 {
+		if fullPath[i] != '[' {
+			break
+		}
+	}
+	dot := strings.LastIndex(fullPath, ".")
+	if dot == -1 {
+		return fullPath[:i] + imports[""] + fullPath[i:]
+	}
+	pkg := fullPath[i:dot]
+	return fullPath[:i] + imports[pkg] + fullPath[dot:]
 }
