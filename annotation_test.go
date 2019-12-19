@@ -95,11 +95,9 @@ func TestDocAnnotation_ParseToAPI(t *testing.T) {
 			 @out type TestGOTyp
 			 @loc %s/annotation_test.go:1`, dir)),
 			want: &API{
-				//InArgumentLoc:  newTypeLocation("docspace.TestGOTyp"),
-				//OutArgumentLoc: newTypeLocation("docspace.TestGOTyp"),
-				Query:          map[string]string{},
-				Header:         map[string]string{},
-				DocLocation:    fmt.Sprintf("%s/annotation_test.go:1", dir),
+				Query:       map[string]string{},
+				Header:      map[string]string{},
+				DocLocation: fmt.Sprintf("%s/annotation_test.go:1", dir),
 			},
 			wantErr: false,
 		},
@@ -115,16 +113,16 @@ func TestDocAnnotation_ParseToAPI(t *testing.T) {
 				InArgument: &Object{
 					Fields: []*ObjectField{
 						{
-							Name:    "name",
-							//JSONTag: "name",
-							//Comment: "这是一个Name",
-							//Type:    "string",
+							Name: "name",
+							Tag:  mustObjectFieldTag(`json:"name" xml:"name"`),
+							Desc: "这是一个Name",
+							Type: &ObjectType{Name: "string"},
 						},
 						{
-							Name:    "age",
-							//JSONTag: "age",
-							//Comment: "这是一个Age",
-							//Type:    "int",
+							Name: "age",
+							Tag:  mustObjectFieldTag(`json:"age" xml:"age"`),
+							Desc: "这是一个Age",
+							Type: &ObjectType{Name: "int"},
 						},
 					},
 				},
@@ -145,7 +143,7 @@ func TestDocAnnotation_ParseToAPI(t *testing.T) {
 				InArgument: &Object{
 					Fields: []*ObjectField{
 						{
-							Name:    "name",
+							Name: "name",
 							//JSONTag: "name",
 							//Comment: "这是一个Name",
 							//Type:    "string",
@@ -166,12 +164,12 @@ func TestDocAnnotation_ParseToAPI(t *testing.T) {
 			 @loc %s/annotation_test.go:1`, dir)),
 			want: &API{
 				//InArgumentLoc:  newTypeLocation("docspace.TestGOTyp"),
-				InArgEncoder:   "json",
-				OutArgEncoder:  "xml",
+				InArgEncoder:  "json",
+				OutArgEncoder: "xml",
 				//OutArgumentLoc: newTypeLocation("docspace.TestGOTyp"),
-				Query:          map[string]string{},
-				Header:         map[string]string{},
-				DocLocation:    fmt.Sprintf("%s/annotation_test.go:1", dir),
+				Query:       map[string]string{},
+				Header:      map[string]string{},
+				DocLocation: fmt.Sprintf("%s/annotation_test.go:1", dir),
 			},
 			wantErr: false,
 		},
@@ -187,13 +185,13 @@ func TestDocAnnotation_ParseToAPI(t *testing.T) {
 				InArgument: &Object{
 					Fields: []*ObjectField{
 						{
-							Name:    "name",
+							Name: "name",
 							//JSONTag: "name",
 							//Comment: "这是一个Name",
 							//Type:    "string",
 						},
 						{
-							Name:    "age",
+							Name: "age",
 							//JSONTag: "age",
 							//Comment: "这是一个Age",
 							//Type:    "int",
