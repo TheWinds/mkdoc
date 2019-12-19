@@ -119,6 +119,15 @@ func NewObjectFieldTag(raw string) (*ObjectFieldTag, error) {
 	return tag, nil
 }
 
+func mustObjectFieldTag(raw string) *ObjectFieldTag {
+	tag := &ObjectFieldTag{raw: raw}
+	err := tag.parse()
+	if err != nil {
+		panic(err)
+	}
+	return tag
+}
+
 // ObjectField filed info
 type ObjectField struct {
 	Name string

@@ -3,7 +3,6 @@ package mkdoc
 import (
 	"fmt"
 	"go/token"
-	"math/rand"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -50,10 +49,6 @@ func (annotation DocAnnotation) ParseToAPI() (*API, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = parseInOut(annotation, api)
-	if err != nil {
-		return nil, err
-	}
 	// replace package name
 	fl := strings.Split(api.DocLocation, ":")
 	if len(fl) != 2 {
@@ -62,16 +57,14 @@ func (annotation DocAnnotation) ParseToAPI() (*API, error) {
 	}
 	fileName := fl[0]
 	fileName, _ = filepath.Abs(fileName)
-	//imports, err := getFileImportsAtFile(fileName)
+	imports, err := getFileImportsAtFile(fileName)
 	if err != nil {
 		return nil, err
 	}
-	//if api.InArgumentLoc != nil {
-	//	api.InArgumentLoc.PackageName = imports[api.InArgumentLoc.PackageName]
-	//}
-	//if api.OutArgumentLoc != nil {
-	//	api.OutArgumentLoc.PackageName = imports[api.OutArgumentLoc.PackageName]
-	//}
+	err = parseInOut(annotation, api, imports)
+	if err != nil {
+		return nil, err
+	}
 	return api, nil
 }
 
@@ -160,7 +153,7 @@ func parseSimple(annotation DocAnnotation, api *API) error {
 	return nil
 }
 
-func parseInOut(annotation DocAnnotation, api *API) error {
+func parseInOut(annotation DocAnnotation, api *API, imports map[string]string) error {
 	for command, re := range annotationRegexps {
 		matchGroups := re.FindAllStringSubmatch(string(annotation), -1)
 		for _, matchGroup := range matchGroups {
@@ -168,33 +161,52 @@ func parseInOut(annotation DocAnnotation, api *API) error {
 				switch command {
 				case "in_go_type":
 					api.InArgEncoder = rmBracket(matchGroup[2])
-					//obj := &Object{
-					//	Type: &ObjectType{
-					//		Name:       "",
-					//		Ref:        matchGroup[3],
-					//		IsRepeated: false,
-					//	},
-					//	Fields: nil,
-					//}
-					//api.InArgumentLoc = newTypeLocation(matchGroup[3])
+					pkgTyp := replacePkg(matchGroup[3], imports)
+					obj, refs, err := createRootObject(pkgTyp)
+					if err != nil {
+						return err
+					}
+					api.InArgument = obj
+					for k, v := range refs {
+						GetProject().AddObject(k, v)
+					}
 				case "out_go_type":
 					api.OutArgEncoder = rmBracket(matchGroup[2])
-					//api.OutArgumentLoc = newTypeLocation(matchGroup[3])
+					pkgTyp := replacePkg(matchGroup[3], imports)
+					obj, refs, err := createRootObject(pkgTyp)
+					if err != nil {
+						return err
+					}
+					api.OutArgument = obj
+					for k, v := range refs {
+						GetProject().AddObject(k, v)
+					}
 				case "in_fields_block":
 					api.InArgEncoder = rmBracket(matchGroup[2])
-					// TODO: isRepeated := matchGroup[2] != ""
 					fieldStmts := matchGroup[4]
 					api.InArgument = &Object{
-						ID:     fmt.Sprintf("#obj_%d", rand.Int63()),
+						ID:     randObjectID("in"),
+						Type:   nil,
 						Fields: parseToObjectFields(fieldStmts),
+						Loaded: true,
 					}
+					if matchGroup[3] != "" {
+						api.InArgument.Type = &ObjectType{IsRepeated: true}
+					}
+					GetProject().AddObject(api.InArgument.ID, api.InArgument)
 				case "out_fields_block":
 					api.OutArgEncoder = rmBracket(matchGroup[2])
 					fieldStmts := matchGroup[4]
-					api.OutArgument = &Object{
-						ID:     fmt.Sprintf("#obj_%d", rand.Int63()),
+					api.InArgument = &Object{
+						ID:     randObjectID("out"),
+						Type:   nil,
 						Fields: parseToObjectFields(fieldStmts),
+						Loaded: true,
 					}
+					if matchGroup[3] != "" {
+						api.OutArgument.Type = &ObjectType{IsRepeated: true}
+					}
+					GetProject().AddObject(api.OutArgument.ID, api.OutArgument)
 				}
 			}
 		}
@@ -211,14 +223,12 @@ func parseToObjectFields(fieldStmts string) []*ObjectField {
 				fmt.Printf("type [%s] is not support,skip\n", matchGroups[2])
 				continue
 			}
-
+			tag, _ := NewObjectFieldTag(fmt.Sprintf(`json:"%s" xml:"%s"`, matchGroups[1], matchGroups[1]))
 			fields = append(fields, &ObjectField{
-				//Name:       matchGroups[1],
-				//JSONTag:    matchGroups[1],
-				//Comment:    strings.TrimSpace(matchGroups[3]),
-				//Type:       matchGroups[2],
-				//IsRepeated: false,
-				//IsRef:      false,
+				Name: matchGroups[1],
+				Desc: strings.TrimSpace(matchGroups[3]),
+				Type: &ObjectType{Name: matchGroups[2]},
+				Tag:  tag,
 			})
 		}
 	}
