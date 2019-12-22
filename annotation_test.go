@@ -3,7 +3,11 @@ package mkdoc
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"log"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"reflect"
 	"testing"
 )
@@ -14,6 +18,34 @@ type TestGOTyp struct {
 }
 
 func TestDocAnnotation_ParseToAPI(t *testing.T) {
+	if _project == nil {
+		config := &Config{
+			Name:         "test annotation",
+			Description:  "",
+			APIBaseURL:   "",
+			BodyEncoder:  "json",
+			CommonHeader: []*Header{},
+			Package:      ".",
+			BaseType:     "",
+			UseGOModule:  true,
+			Scanner:      []string{"funcdoc"},
+			Generator:    []string{},
+		}
+		if err := config.Check(); err != nil {
+			t.Error(err)
+			return
+		}
+		_project = &Project{Config: config}
+
+		if config.UseGOModule {
+			if err := _project.initGoModule(); err != nil {
+				t.Error(err)
+				return
+			}
+		}
+		_project.refObjects = make(map[string]*Object)
+	}
+
 	dir, _ := os.Getwd()
 	tests := []struct {
 		name       string
@@ -98,18 +130,32 @@ func TestDocAnnotation_ParseToAPI(t *testing.T) {
 				Query:       map[string]string{},
 				Header:      map[string]string{},
 				DocLocation: fmt.Sprintf("%s/annotation_test.go:1", dir),
+				InArgument: &Object{
+					ID:     "github.com/thewinds/mkdoc.TestGOTyp",
+					Type:   nil,
+					Fields: nil,
+					Loaded: false,
+				},
+				OutArgument: &Object{
+					ID:     "github.com/thewinds/mkdoc.TestGOTyp",
+					Type:   nil,
+					Fields: nil,
+					Loaded: false,
+				},
 			},
 			wantErr: false,
 		},
 		{
 			name: "test fields",
-			annotation:
-			`@doc 
+			annotation: DocAnnotation(fmt.Sprintf(
+				`@doc 
 			 @in fields {
 				name string 这是一个Name
 				age  int    这是一个Age
-			 }`,
+			 }
+			 @loc %s/annotation_test.go:1`, dir)),
 			want: &API{
+				DocLocation: fmt.Sprintf("%s/annotation_test.go:1", dir),
 				InArgument: &Object{
 					Fields: []*ObjectField{
 						{
@@ -125,6 +171,7 @@ func TestDocAnnotation_ParseToAPI(t *testing.T) {
 							Type: &ObjectType{Name: "int"},
 						},
 					},
+					Loaded: true,
 				},
 				Query:  map[string]string{},
 				Header: map[string]string{},
@@ -140,20 +187,10 @@ func TestDocAnnotation_ParseToAPI(t *testing.T) {
 				age  int11    这是一个Age
 			 }`,
 			want: &API{
-				InArgument: &Object{
-					Fields: []*ObjectField{
-						{
-							Name: "name",
-							//JSONTag: "name",
-							//Comment: "这是一个Name",
-							//Type:    "string",
-						},
-					},
-				},
 				Query:  map[string]string{},
 				Header: map[string]string{},
 			},
-			wantErr: false,
+			wantErr: true,
 		},
 		{
 			name: "test go type encoder",
@@ -163,38 +200,52 @@ func TestDocAnnotation_ParseToAPI(t *testing.T) {
 			 @out[xml]  type TestGOTyp
 			 @loc %s/annotation_test.go:1`, dir)),
 			want: &API{
-				//InArgumentLoc:  newTypeLocation("docspace.TestGOTyp"),
 				InArgEncoder:  "json",
 				OutArgEncoder: "xml",
-				//OutArgumentLoc: newTypeLocation("docspace.TestGOTyp"),
-				Query:       map[string]string{},
-				Header:      map[string]string{},
-				DocLocation: fmt.Sprintf("%s/annotation_test.go:1", dir),
+				Query:         map[string]string{},
+				Header:        map[string]string{},
+				DocLocation:   fmt.Sprintf("%s/annotation_test.go:1", dir),
+				InArgument: &Object{
+					ID:     "mkdoc.TestGOTyp",
+					Type:   nil,
+					Fields: nil,
+					Loaded: false,
+				},
+				OutArgument: &Object{
+					ID:     "mkdoc.TestGOTyp",
+					Type:   nil,
+					Fields: nil,
+					Loaded: false,
+				},
 			},
 			wantErr: false,
 		},
 		{
 			name: "test fields encoder",
 			annotation:
-			`@doc 
+			DocAnnotation(fmt.Sprintf(
+				`@doc 
 			 @in[json] fields {
 				name string 这是一个Name
 				age  int    这是一个Age
-			 }`,
+			 }
+			 @loc %s/annotation_test.go:1`, dir)),
 			want: &API{
+				DocLocation: fmt.Sprintf("%s/annotation_test.go:1", dir),
 				InArgument: &Object{
+					Loaded: true,
 					Fields: []*ObjectField{
 						{
 							Name: "name",
-							//JSONTag: "name",
-							//Comment: "这是一个Name",
-							//Type:    "string",
+							Tag:  mustObjectFieldTag(`json:"name" xml:"name"`),
+							Desc: "这是一个Name",
+							Type: &ObjectType{Name: "string"},
 						},
 						{
 							Name: "age",
-							//JSONTag: "age",
-							//Comment: "这是一个Age",
-							//Type:    "int",
+							Tag:  mustObjectFieldTag(`json:"age" xml:"age"`),
+							Desc: "这是一个Age",
+							Type: &ObjectType{Name: "int"},
 						},
 					},
 				},
@@ -220,28 +271,60 @@ func TestDocAnnotation_ParseToAPI(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+		ok := t.Run(tt.name, func(t *testing.T) {
+			fmt.Printf("TEST %s...\n", tt.name)
 			got, err := tt.annotation.ParseToAPI()
-			if (err != nil) != tt.wantErr {
-				t.Errorf("ParseToAPI() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			switch tt.name {
-			case "test fields", "test fields encoder", "test field type not support":
-				if !reflect.DeepEqual(got.InArgument.Fields, tt.want.InArgument.Fields) {
-					t.Errorf("ParseToAPI() got = %#v, want %#v", got.InArgument.Fields, tt.want.InArgument.Fields)
+			if err != nil {
+				if tt.wantErr {
+					fmt.Println("PASS", err)
+					return
 				}
+				fmt.Printf("ParseToAPI() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			got.Annotation = ""
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("ParseToAPI() got = %#v, want %#v", got, tt.want)
-				b, _ := json.MarshalIndent(got, "", "\t")
-				fmt.Println(string(b))
-				b, _ = json.MarshalIndent(tt.want, "", "\t")
-				fmt.Println(string(b))
+			if got.InArgument != nil {
+				if got.InArgument.ID != "" {
+					tt.want.InArgument.ID = got.InArgument.ID
+				}
 			}
-
+			if got.OutArgument != nil {
+				if got.OutArgument.ID != "" {
+					tt.want.OutArgument.ID = got.OutArgument.ID
+				}
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				b1, _ := json.MarshalIndent(got, "", "    ")
+				b2, _ := json.MarshalIndent(tt.want, "", "    ")
+				s1, s2 := string(b1), string(b2)
+				fmt.Println("GOT:\n", s1)
+				fmt.Println("WANT:\n", s2)
+				fmt.Printf("DIFF:\n%s", diff(s1, s2))
+				t.Fail()
+				return
+			}
+			fmt.Println("PASS")
 		})
+		if !ok {
+			break
+		}
 	}
+}
+
+func diff(s1, s2 string) string {
+	tmpdir := os.TempDir()
+	f1 := filepath.Join(tmpdir, "diff_f1")
+	f2 := filepath.Join(tmpdir, "diff_f2")
+	ioutil.WriteFile(f1, []byte(s1), 0644)
+	ioutil.WriteFile(f2, []byte(s2), 0644)
+	cmd := exec.Command("git", "diff", f1, f2)
+	b, err := cmd.Output()
+	if err != nil {
+		if err.(*exec.ExitError).ExitCode() != 1 {
+			log.Fatal(err)
+		}
+	}
+	os.Remove(f1)
+	os.Remove(f2)
+	return string(b)
 }
