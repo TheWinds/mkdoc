@@ -41,7 +41,7 @@ func replacePkg(fullPath string, imports map[string]string) string {
 	}
 	dot := strings.LastIndex(fullPath, ".")
 	if dot == -1 {
-		return fullPath[:i] + imports[""] + fullPath[i:]
+		return fullPath[:i] + imports[""] + "." + fullPath[i:]
 	}
 	pkg := fullPath[i:dot]
 	return fullPath[:i] + imports[pkg] + fullPath[dot:]
