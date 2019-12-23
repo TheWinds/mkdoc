@@ -121,8 +121,18 @@ func (project *Project) GetObject(id string) *Object {
 	return project.refObjects[id]
 }
 
-func (project *Project) Objects() map[string]*Object{
+func (project *Project) Objects() map[string]*Object {
 	project.muObj.Lock()
 	defer project.muObj.Unlock()
 	return project.refObjects
+}
+
+func (project *Project) LoadObjects() error {
+	objects := project.Objects()
+	for _, object := range objects {
+		if !object.Loaded {
+			fmt.Println("not load", object.ID)
+		}
+	}
+	return nil
 }
