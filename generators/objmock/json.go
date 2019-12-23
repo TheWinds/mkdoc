@@ -47,52 +47,63 @@ func (j *JSONMocker) mock(obj *mkdoc.Object) {
 	if j.err != nil {
 		return
 	}
-	j.dep++
-	j.write("{\n")
-	j.line++
+	objType := obj.Type
+	if objType.IsRepeated {
+		j.write("[")
+		defer func() { j.write("]") }()
+	}
+
+	// builtin type
+	if objType.Name != "object" {
+		j.writeValue(objType.Name)
+		return
+	}
+
+	if objType.Ref != "" {
+		j.mockRef(objType.Ref)
+		return
+	}
+	j.write("{")
+	defer func() { j.write("}") }()
 	var firstField bool
 	for _, field := range obj.Fields {
-		if field.JSONTag == "-" {
+		jsonTag := field.Tag.GetTagName("json")
+		if jsonTag == "-" {
 			continue
+		}
+		if jsonTag == "" {
+			jsonTag = field.Name
 		}
 		if !firstField {
 			firstField = true
 		} else {
-			j.write(",\n")
-			j.line++
+			j.write(",")
 		}
-		j.writeIdent()
-		j.write("    \"%s\": ", field.JSONTag)
-		if field.IsRepeated {
-			j.write("[")
-		}
-		j.lineComment(obj, field)
-		if field.IsRef {
-			refObj := j.refs[field.Type]
-			if refObj == nil {
-				j.err = fmt.Errorf("mock: type %s not exist", field.Type)
-				return
-			}
-			// avoid circle ref
-			if j.pushRefPath(refObj.ID) {
-				j.mock(refObj)
-				j.popRefPath()
-			} else {
-				j.write("null")
-			}
+		j.write("\"%s\":", jsonTag)
+
+		fieldTyp := field.Type
+
+		if fieldTyp.Ref != "" {
+			j.mockRef(fieldTyp.Ref)
 		} else {
-			j.writeValue(field)
+			j.writeValue(fieldTyp.Name)
 		}
-		if field.IsRepeated {
-			j.write("]")
-		}
-		// a -> b -> a -> b
 	}
-	j.write("\n")
-	j.line++
-	j.writeIdent()
-	j.write("}")
-	j.dep--
+}
+
+func (j *JSONMocker) mockRef(refID string) {
+	refObj := j.refs[refID]
+	if refObj == nil {
+		j.err = fmt.Errorf("mock: type %s not exist", refID)
+		return
+	}
+	// limit circle ref
+	if j.pushRefPath(refObj.ID) {
+		j.mock(refObj)
+		j.popRefPath()
+	} else {
+		j.write("null")
+	}
 }
 
 func (j *JSONMocker) appendComment() string {
@@ -121,9 +132,9 @@ func (j *JSONMocker) write(format string, i ...interface{}) {
 	fmt.Fprintf(&j.data, format, i...)
 }
 
-func (j *JSONMocker) writeValue(field *mkdoc.ObjectField) {
+func (j *JSONMocker) writeValue(typ string) {
 	val := ""
-	switch field.BaseType {
+	switch typ {
 	case "string":
 		val = "\"str\""
 	case "bool":
@@ -140,22 +151,19 @@ func (j *JSONMocker) writeValue(field *mkdoc.ObjectField) {
 	j.write(val)
 }
 
-func (j *JSONMocker) writeIdent() {
-	j.data.WriteString(strings.Repeat(" ", 4*j.dep))
-}
 
-func (j *JSONMocker) lineComment(obj *mkdoc.Object, field *mkdoc.ObjectField) {
-	var key string
-	if field.IsRef {
-		key = fmt.Sprintf("%s.%s", field.BaseType, field.Name)
-	} else {
-		key = fmt.Sprintf("%s.%s", obj.ID, field.Name)
-	}
-	if !j.commented[key] {
-		j.commented[key] = true
-		j.comment[j.line] = field.Comment
-	}
-}
+//func (j *JSONMocker) lineComment(obj *mkdoc.Object, field *mkdoc.ObjectField) {
+//	var key string
+//	if field.IsRef {
+//		key = fmt.Sprintf("%s.%s", field.BaseType, field.Name)
+//	} else {
+//		key = fmt.Sprintf("%s.%s", obj.ID, field.Name)
+//	}
+//	if !j.commented[key] {
+//		j.commented[key] = true
+//		j.comment[j.line] = field.Comment
+//	}
+//}
 
 func (j *JSONMocker) pushRefPath(objTyp string) bool {
 	i := -1
