@@ -1,6 +1,8 @@
 package objmock
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"github.com/thewinds/mkdoc"
 	"strings"
@@ -9,11 +11,11 @@ import (
 type JSONMocker struct {
 	refs      map[string]*mkdoc.Object
 	err       error
-	line      int
 	dep       int
 	data      strings.Builder
 	comment   map[int]string
 	commented map[string]bool
+	fieldNo   int
 	refPath   []string
 }
 
@@ -27,20 +29,28 @@ func (j *JSONMocker) Mock(object *mkdoc.Object, refs map[string]*mkdoc.Object) (
 	if j.err != nil {
 		return "", j.err
 	}
-	return j.appendComment(), nil
+	return j.data.String(), nil
 }
 
-func (j *JSONMocker) MockNoComment(object *mkdoc.Object, refs map[string]*mkdoc.Object) (string, error) {
-	j.refs = refs
-	j.comment = make(map[int]string)
-	j.commented = make(map[string]bool)
-	j.dep = -1
-	j.pushRefPath(object.ID)
-	j.mock(object)
-	if j.err != nil {
-		return "", j.err
+func (j *JSONMocker) MockPretty(object *mkdoc.Object, refs map[string]*mkdoc.Object) (string, error) {
+	r, err := j.Mock(object, refs)
+	if err != nil {
+		return "", err
 	}
-	return j.data.String(), nil
+	dst := bytes.NewBuffer([]byte{})
+	err = json.Indent(dst, []byte(r), "", "    ")
+	if err != nil {
+		return "", err
+	}
+	return dst.String(), nil
+}
+
+func (j *JSONMocker) MockPrettyComment(object *mkdoc.Object, refs map[string]*mkdoc.Object) (string, error) {
+	r, err := j.MockPretty(object, refs)
+	if err != nil {
+		return "", err
+	}
+	return j.appendComment(r), nil
 }
 
 func (j *JSONMocker) mock(obj *mkdoc.Object) {
@@ -82,7 +92,8 @@ func (j *JSONMocker) mock(obj *mkdoc.Object) {
 		j.write("\"%s\":", jsonTag)
 
 		fieldTyp := field.Type
-
+		j.markFieldComment(obj, field)
+		j.fieldNo++
 		if fieldTyp.Ref != "" {
 			j.mockRef(fieldTyp.Ref)
 		} else {
@@ -106,16 +117,21 @@ func (j *JSONMocker) mockRef(refID string) {
 	}
 }
 
-func (j *JSONMocker) appendComment() string {
-	lines := strings.Split(j.data.String(), "\n")
+func (j *JSONMocker) appendComment(src string) string {
+	lines := strings.Split(src, "\n")
 	var maxLen int
 	for _, line := range lines {
 		if len(line) > maxLen {
 			maxLen = len(line)
 		}
 	}
+	fieldNo := -1
 	for i := range lines {
-		comment := j.comment[i]
+		if strings.Index(lines[i], "\":") == -1 {
+			continue
+		}
+		fieldNo++
+		comment := j.comment[fieldNo]
 		if comment != "" {
 			lines[i] = fmt.Sprintf("%s // %s", j.padRight(lines[i], maxLen), comment)
 		}
@@ -151,19 +167,14 @@ func (j *JSONMocker) writeValue(typ string) {
 	j.write(val)
 }
 
-
-//func (j *JSONMocker) lineComment(obj *mkdoc.Object, field *mkdoc.ObjectField) {
-//	var key string
-//	if field.IsRef {
-//		key = fmt.Sprintf("%s.%s", field.BaseType, field.Name)
-//	} else {
-//		key = fmt.Sprintf("%s.%s", obj.ID, field.Name)
-//	}
-//	if !j.commented[key] {
-//		j.commented[key] = true
-//		j.comment[j.line] = field.Comment
-//	}
-//}
+func (j *JSONMocker) markFieldComment(obj *mkdoc.Object, field *mkdoc.ObjectField) {
+	var key string
+	key = fmt.Sprintf("%s.%s", obj.ID, field.Name)
+	if !j.commented[key] {
+		j.commented[key] = true
+		j.comment[j.fieldNo] = field.Desc
+	}
+}
 
 func (j *JSONMocker) pushRefPath(objTyp string) bool {
 	i := -1

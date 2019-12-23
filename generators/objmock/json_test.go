@@ -106,9 +106,9 @@ func TestJSONMocker_Mock(t *testing.T) {
 	wants = append(wants, want{user.ID, `{"uid":10,"online":true,"profile":{"nickname":"str","age":10},"friends":{"uid":10,"online":true,"profile":{"nickname":"str","age":10},"friends":null}}`})
 
 	for _, w := range wants {
-		fmt.Println("Test", w.objectID)
+		fmt.Println("\nTest", w.objectID)
 		mocker := new(JSONMocker)
-		o, err := mocker.MockNoComment(refs[w.objectID], refs)
+		o, err := mocker.Mock(refs[w.objectID], refs)
 		if err != nil {
 			fmt.Println(err)
 			return
@@ -118,6 +118,12 @@ func TestJSONMocker_Mock(t *testing.T) {
 			t.Errorf("\n got= %s\n want=%s\n", o, w.wantJSON)
 			return
 		}
+		o1, err := new(JSONMocker).MockPrettyComment(refs[w.objectID], refs)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		fmt.Printf("Pretty JSON:\n%s\n", o1)
 		fmt.Println("Pass")
 	}
 }
