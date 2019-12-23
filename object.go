@@ -166,8 +166,12 @@ func createRootObject(pkgTyp string) (*Object, map[string]*Object, error) {
 	arrDep := i / 2
 	pkgTypPath := pkgTyp[i:]
 	leaf := &Object{
-		ID:     pkgTypPath,
-		Type:   nil,
+		ID: pkgTypPath,
+		Type: &ObjectType{
+			Name:       "object",
+			Ref:        "",
+			IsRepeated: false,
+		},
 		Fields: nil,
 		Loaded: false,
 	}
@@ -195,4 +199,23 @@ func createRootObject(pkgTyp string) (*Object, map[string]*Object, error) {
 		m[root.ID] = root
 	}
 	return root, m, nil
+}
+
+func BuiltinObjects() []*Object {
+	types := []string{
+		"string",
+		"bool",
+		"int", "int8", "int16", "int32", "int64",
+		"uint", "uint8", "uint16", "uint32", "uint64",
+		"float", "float32", "float64",
+		"interface{}"}
+	var objects []*Object
+	for _, t := range types {
+		objects = append(objects, &Object{
+			ID:     t,
+			Type:   &ObjectType{Name: t},
+			Loaded: true,
+		})
+	}
+	return objects
 }
