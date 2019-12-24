@@ -19,6 +19,10 @@ type JSONMocker struct {
 	refPath   []string
 }
 
+func NewJSONMocker() *JSONMocker {
+	return &JSONMocker{}
+}
+
 func (j *JSONMocker) Mock(object *mkdoc.Object, refs map[string]*mkdoc.Object) (string, error) {
 	j.refs = refs
 	j.comment = make(map[int]string)
