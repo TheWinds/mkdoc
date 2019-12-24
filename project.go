@@ -112,7 +112,9 @@ func (project *Project) initGoModule() error {
 func (project *Project) AddObject(id string, value *Object) {
 	project.muObj.Lock()
 	defer project.muObj.Unlock()
-	project.refObjects[id] = value
+	if _, exist := project.refObjects[id]; !exist {
+		project.refObjects[id] = value
+	}
 }
 
 func (project *Project) GetObject(id string) *Object {

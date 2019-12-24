@@ -190,34 +190,32 @@ func (api *API) getObjectInfo(query *PkgType, rootObj *Object, dep int) error {
 	}
 
 	rootObj.Type = &ObjectType{
-		Name:       query.TypeName,
+		Name: query.TypeName,
 		//Ref:        query.String(),
 		IsRepeated: false,
 	}
 	rootObj.Fields = make([]*ObjectField, 0)
 
 	for _, field := range structInfo.Fields {
-		// TODO: filter by encoder
-		//if field.JSONTag == "-" {
-		//	continue
-		//}
 		// priority use doc comment
-		//var comment string
-		//if field.DocComment != "" {
-		//	comment = field.DocComment
-		//} else {
-		//	comment = field.Comment
-		//}
+		var comment string
+		if field.DocComment != "" {
+			comment = field.DocComment
+		} else {
+			comment = field.Comment
+		}
+		fieldTag, err := NewObjectFieldTag(field.Tag)
+		if err != nil {
+			return err
+		}
 		objField := &ObjectField{
-			Name:       field.Name,
-			//JSONTag:    field.JSONTag,
-			//XMLTag:     field.XMLTag,
-			//DocTag:     field.DocTag,
-			//Comment:    comment,
-			//Type:       field.GoType.Location().String(),
-			//BaseType:   field.GoType.Name,
-			//IsRepeated: field.GoType.IsRep,
-			//IsRef:      field.GoType.IsRef,
+			Name: field.Name,
+			Desc: comment,
+			Type: &ObjectType{},
+			Tag:  fieldTag,
+		}
+		if field.GoType.IsBuiltin {
+			objField.Type.Name = field.GoType.TypeName
 		}
 		rootObj.Fields = append(rootObj.Fields, objField)
 		//if objField.IsRef && project.GetObject(rootObj.ID) == nil {

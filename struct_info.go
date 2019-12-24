@@ -91,6 +91,7 @@ func (s *StructFinder) walkTypeSpec(spec *ast.TypeSpec, ctx *walkCtx) {
 			baseTyp := baseType(field.Type)
 			imports := GetFileImportsAtNode(spec, ctx.pkg, ctx.fileset)
 			baseTyp.ImportPkgName = imports[baseTyp.PkgName]
+			baseTyp.IsBuiltin = isBuiltinType(baseTyp.TypeName)
 			structField := &GoStructField{
 				Name:       name,
 				Comment:    comment,
@@ -112,12 +113,14 @@ func (s *StructFinder) walkTypeSpec(spec *ast.TypeSpec, ctx *walkCtx) {
 
 // GoType describe a go type from go ast
 type GoType struct {
-	Name          string
+	TypeName      string
 	IsRep         bool
+	RepDepth      int
 	IsRef         bool
 	PkgName       string
 	ImportPkgName string
 	NotSupport    bool
+	IsBuiltin     bool
 }
 
 func (t *GoType) String() string {
@@ -130,9 +133,9 @@ func (t *GoType) String() string {
 			typ += "*"
 		}
 		if t.PkgName != "" {
-			typ += t.PkgName + "." + t.Name
+			typ += t.PkgName + "." + t.TypeName
 		} else {
-			typ += t.Name
+			typ += t.TypeName
 		}
 	}
 	if t.ImportPkgName != "" {
@@ -143,20 +146,20 @@ func (t *GoType) String() string {
 
 // Location return the location info of go type
 //func (t *GoType) Location() *TypeLocation {
-	//return &TypeLocation{
-	//	PackageName: t.ImportPkgName,
-	//	TypeName:    t.Name,
-	//	IsRepeated:  t.IsRep,
-	//}
+//return &TypeLocation{
+//	PackageName: t.ImportPkgName,
+//	TypeName:    t.Name,
+//	IsRepeated:  t.IsRep,
+//}
 //}
 
 func baseType(x ast.Expr) *GoType {
 	switch t := x.(type) {
 	case *ast.Ident:
-		return &GoType{Name: t.Name}
+		return &GoType{TypeName: t.Name}
 	case *ast.SelectorExpr:
 		if _, ok := t.X.(*ast.Ident); ok {
-			return &GoType{Name: t.Sel.Name, PkgName: t.X.(*ast.Ident).Name}
+			return &GoType{TypeName: t.Sel.Name, PkgName: t.X.(*ast.Ident).Name}
 		}
 	case *ast.ParenExpr:
 		return baseType(t.X)
@@ -167,9 +170,10 @@ func baseType(x ast.Expr) *GoType {
 	case *ast.ArrayType:
 		bt := baseType(t.Elt)
 		bt.IsRep = true
+		bt.RepDepth++
 		return bt
 	case *ast.InterfaceType:
-		return &GoType{Name: "interface{}"}
+		return &GoType{TypeName: "interface{}"}
 	}
 	return &GoType{NotSupport: true}
 }
