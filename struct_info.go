@@ -114,34 +114,13 @@ func (s *StructFinder) walkTypeSpec(spec *ast.TypeSpec, ctx *walkCtx) {
 // GoType describe a go type from go ast
 type GoType struct {
 	TypeName      string
-	IsRep         bool
-	RepDepth      int
+	IsArray       bool
 	IsRef         bool
+	ArrayDepth    int
 	PkgName       string
 	ImportPkgName string
 	NotSupport    bool
 	IsBuiltin     bool
-}
-
-func (t *GoType) String() string {
-	var typ, importInfo string
-	if !t.NotSupport {
-		if t.IsRep {
-			typ += "[]"
-		}
-		if t.IsRef {
-			typ += "*"
-		}
-		if t.PkgName != "" {
-			typ += t.PkgName + "." + t.TypeName
-		} else {
-			typ += t.TypeName
-		}
-	}
-	if t.ImportPkgName != "" {
-		importInfo += t.PkgName + " => " + t.ImportPkgName
-	}
-	return fmt.Sprintf("Name: %s\nIsRef: %v\nImport:%s", typ, t.IsRef, importInfo)
 }
 
 // Location return the location info of go type
@@ -159,18 +138,17 @@ func baseType(x ast.Expr) *GoType {
 		return &GoType{TypeName: t.Name}
 	case *ast.SelectorExpr:
 		if _, ok := t.X.(*ast.Ident); ok {
-			return &GoType{TypeName: t.Sel.Name, PkgName: t.X.(*ast.Ident).Name}
+			return &GoType{TypeName: t.Sel.Name, PkgName: t.X.(*ast.Ident).Name, IsRef: true}
 		}
 	case *ast.ParenExpr:
 		return baseType(t.X)
 	case *ast.StarExpr:
 		bt := baseType(t.X)
-		bt.IsRef = true
 		return bt
 	case *ast.ArrayType:
 		bt := baseType(t.Elt)
-		bt.IsRep = true
-		bt.RepDepth++
+		bt.IsArray = true
+		bt.ArrayDepth++
 		return bt
 	case *ast.InterfaceType:
 		return &GoType{TypeName: "interface{}"}

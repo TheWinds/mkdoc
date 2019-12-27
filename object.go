@@ -182,10 +182,14 @@ func createRootObject(pkgTyp string) (*Object, error) {
 			Loaded: false,
 		}
 	}
+	return createArrayObject(leaf, arrDep), nil
+}
 
+// create and register a n-dimensional(dep) array object
+func createArrayObject(leaf *Object, dep int) *Object {
 	root := leaf
 	GetProject().AddObject(root.ID, root)
-	for k := 0; k < arrDep; k++ {
+	for k := 0; k < dep; k++ {
 		obj := &Object{
 			ID: randObjectID("arr"),
 			Type: &ObjectType{
@@ -198,7 +202,13 @@ func createRootObject(pkgTyp string) (*Object, error) {
 		root = obj
 		GetProject().AddObject(root.ID, root)
 	}
-	return root, nil
+	return root
+}
+
+// create and register a n-dimensional(dep) array object by leaf object id
+func createArrayObjectByID(leafObjID string, dep int) *Object {
+	leaf := GetProject().GetObject(leafObjID)
+	return createArrayObject(leaf, dep)
 }
 
 func BuiltinObjects() []*Object {

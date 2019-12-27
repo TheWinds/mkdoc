@@ -214,8 +214,21 @@ func (api *API) getObjectInfo(query *PkgType, rootObj *Object, dep int) error {
 			Type: &ObjectType{},
 			Tag:  fieldTag,
 		}
+		goType := field.GoType
+
+		if goType.IsArray {
+			objField.Type.Name = "object"
+			if goType.IsBuiltin {
+				obj := createArrayObjectByID(goType.TypeName, goType.ArrayDepth)
+				objField.Type.Ref = obj.ID
+			} else {
+
+			}
+		}
 		if field.GoType.IsBuiltin {
 			objField.Type.Name = field.GoType.TypeName
+		} else {
+
 		}
 		rootObj.Fields = append(rootObj.Fields, objField)
 		//if objField.IsRef && project.GetObject(rootObj.ID) == nil {
