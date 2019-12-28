@@ -98,7 +98,7 @@ func (g *Generator) Gen(ctx *mkdoc.DocGenContext) (output []byte, err error) {
 			}
 			writef(o)
 		}
-		writef("```\n")
+		writef("\n```\n")
 
 		writef("- Response Example\n")
 		writef("```")
@@ -111,7 +111,7 @@ func (g *Generator) Gen(ctx *mkdoc.DocGenContext) (output []byte, err error) {
 			}
 			writef(o)
 		}
-		writef("```\n")
+		writef("\n```\n")
 	}
 
 	return []byte(markdownBuilder.String()), nil
