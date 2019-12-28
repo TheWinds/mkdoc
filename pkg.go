@@ -33,6 +33,9 @@ func newPkgType(fullPath string) (*PkgType, error) {
 }
 
 func replacePkg(fullPath string, imports map[string]string) string {
+	if isBuiltinType(fullPath) {
+		return fullPath
+	}
 	var i int
 	for i = 0; i < len(fullPath); i += 2 {
 		if fullPath[i] != '[' {
