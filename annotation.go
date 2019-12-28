@@ -180,12 +180,12 @@ func parseInOut(annotation DocAnnotation, api *API, imports map[string]string) e
 					fieldStmts := matchGroup[4]
 					api.InArgument = &Object{
 						ID:     randObjectID("in"),
-						Type:   nil,
+						Type:   &ObjectType{Name: "object"},
 						Fields: parseToObjectFields(fieldStmts),
 						Loaded: true,
 					}
 					if matchGroup[3] != "" {
-						api.InArgument.Type = &ObjectType{IsRepeated: true}
+						api.InArgument.Type.IsRepeated = true
 					}
 					GetProject().AddObject(api.InArgument.ID, api.InArgument)
 				case "out_fields_block":
@@ -193,12 +193,12 @@ func parseInOut(annotation DocAnnotation, api *API, imports map[string]string) e
 					fieldStmts := matchGroup[4]
 					api.InArgument = &Object{
 						ID:     randObjectID("out"),
-						Type:   nil,
+						Type:   &ObjectType{Name: "object"},
 						Fields: parseToObjectFields(fieldStmts),
 						Loaded: true,
 					}
 					if matchGroup[3] != "" {
-						api.OutArgument.Type = &ObjectType{IsRepeated: true}
+						api.OutArgument.Type.IsRepeated = true
 					}
 					GetProject().AddObject(api.OutArgument.ID, api.OutArgument)
 				}
