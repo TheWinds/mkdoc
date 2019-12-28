@@ -53,7 +53,14 @@ type ObjectFieldTag struct {
 }
 
 func (o *ObjectFieldTag) parse() error {
-	tags := strings.Fields(o.raw)
+	raw := o.raw
+	if len(raw)==0{
+		return nil
+	}
+	if raw[0] == '`' && raw[len(raw)-1] == '`' {
+		raw = raw[1 : len(raw)-1]
+	}
+	tags := strings.Fields(raw)
 	o.m = make(map[string]*tagNameOptions)
 	for _, t := range tags {
 		r := strings.Split(t, ":")
