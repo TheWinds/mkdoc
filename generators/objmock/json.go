@@ -24,6 +24,9 @@ func NewJSONMocker() *JSONMocker {
 }
 
 func (j *JSONMocker) Mock(object *mkdoc.Object, refs map[string]*mkdoc.Object) (string, error) {
+	if object == nil {
+		return "\n", nil
+	}
 	j.refs = refs
 	j.comment = make(map[int]string)
 	j.commented = make(map[string]bool)
@@ -37,6 +40,9 @@ func (j *JSONMocker) Mock(object *mkdoc.Object, refs map[string]*mkdoc.Object) (
 }
 
 func (j *JSONMocker) MockPretty(object *mkdoc.Object, refs map[string]*mkdoc.Object) (string, error) {
+	if object == nil {
+		return "\n", nil
+	}
 	r, err := j.Mock(object, refs)
 	if err != nil {
 		return "", err
@@ -50,6 +56,9 @@ func (j *JSONMocker) MockPretty(object *mkdoc.Object, refs map[string]*mkdoc.Obj
 }
 
 func (j *JSONMocker) MockPrettyComment(object *mkdoc.Object, refs map[string]*mkdoc.Object) (string, error) {
+	if object == nil {
+		return "\n", nil
+	}
 	r, err := j.MockPretty(object, refs)
 	if err != nil {
 		return "", err
