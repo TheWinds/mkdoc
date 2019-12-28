@@ -52,3 +52,15 @@ func CreateUserV2() {
 func GetUsers() {
 	// ...
 }
+
+// @doc AAA
+// get user by id
+// @tag user
+// @path /api/aaa/ @method get
+// @query uid  用户ID
+// @query age  年龄
+// @query name 名称
+// @out type string
+func AAA() {
+	// ...
+}
