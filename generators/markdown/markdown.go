@@ -16,12 +16,6 @@ func init() {
 	mkdoc.RegisterGenerator(&Generator{})
 }
 
-func (g *Generator) json(api *mkdoc.API, obj *mkdoc.Object) string {
-	mocker := new(objmock.JSONMocker)
-	o, _ := mocker.Mock(obj, g.refObj)
-	return o
-}
-
 func (g *Generator) Gen(ctx *mkdoc.DocGenContext) (output []byte, err error) {
 	g.refObj = ctx.RefObj
 	markdownBuilder := strings.Builder{}
@@ -94,37 +88,30 @@ func (g *Generator) Gen(ctx *mkdoc.DocGenContext) (output []byte, err error) {
 		}
 
 		writef("- Request Example\n")
+		writef("```")
 		switch api.InArgEncoder {
-		case "json":
-			writef("```json\n")
-			if api.InArgumentLoc != nil && api.InArgumentLoc.IsRepeated {
-				writef("[\n")
+		default:
+			writef("json\n")
+			o, err := objmock.NewJSONMocker().MockPrettyComment(api.InArgument, ctx.RefObj)
+			if err != nil {
+				return nil, err
 			}
-			writef(g.json(api, api.InArgument))
-			if api.InArgumentLoc != nil && api.InArgumentLoc.IsRepeated {
-				writef("]\n")
-			} else {
-				writef("\n")
-			}
-			writef("```\n")
+			writef(o)
 		}
+		writef("```\n")
 
 		writef("- Response Example\n")
+		writef("```")
 		switch api.OutArgEncoder {
-		case "json":
-			writef("```json\n")
-			if api.OutArgumentLoc != nil && api.OutArgumentLoc.IsRepeated {
-				writef("[")
+		default:
+			writef("json\n")
+			o, err := objmock.NewJSONMocker().MockPrettyComment(api.OutArgument, ctx.RefObj)
+			if err != nil {
+				return nil, err
 			}
-			writef(g.json(api, api.OutArgument))
-			if api.OutArgumentLoc != nil && api.OutArgumentLoc.IsRepeated {
-				writef("]\n")
-			} else {
-				writef("\n")
-			}
-			writef("```\n")
+			writef(o)
 		}
-		writef("\n")
+		writef("```\n")
 	}
 
 	return []byte(markdownBuilder.String()), nil

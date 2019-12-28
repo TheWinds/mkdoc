@@ -162,25 +162,19 @@ func parseInOut(annotation DocAnnotation, api *API, imports map[string]string) e
 				case "in_go_type":
 					api.InArgEncoder = rmBracket(matchGroup[2])
 					pkgTyp := replacePkg(matchGroup[3], imports)
-					obj, refs, err := createRootObject(pkgTyp)
+					obj, err := createRootObject(pkgTyp)
 					if err != nil {
 						return err
 					}
 					api.InArgument = obj
-					for k, v := range refs {
-						GetProject().AddObject(k, v)
-					}
 				case "out_go_type":
 					api.OutArgEncoder = rmBracket(matchGroup[2])
 					pkgTyp := replacePkg(matchGroup[3], imports)
-					obj, refs, err := createRootObject(pkgTyp)
+					obj, err := createRootObject(pkgTyp)
 					if err != nil {
 						return err
 					}
 					api.OutArgument = obj
-					for k, v := range refs {
-						GetProject().AddObject(k, v)
-					}
 				case "in_fields_block":
 					api.InArgEncoder = rmBracket(matchGroup[2])
 					fieldStmts := matchGroup[4]

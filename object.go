@@ -152,12 +152,15 @@ func randObjectID(s string) string {
 	return fmt.Sprintf("obj_%s_#%d", s, rand.Int63())
 }
 
-func createRootObject(pkgTyp string) (*Object, map[string]*Object, error) {
+// createRootObject
+// crate root object by package and type
+// at the same register those created object to project's ref objects
+func createRootObject(pkgTyp string) (*Object, error) {
 	var i int
 	for i = 0; i < len(pkgTyp); i += 2 {
 		if pkgTyp[i] == '[' {
 			if i+1 >= len(pkgTyp) || pkgTyp[i+1] != ']' {
-				return nil, nil, fmt.Errorf("invaild type '%s'", pkgTyp)
+				return nil, fmt.Errorf("invaild type '%s'", pkgTyp)
 			}
 			continue
 		}
@@ -165,27 +168,28 @@ func createRootObject(pkgTyp string) (*Object, map[string]*Object, error) {
 	}
 	arrDep := i / 2
 	pkgTypPath := pkgTyp[i:]
-	leaf := &Object{
-		ID: pkgTypPath,
-		Type: &ObjectType{
-			Name:       "object",
-			Ref:        "",
-			IsRepeated: false,
-		},
-		Fields: nil,
-		Loaded: false,
-	}
-	if isBuiltinType(pkgTypPath) {
-		leaf.Loaded = true
-		leaf.Type = &ObjectType{
-			Name: pkgTypPath,
+
+	leaf := GetProject().GetObject(pkgTypPath)
+	if leaf == nil {
+		leaf = &Object{
+			ID: pkgTypPath,
+			Type: &ObjectType{
+				Name:       "object",
+				Ref:        "",
+				IsRepeated: false,
+			},
+			Fields: nil,
+			Loaded: false,
 		}
-		leaf.ID = fmt.Sprintf("builtin.%s", pkgTypPath)
 	}
+	return createArrayObject(leaf, arrDep), nil
+}
+
+// create and register a n-dimensional(dep) array object
+func createArrayObject(leaf *Object, dep int) *Object {
 	root := leaf
-	m := make(map[string]*Object)
-	m[leaf.ID] = leaf
-	for k := 0; k < arrDep; k++ {
+	GetProject().AddObject(root.ID, root)
+	for k := 0; k < dep; k++ {
 		obj := &Object{
 			ID: randObjectID("arr"),
 			Type: &ObjectType{
@@ -196,9 +200,15 @@ func createRootObject(pkgTyp string) (*Object, map[string]*Object, error) {
 			Loaded: true,
 		}
 		root = obj
-		m[root.ID] = root
+		GetProject().AddObject(root.ID, root)
 	}
-	return root, m, nil
+	return root
+}
+
+// create and register a n-dimensional(dep) array object by leaf object id
+func createArrayObjectByID(leafObjID string, dep int) *Object {
+	leaf := GetProject().GetObject(leafObjID)
+	return createArrayObject(leaf, dep)
 }
 
 func BuiltinObjects() []*Object {

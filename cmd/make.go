@@ -113,9 +113,14 @@ func makeDoc(ctx *kingpin.ParseContext) error {
 		fmt.Printf("👽  %d api is matched \n", len(matchedAPIs))
 	}
 
-	if err := buildAPI(matchedAPIs); err != nil {
+	//if err := buildAPI(matchedAPIs); err != nil {
+	//	return showErr("%v", err)
+	//}
+
+	if err := project.LoadObjects(); err != nil {
 		return showErr("%v", err)
 	}
+	return nil
 
 	if tag == "" {
 		tag = "all"

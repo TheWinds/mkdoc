@@ -91,6 +91,7 @@ func (s *StructFinder) walkTypeSpec(spec *ast.TypeSpec, ctx *walkCtx) {
 			baseTyp := baseType(field.Type)
 			imports := GetFileImportsAtNode(spec, ctx.pkg, ctx.fileset)
 			baseTyp.ImportPkgName = imports[baseTyp.PkgName]
+			baseTyp.IsBuiltin = isBuiltinType(baseTyp.TypeName)
 			structField := &GoStructField{
 				Name:       name,
 				Comment:    comment,
@@ -112,64 +113,45 @@ func (s *StructFinder) walkTypeSpec(spec *ast.TypeSpec, ctx *walkCtx) {
 
 // GoType describe a go type from go ast
 type GoType struct {
-	Name          string
-	IsRep         bool
+	TypeName      string
+	IsArray       bool
 	IsRef         bool
+	ArrayDepth    int
 	PkgName       string
 	ImportPkgName string
 	NotSupport    bool
-}
-
-func (t *GoType) String() string {
-	var typ, importInfo string
-	if !t.NotSupport {
-		if t.IsRep {
-			typ += "[]"
-		}
-		if t.IsRef {
-			typ += "*"
-		}
-		if t.PkgName != "" {
-			typ += t.PkgName + "." + t.Name
-		} else {
-			typ += t.Name
-		}
-	}
-	if t.ImportPkgName != "" {
-		importInfo += t.PkgName + " => " + t.ImportPkgName
-	}
-	return fmt.Sprintf("Name: %s\nIsRef: %v\nImport:%s", typ, t.IsRef, importInfo)
+	IsBuiltin     bool
 }
 
 // Location return the location info of go type
 //func (t *GoType) Location() *TypeLocation {
-	//return &TypeLocation{
-	//	PackageName: t.ImportPkgName,
-	//	TypeName:    t.Name,
-	//	IsRepeated:  t.IsRep,
-	//}
+//return &TypeLocation{
+//	PackageName: t.ImportPkgName,
+//	TypeName:    t.Name,
+//	IsRepeated:  t.IsRep,
+//}
 //}
 
 func baseType(x ast.Expr) *GoType {
 	switch t := x.(type) {
 	case *ast.Ident:
-		return &GoType{Name: t.Name}
+		return &GoType{TypeName: t.Name}
 	case *ast.SelectorExpr:
 		if _, ok := t.X.(*ast.Ident); ok {
-			return &GoType{Name: t.Sel.Name, PkgName: t.X.(*ast.Ident).Name}
+			return &GoType{TypeName: t.Sel.Name, PkgName: t.X.(*ast.Ident).Name, IsRef: true}
 		}
 	case *ast.ParenExpr:
 		return baseType(t.X)
 	case *ast.StarExpr:
 		bt := baseType(t.X)
-		bt.IsRef = true
 		return bt
 	case *ast.ArrayType:
 		bt := baseType(t.Elt)
-		bt.IsRep = true
+		bt.IsArray = true
+		bt.ArrayDepth++
 		return bt
 	case *ast.InterfaceType:
-		return &GoType{Name: "interface{}"}
+		return &GoType{TypeName: "interface{}"}
 	}
 	return &GoType{NotSupport: true}
 }
