@@ -1,26 +1,48 @@
 # mkdoc
 > 从GO源代码直接生成API文档
 
+![image-20191229231934994](/Users/thewinds/Library/Application Support/typora-user-images/image-20191229231934994.png)
+
 ### 快速开始
 
+- 安装
+
+```shell
+go get github.com/TheWinds/mkdoc/cmd/mkdoc
 ```
-usage: mkdoc [<flags>] <command> [<args> ...]
 
-make doc from go source code
+- 使用
 
-Flags:
-  --help  Show context-sensitive help (also try --help-long and --help-man).
-
-Commands:
-  help [<command>...]
-    Show help.
-
-  init
-    init project,create a default config file and doc dir
-
-  make [<flags>]
-    make doc
+```bash
+cd /path/to/your/projet
+# 初始化
+mkdoc init
+# 修改配置
+vim conf.yaml
+# 代码注解
+# ...
+# 生成文档
+mkdoc make
 ```
+
+### Scanner
+
+*Scanner*(注解扫描器)的作用是从go源码中扫描注解,现在支持以下扫描器:
+
+| 名称    | 说明                      | 链接                                                         |
+| ------- | ------------------------- | ------------------------------------------------------------ |
+| *funcdoc* | 从func document中获取注解 | [🛸](https://github.com/TheWinds/mkdoc/tree/master/scanners/funcdoc) |
+
+
+
+### Generator
+
+*Generator*(文档生成器)的作用是根据api信息生成文档,现在支持以下生成器:
+
+| 名称     | 说明                                  | 链接                                  |
+| -------- | ------------------------------------- | --------------------------------------- |
+| *markdown* | 生成markdown格式的文档                | [🛸](https://github.com/TheWinds/mkdoc/tree/master/generators/markdown) |
+| *insomnia* | 生成可供insomnia导入的数据,可用于测试 | [🛸](https://github.com/TheWinds/mkdoc/tree/master/generators/insomnia) |
 
 
 
