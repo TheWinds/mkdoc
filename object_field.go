@@ -15,7 +15,7 @@ type ObjectField struct {
 
 type ObjectFieldTag struct {
 	raw string
-	m   map[string]*tagNameOptions
+	m   map[string]string
 }
 
 func (o *ObjectFieldTag) parse() error {
@@ -27,7 +27,7 @@ func (o *ObjectFieldTag) parse() error {
 		raw = raw[1 : len(raw)-1]
 	}
 	tags := strings.Fields(raw)
-	o.m = make(map[string]*tagNameOptions)
+	o.m = make(map[string]string)
 	for _, t := range tags {
 		r := strings.Split(t, ":")
 		if len(r) != 2 {
@@ -39,48 +39,28 @@ func (o *ObjectFieldTag) parse() error {
 		if len(body) < 2 || !(body[0] == '"' && body[len(body)-1] == '"') {
 			return fmt.Errorf("tag parse error:%v", o.raw)
 		}
-		nameOpts := strings.Split(body[1:len(body)-1], ",")
-		tn := &tagNameOptions{}
-		if len(nameOpts) > 1 {
-			tn.Options = make(map[string]bool, len(nameOpts)-1)
-		}
-		for k, v := range nameOpts {
-			if k == 0 {
-				tn.Name = v
-				continue
-			}
-			tn.Options[v] = true
-		}
-		o.m[id] = tn
+		o.m[id] = body[1 : len(body)-1]
 	}
 	return nil
 }
 
-func (o *ObjectFieldTag) GetTagName(tagID string) string {
+func (o *ObjectFieldTag) GetValue(tagName string) string {
 	if o == nil {
 		return ""
 	}
-	tn := o.m[tagID]
-	if tn != nil {
-		return tn.Name
-	}
-	return ""
+	return o.m[tagName]
 }
 
-func (o *ObjectFieldTag) HasTagOption(tagID string, optionName string) bool {
+func (o *ObjectFieldTag) GetFirstValue(tagName string, sep string) string {
 	if o == nil {
-		return false
+		return ""
 	}
-	tn := o.m[tagID]
-	if tn != nil {
-		return tn.Options[optionName]
+	v := o.m[tagName]
+	i := strings.Index(v, sep)
+	if i != -1 {
+		return v[:i]
 	}
-	return false
-}
-
-type tagNameOptions struct {
-	Name    string
-	Options map[string]bool
+	return v
 }
 
 func NewObjectFieldTag(raw string) (*ObjectFieldTag, error) {
@@ -100,4 +80,3 @@ func mustObjectFieldTag(raw string) *ObjectFieldTag {
 	}
 	return tag
 }
-

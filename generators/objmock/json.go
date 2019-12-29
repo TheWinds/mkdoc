@@ -90,7 +90,7 @@ func (j *JSONMocker) mock(obj *mkdoc.Object) {
 	defer func() { j.write("}") }()
 	var firstField bool
 	for _, field := range obj.Fields {
-		jsonTag := field.Tag.GetTagName("json")
+		jsonTag := field.Tag.GetFirstValue("json", ",")
 		if jsonTag == "-" {
 			continue
 		}

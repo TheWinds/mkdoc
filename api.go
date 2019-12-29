@@ -60,7 +60,7 @@ func (api *API) LinkBaseType() error {
 
 	var tField, arrayTField *ObjectField
 	for _, v := range baseTypObj.Fields {
-		docTag := v.Tag.GetTagName("doc")
+		docTag := v.Tag.GetValue("doc")
 		switch {
 		case docTag == "T" && v.Type.Name == "interface{}":
 			tField = v
