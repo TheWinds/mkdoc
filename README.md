@@ -1,19 +1,5 @@
-# docspace
+# mkdoc
 > 从GO源代码直接生成API文档
-
-## TODO
-- [ ] Annotation
-  - [ ] Feature: @Param
-- [ ] Mkdoc
-  - [ ] Refactor: impl of TypeLocation
-  - [ ] Feature:  resolve all go type at a step
-- [ ] Generator
-  - [x] Fix: JSON object mocker object circle ref check
-  - [ ] Feature: XML object mocker
-  - [ ] Feature: HTML generator
-- [ ] Build
-  - [ ] Feature: Build mkdoc with custom plugin
-- [ ] Example
 
 ### 快速开始
 
@@ -115,4 +101,3 @@ func GetUser(ctx echo.Context){
   // ...
 }
 ```
-
