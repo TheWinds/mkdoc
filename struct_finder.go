@@ -6,6 +6,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"strings"
 )
 
 // GoStructField some useful filed info of go struct field
@@ -98,6 +99,7 @@ func (s *StructFinder) walkTypeSpec(spec *ast.TypeSpec, ctx *walkCtx) {
 				DocComment: field.Doc.Text(),
 				GoType:     baseTyp,
 			}
+			structField.DocComment = strings.TrimRight(structField.DocComment, "\n")
 			if field.Tag != nil {
 				structField.Tag = field.Tag.Value
 			}
