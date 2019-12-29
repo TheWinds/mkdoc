@@ -54,7 +54,7 @@ type ObjectFieldTag struct {
 
 func (o *ObjectFieldTag) parse() error {
 	raw := o.raw
-	if len(raw)==0{
+	if len(raw) == 0 {
 		return nil
 	}
 	if raw[0] == '`' && raw[len(raw)-1] == '`' {
@@ -149,6 +149,28 @@ type Object struct {
 	Type   *ObjectType
 	Fields []*ObjectField
 	Loaded bool
+}
+
+// Clone object with a random id
+func (obj *Object) Clone() *Object {
+	newObj := new(Object)
+	newObj.ID = randObjectID("clone")
+	t := *obj.Type
+	newObj.Type = &t
+	for _, field := range obj.Fields {
+		ft := *field.Type
+		newField := &ObjectField{
+			Name: field.Name,
+			Desc: field.Desc,
+			Type: &ft,
+		}
+		if field.Tag != nil {
+			newField.Tag = mustObjectFieldTag(field.Tag.raw)
+		}
+		newObj.Fields = append(newObj.Fields, newField)
+	}
+	newObj.Loaded = obj.Loaded
+	return newObj
 }
 
 func init() {
