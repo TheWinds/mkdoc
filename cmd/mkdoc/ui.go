@@ -1,4 +1,4 @@
-package mkdoc
+package main
 
 import "fmt"
 

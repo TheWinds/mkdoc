@@ -1,5 +1,5 @@
 // command: mkdoc make
-package mkdoc
+package main
 
 import (
 	"fmt"

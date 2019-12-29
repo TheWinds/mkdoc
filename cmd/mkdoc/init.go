@@ -1,5 +1,5 @@
 // command: mkdoc init
-package mkdoc
+package main
 
 import (
 	"github.com/thewinds/mkdoc"
