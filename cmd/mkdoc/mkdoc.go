@@ -1,4 +1,4 @@
-package main
+package mkdoc
 
 import (
 	"gopkg.in/alecthomas/kingpin.v2"

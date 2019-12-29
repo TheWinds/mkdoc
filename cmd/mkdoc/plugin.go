@@ -1,4 +1,4 @@
-package main
+package mkdoc
 
 import (
 	//_ "github.com/thewinds/gqlcorego"
