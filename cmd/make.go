@@ -117,6 +117,10 @@ func makeDoc(ctx *kingpin.ParseContext) error {
 		return showErr("%v", err)
 	}
 
+	if err := buildAPI(matchedAPIs); err != nil {
+		return showErr("%v", err)
+	}
+
 	if tag == "" {
 		tag = "all"
 	}

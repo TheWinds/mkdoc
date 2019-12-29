@@ -40,6 +40,14 @@ func NewProject(config *Config) (*Project, error) {
 	for _, obj := range BuiltinObjects() {
 		project.refObjects[obj.ID] = obj
 	}
+
+	if config.BaseType != "" {
+		baseTypeObj := &Object{
+			ID:   config.BaseType,
+			Type: &ObjectType{Name: "object"},
+		}
+		project.refObjects[baseTypeObj.ID] = baseTypeObj
+	}
 	return project, nil
 }
 
@@ -158,6 +166,7 @@ func (project *Project) LoadObjects() error {
 	}
 	return nil
 }
+
 func (project *Project) getStructInfo(query *PkgType) (*GoStructInfo, error) {
 	var structInfo *GoStructInfo
 	var err error

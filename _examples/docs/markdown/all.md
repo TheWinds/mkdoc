@@ -33,129 +33,12 @@
 - Response Example
 ```json
 {
-    "id": 10,                 // ID
+    "code": 10,                   // 状态码
 
-    "name": "str",            // 用户名
+    "msg": "str",                 // 提示消息
 
-    "pwd": "str",             // 密码
+    "data": {                     // Data
 
-    "age": 10,                // 年龄
-
-    "profile": {
-        "friends": [
-            null
-        ],
-        "son": null,
-        "address": [
-            {
-                "code": 10,   // 代码
-
-                "addr": "str" // 详细地址
-
-            }
-        ],
-        "ttt": [
-            [
-                10
-            ]
-        ],
-        "sss": [
-            [
-                [
-                    "str"
-                ]
-            ]
-        ],
-        "Phone": "str"
-    }
-}
-```
-### 获取用户
-> get user by id
-
-- post http
-```
-[path] /api/v2/user
-```
-- Query
-|名称|说明|
-|---|---|
-|`uid`|用户ID|
-
-- Request Example
-```json
-{
-    "name": "str", // 用户名
-
-    "pwd": "str",  // 密码
-
-    "age": 10      // 年龄
-
-}
-```
-- Response Example
-```json
-{
-    "id": 10,                 // ID
-
-    "name": "str",            // 用户名
-
-    "pwd": "str",             // 密码
-
-    "age": 10,                // 年龄
-
-    "profile": {
-        "friends": [
-            null
-        ],
-        "son": null,
-        "address": [
-            {
-                "code": 10,   // 代码
-
-                "addr": "str" // 详细地址
-
-            }
-        ],
-        "ttt": [
-            [
-                10
-            ]
-        ],
-        "sss": [
-            [
-                [
-                    "str"
-                ]
-            ]
-        ],
-        "Phone": "str"
-    }
-}
-```
-### 搜索用户
-> get user by id
-
-- get http
-```
-[path] /api/user/
-```
-- Query
-|名称|说明|
-|---|---|
-|`age`|年龄|
-|`name`|名称|
-|`uid`|用户ID|
-
-- Request Example
-```json
-
-
-```
-- Response Example
-```json
-[
-    {
         "id": 10,                 // ID
 
         "name": "str",            // 用户名
@@ -192,7 +75,145 @@
             "Phone": "str"
         }
     }
-]
+}
+```
+### 获取用户
+> get user by id
+
+- post http
+```
+[path] /api/v2/user
+```
+- Query
+|名称|说明|
+|---|---|
+|`uid`|用户ID|
+
+- Request Example
+```json
+{
+    "name": "str", // 用户名
+
+    "pwd": "str",  // 密码
+
+    "age": 10      // 年龄
+
+}
+```
+- Response Example
+```json
+{
+    "code": 10,                   // 状态码
+
+    "msg": "str",                 // 提示消息
+
+    "data": {                     // Data
+
+        "id": 10,                 // ID
+
+        "name": "str",            // 用户名
+
+        "pwd": "str",             // 密码
+
+        "age": 10,                // 年龄
+
+        "profile": {
+            "friends": [
+                null
+            ],
+            "son": null,
+            "address": [
+                {
+                    "code": 10,   // 代码
+
+                    "addr": "str" // 详细地址
+
+                }
+            ],
+            "ttt": [
+                [
+                    10
+                ]
+            ],
+            "sss": [
+                [
+                    [
+                        "str"
+                    ]
+                ]
+            ],
+            "Phone": "str"
+        }
+    }
+}
+```
+### 搜索用户
+> get user by id
+
+- get http
+```
+[path] /api/user/
+```
+- Query
+|名称|说明|
+|---|---|
+|`age`|年龄|
+|`name`|名称|
+|`uid`|用户ID|
+
+- Request Example
+```json
+
+
+```
+- Response Example
+```json
+{
+    "code": 10,                       // 状态码
+
+    "msg": "str",                     // 提示消息
+
+    "data": [                         // Data
+
+        {
+            "id": 10,                 // ID
+
+            "name": "str",            // 用户名
+
+            "pwd": "str",             // 密码
+
+            "age": 10,                // 年龄
+
+            "profile": {
+                "friends": [
+                    null
+                ],
+                "son": null,
+                "address": [
+                    {
+                        "code": 10,   // 代码
+
+                        "addr": "str" // 详细地址
+
+                    }
+                ],
+                "ttt": [
+                    [
+                        10
+                    ]
+                ],
+                "sss": [
+                    [
+                        [
+                            "str"
+                        ]
+                    ]
+                ],
+                "Phone": "str"
+            }
+        }
+    ]
+}
 ```
 ### AAA
 > get user by id
@@ -215,5 +236,12 @@
 ```
 - Response Example
 ```json
-"str"
+{
+    "code": 10,   // 状态码
+
+    "msg": "str", // 提示消息
+
+    "data": "str" // Data
+
+}
 ```
