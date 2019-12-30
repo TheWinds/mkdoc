@@ -154,7 +154,6 @@ func (project *Project) LoadObjects() error {
 	}
 	i := 0
 	for i < len(queue) {
-		fmt.Println("Load:", queue[i])
 		pkgType, err := newPkgType(queue[i])
 		if err != nil {
 			return err
