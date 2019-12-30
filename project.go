@@ -154,6 +154,7 @@ func (project *Project) LoadObjects() error {
 	}
 	i := 0
 	for i < len(queue) {
+		fmt.Println("Load:", queue[i])
 		pkgType, err := newPkgType(queue[i])
 		if err != nil {
 			return err
@@ -221,6 +222,9 @@ func (project *Project) loadObj(query *PkgType, queue *[]string) error {
 	rootObj.Fields = make([]*ObjectField, 0)
 
 	for _, field := range structInfo.Fields {
+		if field.GoType.NotSupport{
+			continue
+		}
 		// priority use doc comment
 		var comment string
 		if field.DocComment != "" {
