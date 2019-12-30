@@ -1,9 +1,9 @@
-# mkdoc
-> 从GO源代码直接生成API文档
+# MKDOC
+> 灵活可定制,基于注释注解的API文档生成器
 
-![image-20191229231934994](/Users/thewinds/Library/Application Support/typora-user-images/image-20191229231934994.png)
+[![asciicast](https://asciinema.org/a/fIDwADlE8X1MtCCSNb8bUJPte.svg)](https://asciinema.org/a/fIDwADlE8X1MtCCSNb8bUJPte)
 
-### 快速开始
+## 快速开始
 
 - 安装
 
@@ -25,6 +25,12 @@ vim conf.yaml
 mkdoc make
 ```
 
+## 例子
+参考[examples](https://github.com/TheWinds/mkdoc/tree/master/_examples)目录下的例子
+
+## 插件
+插件包括两种类型*Scanner*和*Generator*,您可以自己实现这两种插件来适应自己项目中的文档需求,
+下面有一些已经实现的插件。
 ### Scanner
 
 *Scanner*(注解扫描器)的作用是从go源码中扫描注解,现在支持以下扫描器:
@@ -46,8 +52,9 @@ mkdoc make
 
 
 
-### 文档注解
+## 文档
 
+### 注解
 > 文档注解以注释的形式写在go源码中,不同的扫描器会从不同的位置扫描注解
 >
 > 例如内建的`funcdoc`扫描器将会扫描所有的方法声明上的文档注解
@@ -67,10 +74,10 @@ mkdoc make
 |`@query`  <query 名称\> <query 说明\>|query信息,多个可重复写|
 |`@in` <params\>|入参类型|
 |`@out` <params\>|出参(返回)类型|
-|`@in[encoder]`  <params\>|指定编码器|
-|`@out[encoder]` <params\>|指定编码器|
+|`@in[mime_type]`  <params\>|指定mime_type,form,json,xml...|
+|`@out[mime_type]` <params\>|指定mime_type,form,json,xml...|
 
-> `in` 和 `out` 后的 `[encoder]` 表示编码器的类型,例如如果入参类型是通过json格式传递过来的
+> `in` 和 `out` 后的 `[mime_type]` 例如如果入参类型是通过json格式传递过来的
 则可以写`@in[json] xxxx`,xml 则写 `@in[xml] xxx` 
 
 其中 `in` 和 `out` 支持两种形式
