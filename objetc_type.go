@@ -21,35 +21,32 @@ type ObjectType struct {
 	IsRepeated bool
 }
 
-func isBuiltinType(t string) bool {
-	builtinTypes := map[string]bool{
-		"string":      true,
-		"bool":        true,
-		"byte":        true,
-		"int":         true,
-		"int32":       true,
-		"int64":       true,
-		"uint":        true,
-		"uint32":      true,
-		"uint64":      true,
-		"float":       true,
-		"float32":     true,
-		"float64":     true,
-		"interface{}": true,
+var builtinTypes = []string{
+	"string",
+	"bool",
+	"byte",
+	"int", "int8", "int16", "int32", "int64",
+	"uint", "uint8", "uint16", "uint32", "uint64",
+	"float", "float32", "float64",
+	"interface{}"}
+
+var builtinTypesMap map[string]bool
+
+func init() {
+	builtinTypesMap = make(map[string]bool)
+	for _, typ := range builtinTypes {
+		builtinTypesMap[typ] = true
 	}
-	return builtinTypes[t]
+}
+
+func isBuiltinType(t string) bool {
+	return builtinTypesMap[t]
 }
 
 func BuiltinObjects() []*Object {
-	types := []string{
-		"string",
-		"bool",
-		"int", "int8", "int16", "int32", "int64",
-		"uint", "uint8", "uint16", "uint32", "uint64",
-		"float", "float32", "float64",
-		"interface{}"}
+
 	var objects []*Object
-	for _, t := range types {
+	for _, t := range builtinTypes {
 		objects = append(objects, &Object{
 			ID:     t,
 			Type:   &ObjectType{Name: t},
