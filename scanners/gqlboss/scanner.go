@@ -1,4 +1,4 @@
-package gqlcorego
+package gqlboss
 
 import (
 	"fmt"
@@ -36,7 +36,6 @@ type opSchema struct {
 func (s *Scanner) walkNode(node ast.Node) bool {
 	if kvExpr, ok := node.(*ast.KeyValueExpr); ok {
 		if kvExpr.Key == nil || kvExpr.Value == nil {
-			fmt.Println(readCode(f, node))
 			return true
 		}
 		name := readCode(s.fileSet, kvExpr.Key)

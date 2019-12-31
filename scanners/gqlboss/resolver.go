@@ -1,4 +1,4 @@
-package gqlcorego
+package gqlboss
 
 import (
 	"errors"

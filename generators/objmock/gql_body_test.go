@@ -1,48 +1,90 @@
 package objmock
 
 import (
-	"strings"
+	"fmt"
+	"github.com/thewinds/mkdoc"
 	"testing"
 )
 
 func TestGQLBodyMocker_Mock(t *testing.T) {
-	type fields struct {
-		refs    map[string]*mkdoc.Object
-		err     error
-		dep     int
-		data    strings.Builder
-		refPath []string
+	refs := make(map[string]*mkdoc.Object)
+	for _, obj := range mkdoc.BuiltinObjects() {
+		refs[obj.ID] = obj
 	}
-	type args struct {
-		object *mkdoc.Object
-		refs   map[string]*mkdoc.Object
+
+	parseTag := func(raw string) *mkdoc.ObjectFieldTag {
+		tag, _ := mkdoc.NewObjectFieldTag(raw)
+		return tag
 	}
-	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		want    string
-		wantErr bool
-	}{
-		// TODO: Add test cases.
+
+	profile := &mkdoc.Object{
+		ID: "abc.profile",
+		Type: &mkdoc.ObjectType{
+			Name: "object",
+		},
+		Fields: []*mkdoc.ObjectField{
+			{
+				Name: "NickName",
+				Desc: "name",
+				Type: &mkdoc.ObjectType{Name: "string"},
+				Tag:  parseTag(`json:"nickname"`),
+			},
+			{
+				Name: "age",
+				Desc: "age",
+				Type: &mkdoc.ObjectType{Name: "int"},
+				Tag:  parseTag(`json:"age"`),
+			},
+		},
+		Loaded: false,
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			g := &GQLBodyMocker{
-				refs:    tt.fields.refs,
-				err:     tt.fields.err,
-				dep:     tt.fields.dep,
-				data:    tt.fields.data,
-				refPath: tt.fields.refPath,
-			}
-			got, err := g.Mock(tt.args.object, tt.args.refs)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("Mock() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if got != tt.want {
-				t.Errorf("Mock() got = %v, want %v", got, tt.want)
-			}
-		})
+	refs[profile.ID] = profile
+
+	user := &mkdoc.Object{
+		ID: "abc.user",
+		Type: &mkdoc.ObjectType{
+			Name: "object",
+		},
+		Fields: []*mkdoc.ObjectField{
+			{
+				Name: "id",
+				Desc: "id",
+				Type: &mkdoc.ObjectType{Name: "int64"},
+				Tag:  parseTag(`json:"uid"`),
+			},
+			{
+				Name: "onLine",
+				Desc: "user name",
+				Type: &mkdoc.ObjectType{Name: "bool"},
+				Tag:  parseTag(`json:"online"`),
+			},
+			{
+				Name: "profile",
+				Desc: "user profile",
+				Type: &mkdoc.ObjectType{Name: "object", Ref: "abc.profile"},
+				Tag:  parseTag(`json:"profile"`),
+			},
+			{
+				Name: "friends",
+				Desc: "user friends",
+				Type: &mkdoc.ObjectType{Name: "object", Ref: "abc.user", IsRepeated: true},
+				Tag:  parseTag(`json:"friends"`),
+			},
+		},
+		Loaded: false,
 	}
+	refs[user.ID] = user
+	o, err := GqlBodyMocker().Mock(user, refs)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	fmt.Println(o)
+
+	o, err = GqlBodyMocker().MockPretty(user, refs,"","    ")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	fmt.Println(o)
 }

@@ -1,130 +1,107 @@
 package objmock
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
 	"strings"
 
 	"github.com/thewinds/mkdoc"
 )
 
-type ZKGQLMocker struct {
-	refs      map[string]*mkdoc.Object
-	err       error
-	dep       int
-	data      strings.Builder
-	comment   map[int]string
-	commented map[string]bool
-	fieldNo   int
-	refPath   []string
+type GQLBodyMocker struct {
+	refs    map[string]*mkdoc.Object
+	err     error
+	dep     int
+	data    strings.Builder
+	refPath []string
 }
 
-func NewZKGQLMocker() *ZKGQLMocker {
-	return &ZKGQLMocker{}
+func GqlBodyMocker() *GQLBodyMocker {
+	return &GQLBodyMocker{}
 }
 
-/*
-query courses($current: Int!, $pageSize: Int!, $courseName: String, $isOnline: Int, $courseClass: Int) {
-  courses(current: $current, pageSize: $pageSize, courseName: $courseName, isOnline: $isOnline, courseClass: $courseClass) {
-    total
-    bodys{
-      courseId
-      courseName
-      courseType
-      courseClass
-      courseCover
-      pcCourseCover
-      price
-      isOnline
-      introduce
-      qrCode
-      deadlineType
-      bindTeacherIds
-      linkAfterPurchase
-      hasPhysicalProduct
-      contactWechat
-      createTime
-      brief
-      videoType
-      headCover
-      courseItemPics
-      courseBuyPics
-
-    }
-    errorCode
-    errorMsg
-    success
-  }
-}
-*/
-
-func (z *ZKGQLMocker) Mock(name string, object *mkdoc.Object, refs map[string]*mkdoc.Object) (string, error) {
+func (g *GQLBodyMocker) Mock(object *mkdoc.Object, refs map[string]*mkdoc.Object) (string, error) {
 	if object == nil {
 		return "\n", nil
 	}
-	z.refs = refs
-	z.comment = make(map[int]string)
-	z.commented = make(map[string]bool)
-	z.dep = -1
-	z.pushRefPath(object.ID)
-	z.mock(object)
-	if z.err != nil {
-		return "", z.err
+	g.refs = refs
+	g.dep = -1
+	g.pushRefPath(object.ID)
+	g.mock(object)
+	if g.err != nil {
+		return "", g.err
 	}
-	return z.data.String(), nil
+	return g.data.String(), nil
 }
 
-func (z *ZKGQLMocker) MockPretty(name string, object *mkdoc.Object, refs map[string]*mkdoc.Object) (string, error) {
+func (g *GQLBodyMocker) MockPretty(object *mkdoc.Object, refs map[string]*mkdoc.Object, prefix string, indent string) (string, error) {
 	if object == nil {
 		return "\n", nil
 	}
-	r, err := z.Mock(name, object, refs)
+	r, err := g.Mock(object, refs)
 	if err != nil {
 		return "", err
 	}
-	dst := bytes.NewBuffer([]byte{})
-	err = json.Indent(dst, []byte(r), "", "    ")
-	if err != nil {
-		return "", err
-	}
-	return dst.String(), nil
+	return g.indent(r, prefix, indent), nil
 }
 
-func (z *ZKGQLMocker) mockHeader(name string, obj *mkdoc.Object) {
-	for _, field := range obj.Fields {
-		fType := field.Type
-		if fType.IsRepeated || fType.Name == "object" {
-			fmt.Printf("gql_zk: SKIP '%s' field %s array or object field is not support", name, field.Name)
-			continue
+func (g *GQLBodyMocker) indent(s string, prefix string, indent string) string {
+	sb := strings.Builder{}
+	dep := 0
+	var w []rune
+	for _, c := range s {
+		switch c {
+		case '{':
+			sb.WriteString(prefix)
+			sb.WriteString(strings.Repeat(indent, dep))
+			if len(w) > 0 {
+				sb.WriteString(string(w))
+				w = nil
+			}
+			dep++
+			sb.WriteRune(c)
+			sb.WriteRune('\n')
+			//sb.WriteString(strings.Repeat(indent, dep))
+		case '}':
+			dep--
+			sb.WriteString(prefix)
+			sb.WriteString(strings.Repeat(indent, dep))
+			sb.WriteRune(c)
+			sb.WriteRune('\n')
+		case '\n':
+			sb.WriteString(prefix)
+			sb.WriteString(strings.Repeat(indent, dep))
+			sb.WriteString(string(w))
+			w = nil
+			sb.WriteRune('\n')
+		default:
+			w = append(w, c)
 		}
-
 	}
+	return sb.String()
 }
 
-func (z *ZKGQLMocker) mock(obj *mkdoc.Object) {
-	if z.err != nil {
+func (g *GQLBodyMocker) mock(obj *mkdoc.Object) {
+	if g.err != nil {
 		return
 	}
 	objType := obj.Type
 	if objType.IsRepeated {
-		z.write("[")
-		defer func() { z.write("]") }()
+		//g.write("{")
+		//defer func() { g.write("}") }()
 	}
 
 	// builtin type
 	if objType.Name != "object" {
-		z.writeValue(objType.Name)
+		g.writeValue()
 		return
 	}
 
 	if objType.Ref != "" {
-		z.mockRef(objType.Ref)
+		g.mockRef(objType.Ref)
 		return
 	}
-	z.write("{")
-	defer func() { z.write("}") }()
-	var firstField bool
+	g.write("{")
+	defer func() { g.write("}") }()
 	for _, field := range obj.Fields {
 		jsonTag := field.Tag.GetFirstValue("json", ",")
 		if jsonTag == "-" {
@@ -133,101 +110,43 @@ func (z *ZKGQLMocker) mock(obj *mkdoc.Object) {
 		if jsonTag == "" {
 			jsonTag = field.Name
 		}
-		if !firstField {
-			firstField = true
-		} else {
-			z.write(",")
-		}
-		z.write("\"%s\":", jsonTag)
+		g.write(jsonTag)
 
 		fieldTyp := field.Type
-		z.markFieldComment(obj, field)
-		z.fieldNo++
 		if fieldTyp.Ref != "" {
-			z.mockRef(fieldTyp.Ref)
+			g.mockRef(fieldTyp.Ref)
 		} else {
-			z.writeValue(fieldTyp.Name)
+			g.writeValue()
 		}
 	}
 }
 
-func (z *ZKGQLMocker) mockRef(refID string) {
-	refObj := z.refs[refID]
+func (g *GQLBodyMocker) mockRef(refID string) {
+	refObj := g.refs[refID]
 	if refObj == nil {
-		z.err = fmt.Errorf("mock: type %s not exist", refID)
+		g.err = fmt.Errorf("mock: type %s not exist", refID)
 		return
 	}
 	// limit circle ref
-	if z.pushRefPath(refObj.ID) {
-		z.mock(refObj)
-		z.popRefPath()
+	if g.pushRefPath(refObj.ID) {
+		g.mock(refObj)
+		g.popRefPath()
 	} else {
-		z.write("null")
+		g.write("{}")
 	}
 }
 
-func (z *ZKGQLMocker) appendComment(src string) string {
-	lines := strings.Split(src, "\n")
-	var maxLen int
-	for _, line := range lines {
-		if len(line) > maxLen {
-			maxLen = len(line)
-		}
-	}
-	fieldNo := -1
-	for i := range lines {
-		if strings.Index(lines[i], "\":") == -1 {
-			continue
-		}
-		fieldNo++
-		comment := z.comment[fieldNo]
-		if comment != "" {
-			lines[i] = fmt.Sprintf("%s // %s", z.padRight(lines[i], maxLen), comment)
-		}
-	}
-	return strings.Join(lines, "\n")
+func (g *GQLBodyMocker) write(format string, i ...interface{}) {
+	fmt.Fprintf(&g.data, format, i...)
 }
 
-func (z *ZKGQLMocker) padRight(s string, l int) string {
-	p := l - len(s)
-	return s + strings.Repeat(" ", p)
+func (g *GQLBodyMocker) writeValue() {
+	g.write("\n")
 }
 
-func (z *ZKGQLMocker) write(format string, i ...interface{}) {
-	fmt.Fprintf(&z.data, format, i...)
-}
-
-func (z *ZKGQLMocker) writeValue(typ string) {
-	val := ""
-	switch typ {
-	case "string":
-		val = "\"str\""
-	case "bool":
-		val = "true"
-	case "int", "int8", "int16", "int32", "int64", "uint", "uint8", "uint16", "uint32", "uint64":
-		val = "10"
-	case "float", "float32", "float64":
-		val = "10.2"
-	case "interface{}":
-		val = "{}"
-	default:
-		val = ""
-	}
-	z.write(val)
-}
-
-func (z *ZKGQLMocker) markFieldComment(obj *mkdoc.Object, field *mkdoc.ObjectField) {
-	var key string
-	key = fmt.Sprintf("%s.%s", obj.ID, field.Name)
-	if !z.commented[key] {
-		z.commented[key] = true
-		z.comment[z.fieldNo] = field.Desc
-	}
-}
-
-func (z *ZKGQLMocker) pushRefPath(objTyp string) bool {
+func (g *GQLBodyMocker) pushRefPath(objTyp string) bool {
 	i := -1
-	for k, v := range z.refPath {
+	for k, v := range g.refPath {
 		if v == objTyp {
 			i = k
 			break
@@ -236,16 +155,16 @@ func (z *ZKGQLMocker) pushRefPath(objTyp string) bool {
 	// a->a        ok
 	// a->a->a 	  !ok
 	// a->a->b->a !ok
-	if i == -1 || len(z.refPath)-i <= 1 {
-		z.refPath = append(z.refPath, objTyp)
+	if i == -1 || len(g.refPath)-i <= 1 {
+		g.refPath = append(g.refPath, objTyp)
 		return true
 	}
 	return false
 }
 
-func (z *ZKGQLMocker) popRefPath() {
-	if len(z.refPath) == 0 {
+func (g *GQLBodyMocker) popRefPath() {
+	if len(g.refPath) == 0 {
 		return
 	}
-	z.refPath = z.refPath[:len(z.refPath)-1]
+	g.refPath = g.refPath[:len(g.refPath)-1]
 }
