@@ -9,7 +9,7 @@ var makeDocTag *string
 var makeDocVersion *string
 
 func main() {
-	app := kingpin.New("mkdoc", "make doc from go source code")
+	app := kingpin.New("mkdoc", "make doc from go source code 芝课特供版 v1.0")
 
 	app.
 		Command("init", "").
