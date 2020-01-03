@@ -44,6 +44,7 @@ func init() {
 // ParseToAPI parse doc annotation to API def struct
 func (annotation DocAnnotation) ParseToAPI() (*API, error) {
 	api := new(API)
+	api.Mime = new(MimeType)
 	api.Annotation = annotation
 	err := parseSimple(annotation, api)
 	if err != nil {
@@ -160,7 +161,7 @@ func parseInOut(annotation DocAnnotation, api *API, imports map[string]string) e
 			if len(matchGroup) > 0 {
 				switch command {
 				case "in_go_type":
-					api.InArgEncoder = rmBracket(matchGroup[2])
+					api.Mime.In = rmBracket(matchGroup[2])
 					pkgTyp := replacePkg(matchGroup[3], imports)
 					obj, err := createRootObject(pkgTyp)
 					if err != nil {
@@ -168,7 +169,7 @@ func parseInOut(annotation DocAnnotation, api *API, imports map[string]string) e
 					}
 					api.InArgument = obj
 				case "out_go_type":
-					api.OutArgEncoder = rmBracket(matchGroup[2])
+					api.Mime.Out = rmBracket(matchGroup[2])
 					pkgTyp := replacePkg(matchGroup[3], imports)
 					obj, err := createRootObject(pkgTyp)
 					if err != nil {
@@ -176,7 +177,7 @@ func parseInOut(annotation DocAnnotation, api *API, imports map[string]string) e
 					}
 					api.OutArgument = obj
 				case "in_fields_block":
-					api.InArgEncoder = rmBracket(matchGroup[2])
+					api.Mime.In = rmBracket(matchGroup[2])
 					fieldStmts := matchGroup[4]
 					api.InArgument = &Object{
 						ID:     randObjectID("in"),
@@ -189,7 +190,7 @@ func parseInOut(annotation DocAnnotation, api *API, imports map[string]string) e
 					}
 					GetProject().AddObject(api.InArgument.ID, api.InArgument)
 				case "out_fields_block":
-					api.OutArgEncoder = rmBracket(matchGroup[2])
+					api.Mime.Out = rmBracket(matchGroup[2])
 					fieldStmts := matchGroup[4]
 					api.InArgument = &Object{
 						ID:     randObjectID("out"),

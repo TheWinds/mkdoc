@@ -91,7 +91,7 @@ func (g *Generator) Gen(ctx *mkdoc.DocGenContext) (output []byte, err error) {
 				Value: "",
 			})
 		}
-		switch api.InArgEncoder {
+		switch api.Mime.In {
 		case "json":
 			body := &textReqBody{
 				MimeType: "application/json",
