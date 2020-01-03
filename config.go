@@ -11,10 +11,11 @@ import (
 
 const configFileName = "conf.yaml"
 
-type Header struct {
+type Inject struct {
 	Name    string `yaml:"name"`
 	Desc    string `yaml:"desc"`
 	Default string `yaml:"default"`
+	Scope   string `yaml:"scope"` // header,query,form
 }
 
 type MimeType struct {
@@ -23,16 +24,16 @@ type MimeType struct {
 }
 
 type Config struct {
-	Name         string    `yaml:"name"`
-	Description  string    `yaml:"desc"`
-	APIBaseURL   string    `yaml:"api_base_url"`  // https://api.xxx.com
-	CommonHeader []*Header `yaml:"common_header"` //
-	Package      string    `yaml:"pkg"`           //
-	BaseType     string    `yaml:"base_type"`     // models.BaseType
-	UseGOModule  bool      `yaml:"use_go_mod"`
-	Scanner      []string  `yaml:"scanner"`
-	Generator    []string  `yaml:"generator"`
-	Mime         *MimeType `yaml:"mime"` // MimeType
+	Name        string    `yaml:"name"`
+	Description string    `yaml:"desc"`
+	APIBaseURL  string    `yaml:"api_base_url"` // https://api.xxx.com
+	Injects     []*Inject `yaml:"inject"`       //
+	Package     string    `yaml:"pkg"`          //
+	BaseType    string    `yaml:"base_type"`    // models.BaseType
+	UseGOModule bool      `yaml:"use_go_mod"`
+	Scanner     []string  `yaml:"scanner"`
+	Generator   []string  `yaml:"generator"`
+	Mime        *MimeType `yaml:"mime"` // MimeType
 }
 
 func (config *Config) Check() error {
@@ -119,11 +120,12 @@ func CreateDefaultConfig() error {
 			In:  "form",
 			Out: "json",
 		},
-		CommonHeader: []*Header{
+		Injects: []*Inject{
 			{
 				Name:    "",
 				Desc:    "",
 				Default: "",
+				Scope:   "",
 			},
 		},
 		Package:     "",
