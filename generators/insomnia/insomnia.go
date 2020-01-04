@@ -128,22 +128,19 @@ func (g *Generator) Gen(ctx *mkdoc.DocGenContext) (output []byte, err error) {
 
 			if api.InArgument != nil {
 				for _, field := range api.InArgument.Fields {
-					if field.Tag.GetValue("json") == "-" {
+					paramName := formFieldName(field)
+					if paramName == "" {
 						continue
 					}
 					param := &reqParam{
 						Description: field.Desc,
 						ID:          genResID("pair"),
-						Name:        formFieldName(field),
+						Name:        paramName,
 						Value:       "",
 					}
 
 					body.Params = append(body.Params, param)
 				}
-			}
-
-			if commonFormParam != nil {
-				body.Params = append(body.Params, commonFormParam...)
 			}
 
 			if commonFormParam != nil {
