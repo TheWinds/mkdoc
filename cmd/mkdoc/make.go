@@ -184,7 +184,7 @@ func writeFile(dir, name string, data []byte) error {
 	fmt.Printf("📖  write api doc to './docs/%s/%s'\n", dir, name)
 	mdPath := filepath.Join(path, "docs", dir)
 	if _, err = os.Stat(mdPath); err != nil {
-		err = os.Mkdir(mdPath, 0755)
+		err = os.MkdirAll(mdPath, 0755)
 		if err != nil {
 			return err
 		}
