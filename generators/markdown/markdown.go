@@ -103,7 +103,7 @@ func (g *Generator) Gen(ctx *mkdoc.DocGenContext) (output []byte, err error) {
 		if api.Method == "query" || api.Method == "mutation" {
 			writef("- Graphql Schema\n")
 			writef("```")
-			switch api.InArgEncoder {
+			switch api.Mime.In {
 			default:
 				writef("\n")
 				o, err := g.gql(api, ctx.RefObj)
