@@ -20,16 +20,16 @@ type TestGOTyp struct {
 func TestDocAnnotation_ParseToAPI(t *testing.T) {
 	if _project == nil {
 		config := &Config{
-			Name:         "test annotation",
-			Description:  "",
-			APIBaseURL:   "",
-			BodyEncoder:  "json",
-			CommonHeader: []*Header{},
-			Package:      ".",
-			BaseType:     "",
-			UseGOModule:  true,
-			Scanner:      []string{"funcdoc"},
-			Generator:    []string{},
+			Name:        "test annotation",
+			Description: "",
+			APIBaseURL:  "",
+			Mime:        &MimeType{"json", ""},
+			Injects:     []*Inject{},
+			Package:     ".",
+			BaseType:    "",
+			UseGOModule: true,
+			Scanner:     []string{"funcdoc"},
+			Generator:   []string{},
 		}
 		if err := config.Check(); err != nil {
 			t.Error(err)
@@ -200,11 +200,10 @@ func TestDocAnnotation_ParseToAPI(t *testing.T) {
 			 @out[xml]  type TestGOTyp
 			 @loc %s/annotation_test.go:1`, dir)),
 			want: &API{
-				InArgEncoder:  "json",
-				OutArgEncoder: "xml",
-				Query:         map[string]string{},
-				Header:        map[string]string{},
-				DocLocation:   fmt.Sprintf("%s/annotation_test.go:1", dir),
+				Mime:        &MimeType{"json", "xml"},
+				Query:       map[string]string{},
+				Header:      map[string]string{},
+				DocLocation: fmt.Sprintf("%s/annotation_test.go:1", dir),
 				InArgument: &Object{
 					ID:     "mkdoc.TestGOTyp",
 					Type:   nil,
@@ -249,9 +248,9 @@ func TestDocAnnotation_ParseToAPI(t *testing.T) {
 						},
 					},
 				},
-				InArgEncoder: "json",
-				Query:        map[string]string{},
-				Header:       map[string]string{},
+				Mime:   &MimeType{"json", ""},
+				Query:  map[string]string{},
+				Header: map[string]string{},
 			},
 			wantErr: false,
 		},

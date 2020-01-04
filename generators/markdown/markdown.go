@@ -89,7 +89,7 @@ func (g *Generator) Gen(ctx *mkdoc.DocGenContext) (output []byte, err error) {
 
 		writef("- Request Example\n")
 		writef("```")
-		switch api.InArgEncoder {
+		switch api.Mime.In {
 		default:
 			writef("json\n")
 			o, err := objmock.NewJSONMocker().MockPrettyComment(api.InArgument, ctx.RefObj)
@@ -117,7 +117,7 @@ func (g *Generator) Gen(ctx *mkdoc.DocGenContext) (output []byte, err error) {
 
 		writef("- Response Example\n")
 		writef("```")
-		switch api.OutArgEncoder {
+		switch api.Mime.Out {
 		default:
 			writef("json\n")
 			o, err := objmock.NewJSONMocker().MockPrettyComment(api.OutArgument, ctx.RefObj)

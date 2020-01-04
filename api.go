@@ -6,30 +6,29 @@ import (
 
 // API def
 type API struct {
-	Name          string            `json:"name"`
-	Desc          string            `json:"desc"`
-	Path          string            `json:"path"`
-	Method        string            `json:"method"` // post get delete patch ; query mutation
-	Type          string            `json:"type"`   // echo_handle graphql
-	Tags          []string          `json:"tags"`
-	Query         map[string]string `json:"query"`
-	Header        map[string]string `json:"header"`
-	InArgument    *Object           `json:"in_argument"`
-	OutArgument   *Object           `json:"out_argument"`
-	InArgEncoder  string            `json:"in_arg_encoder"`
-	OutArgEncoder string            `json:"out_arg_encoder"`
-	DocLocation   string            `json:"doc_location"`
-	Disables      []string          `json:"disables"`
-	Annotation    DocAnnotation     `json:"annotation"`
+	Name        string            `json:"name"`
+	Desc        string            `json:"desc"`
+	Path        string            `json:"path"`
+	Method      string            `json:"method"` // post get delete patch ; query mutation
+	Type        string            `json:"type"`   // echo_handle graphql
+	Tags        []string          `json:"tags"`
+	Query       map[string]string `json:"query"`
+	Header      map[string]string `json:"header"`
+	InArgument  *Object           `json:"in_argument"`
+	OutArgument *Object           `json:"out_argument"`
+	Mime        *MimeType
+	DocLocation string        `json:"doc_location"`
+	Disables    []string      `json:"disables"`
+	Annotation  DocAnnotation `json:"annotation"`
 }
 
 // Build 生成API信息
 func (api *API) Build() error {
-	if api.InArgEncoder == "" {
-		api.InArgEncoder = GetProject().Config.BodyEncoder
+	if api.Mime.In == "" {
+		api.Mime.In = GetProject().Config.Mime.In
 	}
-	if api.OutArgEncoder == "" {
-		api.OutArgEncoder = GetProject().Config.BodyEncoder
+	if api.Mime.Out == "" {
+		api.Mime.Out = GetProject().Config.Mime.Out
 	}
 	return api.LinkBaseType()
 }

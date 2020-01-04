@@ -8,7 +8,7 @@
 - 安装
 
 ```shell
-go get github.com/TheWinds/mkdoc/cmd/mkdoc
+GO111MODULE=on go get github.com/TheWinds/mkdoc/cmd/mkdoc
 ```
 
 - 使用
