@@ -33,52 +33,22 @@
 - Response Example
 ```json
 {
-    "code": 10,                           // 状态码
-    "msg": "str",                         // 提示消息
-    "data": {                             // Data
-        "id": 10,                         // ID
-        "name": "str",                    // 用户名
-        "pwd": "str",                     // 密码
-        "age": 10,                        // 年龄
+    "code": 10,                   // 状态码
+    "msg": "str",                 // 提示消息
+    "data": {                     // Data
+        "id": 10,                 // ID
+        "name": "str",            // 用户名
+        "pwd": "str",             // 密码
+        "age": 10,                // 年龄
         "profile": {
             "friends": [
                 null
             ],
-            "son": {
-                "id": 10,
-                "name": "str",
-                "pwd": "str",
-                "age": 10,
-                "profile": {
-                    "friends": [
-                        null
-                    ],
-                    "son": null,
-                    "address": [
-                        {
-                            "code": 10,   // 代码
-                            "addr": "str" // 详细地址
-                        }
-                    ],
-                    "ttt": [
-                        [
-                            10
-                        ]
-                    ],
-                    "sss": [
-                        [
-                            [
-                                "str"
-                            ]
-                        ]
-                    ],
-                    "Phone": "str"
-                }
-            },
+            "son": null,
             "address": [
                 {
-                    "code": 10,
-                    "addr": "str"
+                    "code": 10,   // 代码
+                    "addr": "str" // 详细地址
                 }
             ],
             "ttt": [
@@ -121,52 +91,22 @@
 - Response Example
 ```json
 {
-    "code": 10,                           // 状态码
-    "msg": "str",                         // 提示消息
-    "data": {                             // Data
-        "id": 10,                         // ID
-        "name": "str",                    // 用户名
-        "pwd": "str",                     // 密码
-        "age": 10,                        // 年龄
+    "code": 10,                   // 状态码
+    "msg": "str",                 // 提示消息
+    "data": {                     // Data
+        "id": 10,                 // ID
+        "name": "str",            // 用户名
+        "pwd": "str",             // 密码
+        "age": 10,                // 年龄
         "profile": {
             "friends": [
                 null
             ],
-            "son": {
-                "id": 10,
-                "name": "str",
-                "pwd": "str",
-                "age": 10,
-                "profile": {
-                    "friends": [
-                        null
-                    ],
-                    "son": null,
-                    "address": [
-                        {
-                            "code": 10,   // 代码
-                            "addr": "str" // 详细地址
-                        }
-                    ],
-                    "ttt": [
-                        [
-                            10
-                        ]
-                    ],
-                    "sss": [
-                        [
-                            [
-                                "str"
-                            ]
-                        ]
-                    ],
-                    "Phone": "str"
-                }
-            },
+            "son": null,
             "address": [
                 {
-                    "code": 10,
-                    "addr": "str"
+                    "code": 10,   // 代码
+                    "addr": "str" // 详细地址
                 }
             ],
             "ttt": [
@@ -208,53 +148,23 @@
 - Response Example
 ```json
 {
-    "code": 10,                               // 状态码
-    "msg": "str",                             // 提示消息
-    "data": [                                 // Data
+    "code": 10,                       // 状态码
+    "msg": "str",                     // 提示消息
+    "data": [                         // Data
         {
-            "id": 10,                         // ID
-            "name": "str",                    // 用户名
-            "pwd": "str",                     // 密码
-            "age": 10,                        // 年龄
+            "id": 10,                 // ID
+            "name": "str",            // 用户名
+            "pwd": "str",             // 密码
+            "age": 10,                // 年龄
             "profile": {
                 "friends": [
                     null
                 ],
-                "son": {
-                    "id": 10,
-                    "name": "str",
-                    "pwd": "str",
-                    "age": 10,
-                    "profile": {
-                        "friends": [
-                            null
-                        ],
-                        "son": null,
-                        "address": [
-                            {
-                                "code": 10,   // 代码
-                                "addr": "str" // 详细地址
-                            }
-                        ],
-                        "ttt": [
-                            [
-                                10
-                            ]
-                        ],
-                        "sss": [
-                            [
-                                [
-                                    "str"
-                                ]
-                            ]
-                        ],
-                        "Phone": "str"
-                    }
-                },
+                "son": null,
                 "address": [
                     {
-                        "code": 10,
-                        "addr": "str"
+                        "code": 10,   // 代码
+                        "addr": "str" // 详细地址
                     }
                 ],
                 "ttt": [
