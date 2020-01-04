@@ -146,6 +146,10 @@ func (g *Generator) Gen(ctx *mkdoc.DocGenContext) (output []byte, err error) {
 				body.Params = append(body.Params, commonFormParam...)
 			}
 
+			if commonFormParam != nil {
+				body.Params = append(body.Params, commonFormParam...)
+			}
+
 			req.Headers = append(req.Headers, &requestHeader{
 				ID:    genResID("pair"),
 				Name:  "Content-Type",
