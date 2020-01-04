@@ -152,7 +152,9 @@ func (project *Project) LoadObjects(ids ...string) error {
 			}
 		}
 	} else {
-		queue = append(queue, project.Config.BaseType)
+		if project.Config.BaseType != "" {
+			queue = append(queue, project.Config.BaseType)
+		}
 		for _, id := range ids {
 			toLoadID := project.firstUnLoadID(objects, id)
 			if toLoadID != "" {
