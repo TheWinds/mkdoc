@@ -113,7 +113,18 @@ func makeDoc(ctx *kingpin.ParseContext) error {
 		fmt.Printf("👽  %d api is matched \n", len(matchedAPIs))
 	}
 	fmt.Println("🔎 Load objects...")
-	if err := project.LoadObjects(); err != nil {
+
+	var loadIDs []string
+	for _, api := range matchedAPIs {
+		if api.InArgument != nil {
+			loadIDs = append(loadIDs, api.InArgument.ID)
+		}
+		if api.OutArgument != nil {
+			loadIDs = append(loadIDs, api.OutArgument.ID)
+		}
+	}
+
+	if err := project.LoadObjects(loadIDs...); err != nil {
 		return showErr("%v", err)
 	}
 
