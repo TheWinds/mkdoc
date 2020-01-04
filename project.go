@@ -141,14 +141,26 @@ func (project *Project) Objects() map[string]*Object {
 	return project.refObjects
 }
 
-func (project *Project) LoadObjects() error {
+func (project *Project) LoadObjects(ids ...string) error {
 	objects := project.Objects()
 	var queue []string
-	for _, object := range objects {
-		if !object.Loaded {
-			queue = append(queue, object.ID)
+	if len(ids) == 0 {
+		// load all
+		for _, object := range objects {
+			if !object.Loaded {
+				queue = append(queue, object.ID)
+			}
+		}
+	} else {
+		queue = append(queue, project.Config.BaseType)
+		for _, id := range ids {
+			toLoadID := project.firstUnLoadID(objects, id)
+			if toLoadID != "" {
+				queue = append(queue, toLoadID)
+			}
 		}
 	}
+
 	if len(queue) == 0 {
 		return nil
 	}
@@ -221,7 +233,7 @@ func (project *Project) loadObj(query *PkgType, queue *[]string) error {
 	rootObj.Fields = make([]*ObjectField, 0)
 
 	for _, field := range structInfo.Fields {
-		if field.GoType.NotSupport{
+		if field.GoType.NotSupport {
 			continue
 		}
 		// priority use doc comment
@@ -287,4 +299,19 @@ func (project *Project) loadObj(query *PkgType, queue *[]string) error {
 	}
 	rootObj.Loaded = true
 	return nil
+}
+
+// dfs search
+func (project *Project) firstUnLoadID(objects map[string]*Object, id string) string {
+	obj := objects[id]
+	if obj == nil {
+		return ""
+	}
+	if !obj.Loaded {
+		return id
+	}
+	if obj.Type.Ref == "" {
+		return ""
+	}
+	return project.firstUnLoadID(objects, obj.Type.Ref)
 }
