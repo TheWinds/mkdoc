@@ -49,13 +49,26 @@ func (g *Generator) Gen(ctx *mkdoc.DocGenContext) (output []byte, err error) {
 	data.Resources = append(data.Resources, wrk, envs)
 
 	var commonHeaders []*requestHeader
+	var commonFormParam []*reqParam
 
-	for _, header := range ctx.Config.CommonHeader {
-		commonHeaders = append(commonHeaders, &requestHeader{
-			ID:    genResID("pair"),
-			Name:  header.Name,
-			Value: header.Default,
-		})
+	for _, e := range ctx.Config.Injects {
+		switch e.Scope {
+		case "header":
+			commonHeaders = append(commonHeaders, &requestHeader{
+				ID:    genResID("pair"),
+				Name:  e.Name,
+				Value: e.Default,
+			})
+		case "query":
+			// TODO
+		case "form_param":
+			commonFormParam = append(commonFormParam, &reqParam{
+				Description: e.Desc,
+				ID:          genResID("pair"),
+				Name:        e.Name,
+				Value:       e.Default,
+			})
+		}
 	}
 
 	for _, api := range ctx.APIs {
@@ -91,6 +104,7 @@ func (g *Generator) Gen(ctx *mkdoc.DocGenContext) (output []byte, err error) {
 				Value: "",
 			})
 		}
+
 		switch api.Mime.In {
 		case "json":
 			body := &textReqBody{
@@ -107,21 +121,29 @@ func (g *Generator) Gen(ctx *mkdoc.DocGenContext) (output []byte, err error) {
 			})
 			req.Body = body
 		default:
+			// default: form
 			body := &structuredReqBody{
 				MimeType: "multipart/form-data",
 			}
-			for _, field := range api.InArgument.Fields {
-				if field.Tag.GetValue("json") == "-" {
-					continue
-				}
-				param := &reqParam{
-					Description: field.Desc,
-					ID:          genResID("pair"),
-					Name:        field.Tag.GetFirstValue("json", ","),
-					Value:       "",
-				}
 
-				body.Params = append(body.Params, param)
+			if api.InArgument != nil {
+				for _, field := range api.InArgument.Fields {
+					if field.Tag.GetValue("json") == "-" {
+						continue
+					}
+					param := &reqParam{
+						Description: field.Desc,
+						ID:          genResID("pair"),
+						Name:        formFieldName(field),
+						Value:       "",
+					}
+
+					body.Params = append(body.Params, param)
+				}
+			}
+
+			if commonFormParam != nil {
+				body.Params = append(body.Params, commonFormParam...)
 			}
 
 			req.Headers = append(req.Headers, &requestHeader{
@@ -140,6 +162,21 @@ func (g *Generator) Gen(ctx *mkdoc.DocGenContext) (output []byte, err error) {
 
 func (g *Generator) Name() string {
 	return "insomnia"
+}
+
+func formFieldName(field *mkdoc.ObjectField) string {
+	tags := []string{"form", "json", "xml"}
+	for _, tag := range tags {
+		tv := field.Tag.GetValue(tag)
+		if tv == "-" {
+			return ""
+		}
+		if tv == "" {
+			continue
+		}
+		return field.Tag.GetFirstValue(tag, ",")
+	}
+	return field.Name
 }
 
 func (g *Generator) FileExt() string {

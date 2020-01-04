@@ -20,16 +20,16 @@ type TestGOTyp struct {
 func TestDocAnnotation_ParseToAPI(t *testing.T) {
 	if _project == nil {
 		config := &Config{
-			Name:         "test annotation",
-			Description:  "",
-			APIBaseURL:   "",
-			Mime:   &MimeType{"json", ""},
-			CommonHeader: []*Header{},
-			Package:      ".",
-			BaseType:     "",
-			UseGOModule:  true,
-			Scanner:      []string{"funcdoc"},
-			Generator:    []string{},
+			Name:        "test annotation",
+			Description: "",
+			APIBaseURL:  "",
+			Mime:        &MimeType{"json", ""},
+			Injects:     []*Inject{},
+			Package:     ".",
+			BaseType:    "",
+			UseGOModule: true,
+			Scanner:     []string{"funcdoc"},
+			Generator:   []string{},
 		}
 		if err := config.Check(); err != nil {
 			t.Error(err)
