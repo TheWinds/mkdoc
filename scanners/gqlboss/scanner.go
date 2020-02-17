@@ -53,6 +53,9 @@ func (s *Scanner) walkNode(node ast.Node) bool {
 
 	if funcDecl, ok := node.(*ast.FuncDecl); ok {
 		funcName := funcDecl.Name.Name
+		if funcDecl.Type.Results == nil {
+			return false
+		}
 		retTypeName := readCode(s.fileSet, funcDecl.Type.Results)
 		switch retTypeName {
 		case "*graphql.Field":
