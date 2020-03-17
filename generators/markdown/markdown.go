@@ -117,7 +117,7 @@ func (g *Generator) Gen(ctx *mkdoc.DocGenContext) (output *mkdoc.GeneratedOutput
 
 	var outName string
 	if ctx.Tag == "" {
-		outName = fmt.Sprintf("all_%s_%d", time.Now().Format("2006-01-02"), time.Now().Unix())
+		outName = fmt.Sprintf("all_doc_%s", time.Now().Format("2006_01_02_150405"))
 	} else {
 		outName = ctx.Tag
 	}
