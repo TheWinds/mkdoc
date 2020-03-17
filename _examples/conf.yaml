@@ -17,3 +17,4 @@ scanner:
 generator:
   - markdown
   - insomnia
+  - docsify
