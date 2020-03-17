@@ -131,10 +131,6 @@ func makeDoc(ctx *kingpin.ParseContext) error {
 		return showErr("%v", err)
 	}
 
-	if tag == "" {
-		tag = "all"
-	}
-
 	genCtx := &mkdoc.DocGenContext{
 		Tag:    tag,
 		APIs:   matchedAPIs,
