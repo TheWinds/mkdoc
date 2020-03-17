@@ -1,15 +1,15 @@
 package mkdoc
 
-import "log"
+import (
+	"log"
+)
 
 // DocGenerator receive a DocGenContext output a doc
 type DocGenerator interface {
 	// Generate doc
-	Gen(ctx *DocGenContext) (output []byte, err error)
+	Gen(ctx *DocGenContext) (output *GeneratedOutput, err error)
 	// Generator Name
 	Name() string
-	// File ext
-	FileExt() string
 }
 
 type DocGenContext struct {
@@ -17,6 +17,7 @@ type DocGenContext struct {
 	APIs   []*API
 	Config Config
 	RefObj map[string]*Object
+	Args   map[string]string
 }
 
 var generators map[string]DocGenerator
@@ -36,4 +37,13 @@ func RegisterGenerator(generator DocGenerator) {
 // GetGenerators get all registered generators
 func GetGenerators() map[string]DocGenerator {
 	return generators
+}
+
+type GeneratedOutput struct {
+	Files []*GeneratedFile
+}
+
+type GeneratedFile struct {
+	Name string
+	Data []byte
 }
