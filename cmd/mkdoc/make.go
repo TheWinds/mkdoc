@@ -165,10 +165,11 @@ func gen(project *mkdoc.Project, ctx *mkdoc.DocGenContext) error {
 		if err != nil {
 			return err
 		}
-		fileName := docName + "." + generator.FileExt()
-		err = writeFile(generator.Name(), fileName, out)
-		if err != nil {
-			return err
+		for _, file := range out.Files {
+			err = writeFile(generator.Name(), file.Name, file.Data)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil

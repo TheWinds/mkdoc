@@ -8,7 +8,6 @@ import (
 	"github.com/thewinds/mkdoc"
 	"github.com/thewinds/mkdoc/generators/objmock"
 	"math/rand"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -160,7 +159,7 @@ func (g *Generator) Gen(ctx *mkdoc.DocGenContext) (output *mkdoc.GeneratedOutput
 	}
 	var outName string
 	if ctx.Tag == "" {
-		outName = time.Now().Format("2006-01-02") + "_" + strconv.Itoa(int(time.Now().Unix()))
+		outName = fmt.Sprintf("all_%s_%d", time.Now().Format("2006-01-02"), time.Now().Unix())
 	} else {
 		outName = ctx.Tag
 	}

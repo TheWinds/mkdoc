@@ -6,6 +6,7 @@ import (
 	"github.com/thewinds/mkdoc/generators/objmock"
 	"sort"
 	"strings"
+	"time"
 )
 
 type Generator struct {
@@ -16,7 +17,7 @@ func init() {
 	mkdoc.RegisterGenerator(&Generator{})
 }
 
-func (g *Generator) Gen(ctx *mkdoc.DocGenContext) (output []byte, err error) {
+func (g *Generator) Gen(ctx *mkdoc.DocGenContext) (output *mkdoc.GeneratedOutput, err error) {
 	g.refObj = ctx.RefObj
 	markdownBuilder := strings.Builder{}
 	writef := func(format string, v ...interface{}) {
@@ -114,13 +115,21 @@ func (g *Generator) Gen(ctx *mkdoc.DocGenContext) (output []byte, err error) {
 		writef("\n```\n")
 	}
 
-	return []byte(markdownBuilder.String()), nil
+	var outName string
+	if ctx.Tag == "" {
+		outName = fmt.Sprintf("all_%s_%d", time.Now().Format("2006-01-02"), time.Now().Unix())
+	} else {
+		outName = ctx.Tag
+	}
+
+	output = &mkdoc.GeneratedOutput{}
+	output.Files = append(output.Files, &mkdoc.GeneratedFile{
+		Name: outName + ".md",
+		Data: []byte(markdownBuilder.String()),
+	})
+	return output, nil
 }
 
 func (g *Generator) Name() string {
 	return "markdown"
-}
-
-func (g *Generator) FileExt() string {
-	return "md"
 }
