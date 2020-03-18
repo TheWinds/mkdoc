@@ -39,9 +39,12 @@ func (g *Generator) makeSidebar(ctx *mkdoc.DocGenContext) *mkdoc.GeneratedFile {
 		buf.WriteString(s)
 		buf.WriteByte('\n')
 	}
-	writeLine("* [Home](/)")
+	writeLine("- Getting started")
+	writeLine("  - [README](/)")
+	writeLine("")
+	writeLine("- APIs")
 	for _, tag := range g.tags {
-		writeLine(fmt.Sprintf("* [%s](%s.md)", tag, tag))
+		writeLine(fmt.Sprintf("  - [%s](%s.md)", tag, tag))
 	}
 	return &mkdoc.GeneratedFile{Name: "_sidebar.md", Data: buf.Bytes()}
 }
@@ -74,7 +77,6 @@ const indexTpl = `<!DOCTYPE html>
   <script src="//unpkg.com/docsify/lib/docsify.min.js"></script>
   <script src="//cdn.jsdelivr.net/npm/docsify/lib/plugins/search.min.js"></script>
   <script src="//cdn.jsdelivr.net/npm/docsify-copy-code"></script>
-  <script src="//cdn.jsdelivr.net/npm/prismjs/components/prism-go.min.js"></script>
   <script src="//cdn.jsdelivr.net/npm/prismjs/components/prism-json.min.js"></script>
 </body>
 </html>
@@ -89,6 +91,8 @@ func (g *Generator) makeReadme(ctx *mkdoc.DocGenContext) *mkdoc.GeneratedFile {
 	buf := bytes.NewBuffer(nil)
 	tpl := `# %s
 > %s
+
+> show doc by [docsify](https://github.com/docsifyjs/docsify)
 - APIBaseURL: %s `
 	buf.WriteString(fmt.Sprintf(tpl,
 		ctx.Config.Name,
@@ -104,7 +108,9 @@ func (g *Generator) makeTagMD(tag string) (*mkdoc.GeneratedFile, error) {
 		markdownBuilder.WriteString(fmt.Sprintf(format, v...))
 	}
 	writef("# %s\n\n", tag)
-
+	sort.Slice(g.tagAPIs[tag], func(i, j int) bool {
+		return g.tagAPIs[tag][i].Name < g.tagAPIs[tag][j].Name
+	})
 	for _, api := range g.tagAPIs[tag] {
 		writef("## %s\n", api.Name)
 		if len(strings.TrimSpace(api.Desc)) > 0 {
@@ -153,9 +159,12 @@ func (g *Generator) makeTagMD(tag string) (*mkdoc.GeneratedFile, error) {
 			if err != nil {
 				return nil, err
 			}
+			if len(strings.TrimSpace(o)) == 0 {
+				o = "{}"
+			}
 			writef(o)
 		}
-		writef("\n```\n")
+		writef("\n```\n\n")
 
 		writef("- Response Example\n")
 		writef("```")
@@ -165,6 +174,9 @@ func (g *Generator) makeTagMD(tag string) (*mkdoc.GeneratedFile, error) {
 			o, err := objmock.NewJSONMocker().MockPrettyComment(api.OutArgument, g.refObj)
 			if err != nil {
 				return nil, err
+			}
+			if len(strings.TrimSpace(o)) == 0 {
+				o = "{}"
 			}
 			writef(o)
 		}
