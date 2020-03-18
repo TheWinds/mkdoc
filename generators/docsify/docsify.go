@@ -78,6 +78,7 @@ const indexTpl = `<!DOCTYPE html>
   <script src="//cdn.jsdelivr.net/npm/docsify/lib/plugins/search.min.js"></script>
   <script src="//cdn.jsdelivr.net/npm/docsify-copy-code"></script>
   <script src="//cdn.jsdelivr.net/npm/prismjs/components/prism-json.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/prismjs/components/prism-graphql.min.js"></script>
 </body>
 </html>
 `
@@ -181,6 +182,21 @@ func (g *Generator) makeTagMD(tag string) (*mkdoc.GeneratedFile, error) {
 			writef(o)
 		}
 		writef("\n```\n")
+
+		if api.Method == "query" || api.Method == "mutation" {
+			writef("- Graphql Schema\n")
+			writef("```graphql")
+			switch api.Mime.In {
+			default:
+				writef("\n")
+				o, err := g.gql(api, g.refObj)
+				if err != nil {
+					return nil, err
+				}
+				writef(o)
+			}
+			writef("\n```\n")
+		}
 	}
 	return &mkdoc.GeneratedFile{
 		Name: tag + ".md",
@@ -199,6 +215,84 @@ func (g *Generator) groupAPIByTag(ctx *mkdoc.DocGenContext) {
 		}
 	}
 	sort.Strings(g.tags)
+}
+
+func (g *Generator) gql(api *mkdoc.API, refs map[string]*mkdoc.Object) (string, error) {
+	sb := new(strings.Builder)
+	ind := strings.LastIndex(api.Path, ":")
+	opName := api.Path[ind+1:]
+	args := make([]string, 0)
+	argsInner := make([]string, 0)
+	for _, field := range api.InArgument.Fields {
+		fType := field.Type
+		if fType.IsRepeated || fType.Name == "object" {
+			//fmt.Printf("gql_zk: SKIP '%s' field %s array or object field is not support\n", api.Name, field.Name)
+			continue
+		}
+		if field.Tag.GetValue("json") == "-" {
+			continue
+		}
+		var jsonTag string
+		if field.Tag.GetValue("json") == "" {
+			jsonTag = field.Name
+		} else {
+			jsonTag = field.Tag.GetFirstValue("json", ",")
+		}
+		var gqlTyp string
+		switch field.Type.Name {
+		case "string":
+			gqlTyp = "String!"
+		case "bool":
+			gqlTyp = "Boolean!"
+		case "int", "int32", "int64", "uint", "uint32", "uint64":
+			gqlTyp = "Int!"
+		case "float", "float32", "float64":
+			gqlTyp = "Float!"
+		}
+		if field.Type.IsRepeated {
+			gqlTyp = "[" + gqlTyp + "]!"
+		}
+		args = append(args, fmt.Sprintf("$%s: %s", jsonTag, gqlTyp))
+		argsInner = append(argsInner, fmt.Sprintf("%s: $%s", jsonTag, jsonTag))
+	}
+	bodykw := "body"
+	if api.OutArgument != nil && api.OutArgument.Type.IsRepeated {
+		bodykw = "bodys"
+	}
+	var tArgs string
+	var tArgsInner string
+	if len(args) > 0 {
+		tArgs = fmt.Sprintf("(%s)", strings.Join(args, ","))
+	}
+	if len(argsInner) > 0 {
+		tArgsInner = fmt.Sprintf("(%s)", strings.Join(argsInner, ","))
+	}
+	ql := `%s %s%s {
+		%s%s {
+		  total
+		  %s%s
+		  errorCode
+		  errorMsg
+		  success
+		}
+	  }`
+	gqlBody, err := objmock.GqlBodyMocker().MockPretty(api.OutArgument, refs, "		  ", "    ")
+	if err != nil {
+		return "", err
+	}
+	sb.WriteString(
+		fmt.Sprintf(
+			ql,
+			api.Method,
+			opName,
+			tArgs,
+			opName,
+			tArgsInner,
+			bodykw,
+			gqlBody,
+		))
+
+	return sb.String(), nil
 }
 
 func (g *Generator) Name() string {
