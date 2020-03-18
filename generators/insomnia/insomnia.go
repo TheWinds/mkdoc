@@ -18,7 +18,7 @@ func init() {
 	mkdoc.RegisterGenerator(&Generator{})
 }
 
-func (g *Generator) Gen(ctx *mkdoc.DocGenContext) (output []byte, err error) {
+func (g *Generator) Gen(ctx *mkdoc.DocGenContext) (output *mkdoc.GeneratedOutput, err error) {
 	data := &insomniaExport{
 		Type:   "export",
 		Format: 4,
@@ -157,8 +157,23 @@ func (g *Generator) Gen(ctx *mkdoc.DocGenContext) (output []byte, err error) {
 		data.Resources = append(data.Resources, req)
 
 	}
+	var outName string
+	if ctx.Tag == "" {
+		outName = fmt.Sprintf("all_doc_%s", time.Now().Format("2006_01_02_150405"))
+	} else {
+		outName = ctx.Tag
+	}
 
-	return json.Marshal(data)
+	o, err := json.Marshal(data)
+	if err != nil {
+		return nil, err
+	}
+	output = &mkdoc.GeneratedOutput{}
+	output.Files = append(output.Files, &mkdoc.GeneratedFile{
+		Name: outName + ".json",
+		Data: o,
+	})
+	return output, nil
 }
 
 func (g *Generator) Name() string {
@@ -178,10 +193,6 @@ func formFieldName(field *mkdoc.ObjectField) string {
 		return field.Tag.GetFirstValue(tag, ",")
 	}
 	return field.Name
-}
-
-func (g *Generator) FileExt() string {
-	return "json"
 }
 
 type insomniaExport struct {

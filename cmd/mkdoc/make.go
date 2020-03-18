@@ -132,10 +132,6 @@ func makeDoc(ctx *kingpin.ParseContext) error {
 		return showErr("%v", err)
 	}
 
-	if tag == "" {
-		tag = "all"
-	}
-
 	genCtx := &mkdoc.DocGenContext{
 		Tag:    tag,
 		APIs:   matchedAPIs,
@@ -166,10 +162,11 @@ func gen(project *mkdoc.Project, ctx *mkdoc.DocGenContext) error {
 		if err != nil {
 			return err
 		}
-		fileName := docName + "." + generator.FileExt()
-		err = writeFile(generator.Name(), fileName, out)
-		if err != nil {
-			return err
+		for _, file := range out.Files {
+			err = writeFile(generator.Name(), file.Name, file.Data)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -182,14 +179,15 @@ func writeFile(dir, name string, data []byte) error {
 	}
 
 	fmt.Printf("📖  write api doc to './docs/%s/%s'\n", dir, name)
-	mdPath := filepath.Join(path, "docs", dir)
-	if _, err = os.Stat(mdPath); err != nil {
-		err = os.MkdirAll(mdPath, 0755)
+	fileName := filepath.Join(path, "docs", dir, name)
+	fileDir := filepath.Dir(fileName)
+	if _, err = os.Stat(fileDir); err != nil {
+		err = os.MkdirAll(fileDir, 0755)
 		if err != nil {
 			return err
 		}
 	}
-	file, err := os.OpenFile(filepath.Join(mdPath, name), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	file, err := os.OpenFile(fileName, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
 		return fmt.Errorf("witre file ,%v\n", err)
 	}
