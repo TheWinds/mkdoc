@@ -3,7 +3,6 @@ package gqlboss
 import (
 	"fmt"
 	"go/ast"
-	"go/parser"
 	"go/token"
 	"io/ioutil"
 	"regexp"
@@ -109,15 +108,17 @@ func (s *Scanner) ScanAnnotations(project mkdoc.Project) ([]mkdoc.DocAnnotation,
 			return strings.Contains(dirName, "service/boss/schemas")
 		})
 
-	s.fileSet = token.NewFileSet()
 	s.filedAnnotation = make(map[string]mkdoc.DocAnnotation)
 	s.fieldSchema = make(map[string]opSchema)
 	s.schemaPath = make(map[string]string)
 
 	for _, dir := range dirs {
-		pkgs, err := parser.ParseDir(s.fileSet, dir, nil, parser.ParseComments)
+		pkgs, fileset, err := mkdoc.ParseDir(dir)
 		if err != nil {
 			panic(err)
+		}
+		if s.fileSet == nil {
+			s.fileSet = fileset
 		}
 		for _, v := range pkgs {
 			s.currentPkg = v
