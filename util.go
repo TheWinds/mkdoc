@@ -192,3 +192,21 @@ func FindGOModAbsPath(root string) string {
 	})
 	return absPath
 }
+
+var (
+	globalFileset       = token.NewFileSet()
+	globalDirParseCache = make(map[string]map[string]*ast.Package)
+)
+
+// ParseDir parser dir and add file to global fileset
+// also cached parsed packages
+func ParseDir(dir string) (map[string]*ast.Package, *token.FileSet, error) {
+	if globalDirParseCache[dir] == nil {
+		pkgs, err := parser.ParseDir(globalFileset, dir, nil, parser.ParseComments)
+		if err != nil {
+			return nil, nil, err
+		}
+		globalDirParseCache[dir] = pkgs
+	}
+	return globalDirParseCache[dir], globalFileset, nil
+}
