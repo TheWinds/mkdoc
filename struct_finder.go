@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"go/ast"
-	"go/parser"
 	"go/token"
 	"strings"
 )
@@ -42,13 +41,16 @@ func (s *StructFinder) Find(pkgDir string, structName string) (*GoStructInfo, er
 		structName: structName,
 		finder:     s,
 		result:     new(GoStructInfo),
-		fileset:    token.NewFileSet(),
 	}
 	ctx.result.Fields = make([]*GoStructField, 0)
 
-	pkgs, err := parser.ParseDir(ctx.fileset, pkgDir, nil, parser.ParseComments)
+	pkgs, fileset, err := ParseDir(pkgDir)
 	if err != nil {
 		return nil, err
+	}
+
+	if ctx.fileset == nil {
+		ctx.fileset = fileset
 	}
 
 	for _, pkg := range pkgs {

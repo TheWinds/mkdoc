@@ -3,8 +3,6 @@ package funcdoc
 import (
 	"github.com/thewinds/mkdoc"
 	"go/ast"
-	"go/parser"
-	"go/token"
 )
 
 func init() {
@@ -17,8 +15,8 @@ func (c *Scanner) ScanAnnotations(project mkdoc.Project) ([]mkdoc.DocAnnotation,
 	annotations := make([]mkdoc.DocAnnotation, 0)
 	dirs := mkdoc.GetScanDirs(project.Config.Package, project.Config.UseGOModule, nil)
 	for _, dir := range dirs {
-		f := token.NewFileSet()
-		pkgs, err := parser.ParseDir(f, dir, nil, parser.ParseComments)
+
+		pkgs, fileset, err := mkdoc.ParseDir(dir)
 		if err != nil {
 			panic(err)
 		}
@@ -27,7 +25,7 @@ func (c *Scanner) ScanAnnotations(project mkdoc.Project) ([]mkdoc.DocAnnotation,
 			ast.Inspect(v, func(node ast.Node) bool {
 				if funcNode, ok := node.(*ast.FuncDecl); ok {
 					if annotation := mkdoc.GetAnnotationFromComment(funcNode.Doc.Text()); annotation != "" {
-						annotation = annotation.AppendMetaData("http", f.Position(funcNode.Doc.Pos()))
+						annotation = annotation.AppendMetaData("http", fileset.Position(funcNode.Doc.Pos()))
 						annotations = append(annotations, annotation)
 					}
 				}
