@@ -7,6 +7,7 @@ import (
 	"github.com/thewinds/mkdoc/generators/objmock"
 	"sort"
 	"strings"
+	"time"
 )
 
 type Generator struct {
@@ -60,6 +61,9 @@ const indexTpl = `<!DOCTYPE html>
   <link rel="stylesheet" href="//unpkg.com/docsify/lib/themes/vue.css">
 </head>
 <body>
+  <nav>
+    <a href="#" style="color:#42b983">UpdateAt: %s</a>
+  </nav>
   <div id="app"></div>
   <script>
     window.$docsify = {
@@ -84,7 +88,7 @@ const indexTpl = `<!DOCTYPE html>
 `
 
 func (g *Generator) makeIndex(ctx *mkdoc.DocGenContext) *mkdoc.GeneratedFile {
-	src := fmt.Sprintf(indexTpl, ctx.Config.Name)
+	src := fmt.Sprintf(indexTpl, ctx.Config.Name, time.Now().Format("2006-01-02 15:04:05"))
 	return &mkdoc.GeneratedFile{Name: "index.html", Data: []byte(src)}
 }
 
