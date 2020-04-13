@@ -8,6 +8,7 @@ type User struct {
 	// 密码
 	Password string `json:"pwd"`
 	// 年龄
+	// 这是年龄字段
 	Age     int      `json:"age"`
 	Profile *Profile `json:"profile"`
 }

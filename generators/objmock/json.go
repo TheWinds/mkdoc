@@ -146,7 +146,16 @@ func (j *JSONMocker) appendComment(src string) string {
 		fieldNo++
 		comment := j.comment[fieldNo]
 		if comment != "" {
-			lines[i] = fmt.Sprintf("%s // %s", j.padRight(lines[i], maxLen), comment)
+			commentLines := strings.Split(comment, "\n")
+			var s string
+			for k, v := range commentLines {
+				if k == 0 {
+					s += fmt.Sprintf("%s // %s", j.padRight(lines[i], maxLen), v)
+				} else {
+					s += fmt.Sprintf("\n%s// %s", j.padRight("", maxLen), v)
+				}
+			}
+			lines[i] = s
 		}
 	}
 	return strings.Join(lines, "\n")
