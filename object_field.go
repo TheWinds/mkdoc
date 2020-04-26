@@ -7,10 +7,10 @@ import (
 
 // ObjectField filed info
 type ObjectField struct {
-	Name string
-	Desc string
-	Type *ObjectType
-	Tag  *ObjectFieldTag
+	Name       string
+	Desc       string
+	Type       *ObjectType
+	Extensions []Extension
 }
 
 type ObjectFieldTag struct {

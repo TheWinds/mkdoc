@@ -12,6 +12,11 @@ import (
 	"sync"
 )
 
+type GoModuleInfo struct {
+	ModulePkg  string
+	ModulePath string
+}
+
 // GetGOPaths get all go paths
 func GetGOPaths() []string {
 	pathEnv := os.Getenv("GOPATH")
@@ -71,7 +76,7 @@ func GetSubDirs(root string) []string {
 var importCache sync.Map
 
 // GetFileImportsAtNode infer filename from node and then get the file imports
-func GetFileImportsAtNode(node ast.Node, pkg *ast.Package, fileset *token.FileSet) map[string]string {
+func GetFileImportsAtNode(node ast.Node, pkg *ast.Package, fileset *token.FileSet, mod *GoModuleInfo) map[string]string {
 	fileName := fileset.File(node.Pos()).Name()
 	m, ok := importCache.Load(fileName)
 	if !ok {
@@ -86,14 +91,14 @@ func GetFileImportsAtNode(node ast.Node, pkg *ast.Package, fileset *token.FileSe
 			}
 			fileImportMap[importName] = importPath
 		}
-		fileImportMap[""] = getFilePkgPath(fileName)
+		fileImportMap[""] = getFilePkgPath(fileName, mod)
 		m = fileImportMap
 		importCache.Store(fileName, m)
 	}
 	return m.(map[string]string)
 }
 
-func getFileImportsAtFile(fileName string) (map[string]string, error) {
+func GetFileImportsAtFile(fileName string, mod *GoModuleInfo) (map[string]string, error) {
 	f := token.NewFileSet()
 	file, err := parser.ParseFile(f, fileName, nil, parser.ParseComments)
 	if err != nil {
@@ -112,7 +117,7 @@ func getFileImportsAtFile(fileName string) (map[string]string, error) {
 			}
 			fileImportMap[importName] = importPath
 		}
-		fileImportMap[""] = getFilePkgPath(fileName)
+		fileImportMap[""] = getFilePkgPath(fileName, mod)
 		m = fileImportMap
 		importCache.Store(fileName, m)
 	}
@@ -120,9 +125,8 @@ func getFileImportsAtFile(fileName string) (map[string]string, error) {
 }
 
 // getFilePkgPath get go package name from absolute file name
-func getFilePkgPath(fileName string) string {
-	project := GetProject()
-	if !project.Config.UseGOModule {
+func getFilePkgPath(fileName string, mod *GoModuleInfo) string {
+	if mod == nil {
 		goSrcPaths := GetGOSrcPaths()
 		for _, v := range goSrcPaths {
 			if strings.HasPrefix(fileName, v) {
@@ -131,10 +135,10 @@ func getFilePkgPath(fileName string) string {
 		}
 		return ""
 	}
-	rel := strings.Replace(fileName, project.ModulePath, "", 1)
+	rel := strings.Replace(fileName, mod.ModulePath, "", 1)
 	rel = filepath.Dir(rel)
 	rel = strings.TrimRight(rel, string(os.PathSeparator))
-	return filepath.Join(project.ModulePkg, rel)
+	return filepath.Join(mod.ModulePkg, rel)
 }
 
 var (

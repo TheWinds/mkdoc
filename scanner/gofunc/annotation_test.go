@@ -1,8 +1,10 @@
-package mkdoc
+package gofunc
 
+/*
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/thewinds/mkdoc"
 	"io/ioutil"
 	"log"
 	"os"
@@ -18,13 +20,13 @@ type TestGOTyp struct {
 }
 
 func TestDocAnnotation_ParseToAPI(t *testing.T) {
-	if _project == nil {
-		config := &Config{
+	if mkdoc._project == nil {
+		config := &mkdoc.Config{
 			Name:        "test annotation",
 			Description: "",
 			APIBaseURL:  "",
-			Mime:        &MimeType{"json", ""},
-			Injects:     []*Inject{},
+			Mime:        &mkdoc.MimeType{"json", ""},
+			Injects:     []*mkdoc.Inject{},
 			Package:     ".",
 			BaseType:    "",
 			UseGOModule: true,
@@ -35,22 +37,22 @@ func TestDocAnnotation_ParseToAPI(t *testing.T) {
 			t.Error(err)
 			return
 		}
-		_project = &Project{Config: config}
+		mkdoc._project = &mkdoc.Project{Config: config}
 
 		if config.UseGOModule {
-			if err := _project.initGoModule(); err != nil {
+			if err := mkdoc._project.initGoModule(); err != nil {
 				t.Error(err)
 				return
 			}
 		}
-		_project.refObjects = make(map[string]*Object)
+		mkdoc._project.refObjects = make(map[string]*mkdoc.Object)
 	}
 
 	dir, _ := os.Getwd()
 	tests := []struct {
 		name       string
 		annotation DocAnnotation
-		want       *API
+		want       *mkdoc.API
 		wantErr    bool
 	}{
 		{
@@ -66,7 +68,7 @@ func TestDocAnnotation_ParseToAPI(t *testing.T) {
 			@query pwd 密码
 			@header token  jwtToken
 			@header userId userId`,
-			want: &API{
+			want: &mkdoc.API{
 				Name:   "abc",
 				Desc:   "测试API",
 				Path:   "/api/v1/abc",
@@ -86,7 +88,7 @@ func TestDocAnnotation_ParseToAPI(t *testing.T) {
 			@type graphql
 			@path /api/v1/abc @method query
 			@tag v1`,
-			want: &API{
+			want: &mkdoc.API{
 				Name:   "abc",
 				Desc:   "测试API",
 				Path:   "/api/v1/abc",
@@ -107,7 +109,7 @@ func TestDocAnnotation_ParseToAPI(t *testing.T) {
 			@path /api/v1/abc
 			@method query
 			@tag v1,test`,
-			want: &API{
+			want: &mkdoc.API{
 				Name:   "abc",
 				Desc:   "测试API",
 				Path:   "/api/v1/abc",
@@ -126,17 +128,17 @@ func TestDocAnnotation_ParseToAPI(t *testing.T) {
 			 @in  type TestGOTyp
 			 @out type TestGOTyp
 			 @loc %s/annotation_test.go:1`, dir)),
-			want: &API{
+			want: &mkdoc.API{
 				Query:       map[string]string{},
 				Header:      map[string]string{},
 				DocLocation: fmt.Sprintf("%s/annotation_test.go:1", dir),
-				InArgument: &Object{
+				InArgument: &mkdoc.Object{
 					ID:     "github.com/thewinds/mkdoc.TestGOTyp",
 					Type:   nil,
 					Fields: nil,
 					Loaded: false,
 				},
-				OutArgument: &Object{
+				OutArgument: &mkdoc.Object{
 					ID:     "github.com/thewinds/mkdoc.TestGOTyp",
 					Type:   nil,
 					Fields: nil,
@@ -148,27 +150,27 @@ func TestDocAnnotation_ParseToAPI(t *testing.T) {
 		{
 			name: "test fields",
 			annotation: DocAnnotation(fmt.Sprintf(
-				`@doc 
+				`@doc
 			 @in fields {
 				name string 这是一个Name
 				age  int    这是一个Age
 			 }
 			 @loc %s/annotation_test.go:1`, dir)),
-			want: &API{
+			want: &mkdoc.API{
 				DocLocation: fmt.Sprintf("%s/annotation_test.go:1", dir),
-				InArgument: &Object{
-					Fields: []*ObjectField{
+				InArgument: &mkdoc.Object{
+					Fields: []*mkdoc.ObjectField{
 						{
 							Name: "name",
-							Tag:  mustObjectFieldTag(`json:"name" xml:"name"`),
+							Tag:  mkdoc.mustObjectFieldTag(`json:"name" xml:"name"`),
 							Desc: "这是一个Name",
-							Type: &ObjectType{Name: "string"},
+							Type: &mkdoc.ObjectType{Name: "string"},
 						},
 						{
 							Name: "age",
-							Tag:  mustObjectFieldTag(`json:"age" xml:"age"`),
+							Tag:  mkdoc.mustObjectFieldTag(`json:"age" xml:"age"`),
 							Desc: "这是一个Age",
-							Type: &ObjectType{Name: "int"},
+							Type: &mkdoc.ObjectType{Name: "int"},
 						},
 					},
 					Loaded: true,
@@ -186,7 +188,7 @@ func TestDocAnnotation_ParseToAPI(t *testing.T) {
 				name string 这是一个Name
 				age  int11    这是一个Age
 			 }`,
-			want: &API{
+			want: &mkdoc.API{
 				Query:  map[string]string{},
 				Header: map[string]string{},
 			},
@@ -199,18 +201,18 @@ func TestDocAnnotation_ParseToAPI(t *testing.T) {
 			 @in[json]  type TestGOTyp
 			 @out[xml]  type TestGOTyp
 			 @loc %s/annotation_test.go:1`, dir)),
-			want: &API{
-				Mime:        &MimeType{"json", "xml"},
+			want: &mkdoc.API{
+				Mime:        &mkdoc.MimeType{"json", "xml"},
 				Query:       map[string]string{},
 				Header:      map[string]string{},
 				DocLocation: fmt.Sprintf("%s/annotation_test.go:1", dir),
-				InArgument: &Object{
+				InArgument: &mkdoc.Object{
 					ID:     "mkdoc.TestGOTyp",
 					Type:   nil,
 					Fields: nil,
 					Loaded: false,
 				},
-				OutArgument: &Object{
+				OutArgument: &mkdoc.Object{
 					ID:     "mkdoc.TestGOTyp",
 					Type:   nil,
 					Fields: nil,
@@ -223,32 +225,32 @@ func TestDocAnnotation_ParseToAPI(t *testing.T) {
 			name: "test fields encoder",
 			annotation:
 			DocAnnotation(fmt.Sprintf(
-				`@doc 
+				`@doc
 			 @in[json] fields {
 				name string 这是一个Name
 				age  int    这是一个Age
 			 }
 			 @loc %s/annotation_test.go:1`, dir)),
-			want: &API{
+			want: &mkdoc.API{
 				DocLocation: fmt.Sprintf("%s/annotation_test.go:1", dir),
-				InArgument: &Object{
+				InArgument: &mkdoc.Object{
 					Loaded: true,
-					Fields: []*ObjectField{
+					Fields: []*mkdoc.ObjectField{
 						{
 							Name: "name",
-							Tag:  mustObjectFieldTag(`json:"name" xml:"name"`),
+							Tag:  mkdoc.mustObjectFieldTag(`json:"name" xml:"name"`),
 							Desc: "这是一个Name",
-							Type: &ObjectType{Name: "string"},
+							Type: &mkdoc.ObjectType{Name: "string"},
 						},
 						{
 							Name: "age",
-							Tag:  mustObjectFieldTag(`json:"age" xml:"age"`),
+							Tag:  mkdoc.mustObjectFieldTag(`json:"age" xml:"age"`),
 							Desc: "这是一个Age",
-							Type: &ObjectType{Name: "int"},
+							Type: &mkdoc.ObjectType{Name: "int"},
 						},
 					},
 				},
-				Mime:   &MimeType{"json", ""},
+				Mime:   &mkdoc.MimeType{"json", ""},
 				Query:  map[string]string{},
 				Header: map[string]string{},
 			},
@@ -257,11 +259,11 @@ func TestDocAnnotation_ParseToAPI(t *testing.T) {
 		{
 			name: "test disable",
 			annotation:
-			`@doc 
+			`@doc
 			 @disable common_header
 			 @disable base_type
 			 `,
-			want: &API{
+			want: &mkdoc.API{
 				Query:    map[string]string{},
 				Header:   map[string]string{},
 				Disables: []string{"common_header", "base_type"},
@@ -327,3 +329,4 @@ func diff(s1, s2 string) string {
 	os.Remove(f2)
 	return string(b)
 }
+*/

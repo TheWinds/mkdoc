@@ -3,14 +3,14 @@ package markdown
 import (
 	"fmt"
 	"github.com/thewinds/mkdoc"
-	"github.com/thewinds/mkdoc/generators/objmock"
+	"github.com/thewinds/mkdoc/generator/objmock"
 	"sort"
 	"strings"
 	"time"
 )
 
 type Generator struct {
-	refObj map[string]*mkdoc.Object
+	refObj map[mkdoc.LangObjectId]*mkdoc.Object
 }
 
 func init() {
@@ -93,7 +93,7 @@ func (g *Generator) Gen(ctx *mkdoc.DocGenContext) (output *mkdoc.GeneratedOutput
 		switch api.Mime.In {
 		default:
 			writef("json\n")
-			o, err := objmock.NewJSONMocker().MockPrettyComment(api.InArgument, ctx.RefObj)
+			o, err := objmock.NewJSONMocker().SetLanguage(api.Language).MockPrettyComment(api.InArgument, ctx.RefObj)
 			if err != nil {
 				return nil, err
 			}
@@ -106,7 +106,7 @@ func (g *Generator) Gen(ctx *mkdoc.DocGenContext) (output *mkdoc.GeneratedOutput
 		switch api.Mime.Out {
 		default:
 			writef("json\n")
-			o, err := objmock.NewJSONMocker().MockPrettyComment(api.OutArgument, ctx.RefObj)
+			o, err := objmock.NewJSONMocker().SetLanguage(api.Language).MockPrettyComment(api.OutArgument, ctx.RefObj)
 			if err != nil {
 				return nil, err
 			}

@@ -1,8 +1,9 @@
-package mkdoc
+package goloader
 
 import (
 	"errors"
 	"fmt"
+	"github.com/thewinds/mkdoc"
 	"go/ast"
 	"go/token"
 	"strings"
@@ -25,7 +26,13 @@ type GoStructInfo struct {
 
 var errGoStructNotFound = errors.New("go struct not found")
 
-type StructFinder struct{}
+type StructFinder struct {
+	mod *mkdoc.GoModuleInfo
+}
+
+func newStructFinder(mod *mkdoc.GoModuleInfo) *StructFinder {
+	return &StructFinder{mod: mod}
+}
 
 type walkCtx struct {
 	structName string
@@ -44,7 +51,7 @@ func (s *StructFinder) Find(pkgDir string, structName string) (*GoStructInfo, er
 	}
 	ctx.result.Fields = make([]*GoStructField, 0)
 
-	pkgs, fileset, err := ParseDir(pkgDir)
+	pkgs, fileset, err := mkdoc.ParseDir(pkgDir)
 	if err != nil {
 		return nil, err
 	}
@@ -92,7 +99,7 @@ func (s *StructFinder) walkTypeSpec(spec *ast.TypeSpec, ctx *walkCtx) {
 			}
 
 			baseTyp := baseType(field.Type)
-			imports := GetFileImportsAtNode(spec, ctx.pkg, ctx.fileset)
+			imports := mkdoc.GetFileImportsAtNode(spec, ctx.pkg, ctx.fileset, s.mod)
 			baseTyp.ImportPkgName = imports[baseTyp.PkgName]
 			baseTyp.IsBuiltin = isBuiltinType(baseTyp.TypeName)
 			structField := &GoStructField{

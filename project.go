@@ -2,21 +2,19 @@ package mkdoc
 
 import (
 	"fmt"
-	"io/ioutil"
-	"os"
-	"path/filepath"
+	"github.com/thewinds/mkdoc/schema"
+	"golang.org/x/sync/errgroup"
 	"strings"
 	"sync"
 )
 
 type Project struct {
-	Config     *Config
-	Scanners   []APIScanner   `yaml:"-"`
-	Generators []DocGenerator `yaml:"-"`
-	ModulePkg  string
-	ModulePath string
-	refObjects map[string]*Object
-	muObj      sync.Mutex
+	Config           *Config
+	Scanners         []DocScanner   `yaml:"-"`
+	Generators       []DocGenerator `yaml:"-"`
+	refObjects       map[LangObjectId]*Object
+	defaultLoaderCfg *ObjectLoaderConfig
+	muObj            sync.Mutex
 }
 
 func NewProject(config *Config) (*Project, error) {
@@ -31,23 +29,15 @@ func NewProject(config *Config) (*Project, error) {
 	if err := project.checkGenerator(); err != nil {
 		return nil, err
 	}
-	if config.UseGOModule {
-		if err := project.initGoModule(); err != nil {
-			return nil, err
-		}
-	}
-	project.refObjects = make(map[string]*Object)
-	for _, obj := range BuiltinObjects() {
-		project.refObjects[obj.ID] = obj
-	}
-
-	if config.BaseType != "" {
-		baseTypeObj := &Object{
-			ID:   config.BaseType,
-			Type: &ObjectType{Name: "object"},
-		}
-		project.refObjects[baseTypeObj.ID] = baseTypeObj
-	}
+	project.refObjects = make(map[LangObjectId]*Object)
+	project.defaultLoaderCfg = &ObjectLoaderConfig{project.Config.Copy()}
+	//if config.BaseType != "" {
+	//	baseTypeObj := &Object{
+	//		ID:   config.BaseType,
+	//		Type: &ObjectType{Name: "object"},
+	//	}
+	//	project.refObjects[baseTypeObj.ID] = baseTypeObj
+	//}
 	return project, nil
 }
 
@@ -68,8 +58,8 @@ func GetProject() *Project {
 }
 
 func (project *Project) checkScanner() error {
-	var okScanners []APIScanner
-	scanners := GetScanners()
+	var okScanners []DocScanner
+	scanners := GetDocScanners()
 	if len(project.Config.Scanner) == 0 {
 		return fmt.Errorf("please use at least one scanner")
 	}
@@ -111,17 +101,7 @@ func (project *Project) checkGenerator() error {
 	return nil
 }
 
-func (project *Project) initGoModule() error {
-	data, err := ioutil.ReadFile(filepath.Join(project.Config.Package, "go.mod"))
-	if err != nil {
-		return err
-	}
-	project.ModulePkg = ModulePath(data)
-	project.ModulePath = FindGOModAbsPath(project.Config.Package)
-	return nil
-}
-
-func (project *Project) AddObject(id string, value *Object) {
+func (project *Project) AddLangObject(id LangObjectId, value *Object) {
 	project.muObj.Lock()
 	defer project.muObj.Unlock()
 	if _, exist := project.refObjects[id]; !exist {
@@ -129,191 +109,148 @@ func (project *Project) AddObject(id string, value *Object) {
 	}
 }
 
-func (project *Project) GetObject(id string) *Object {
+func (project *Project) GetLangObject(id LangObjectId) *Object {
 	project.muObj.Lock()
 	defer project.muObj.Unlock()
 	return project.refObjects[id]
 }
 
-func (project *Project) Objects() map[string]*Object {
+func (project *Project) Objects() map[LangObjectId]*Object {
 	project.muObj.Lock()
 	defer project.muObj.Unlock()
 	return project.refObjects
 }
 
-func (project *Project) LoadObjects(ids ...string) error {
-	objects := project.Objects()
-	var queue []string
-	if len(ids) == 0 {
-		// load all
-		for _, object := range objects {
-			if !object.Loaded {
-				queue = append(queue, object.ID)
-			}
-		}
-	} else {
-		if project.Config.BaseType != "" {
-			queue = append(queue, project.Config.BaseType)
-		}
-		for _, id := range ids {
-			toLoadID := project.firstUnLoadID(objects, id)
-			if toLoadID != "" {
-				queue = append(queue, toLoadID)
-			}
-		}
+func (project *Project) parseSchemaExtension(ext *schema.Extension) (Extension, error) {
+	switch ext.Name {
+	case "go_tag":
+		return new(ExtensionGoTag).Parse(ext)
+	default:
+		return new(ExtensionUnknown).Parse(ext)
 	}
-
-	if len(queue) == 0 {
-		return nil
-	}
-	i := 0
-	for i < len(queue) {
-		pkgType, err := newPkgType(queue[i])
-		if err != nil {
-			return err
-		}
-		err = project.loadObj(pkgType, &queue)
-		if err != nil {
-			return err
-		}
-		i++
-	}
-	return nil
 }
 
-func (project *Project) getStructInfo(query *PkgType) (*GoStructInfo, error) {
-	var structInfo *GoStructInfo
-	var err error
-	if project.Config.UseGOModule {
-		pkgAbsPath := strings.Replace(query.Package, project.ModulePkg, project.ModulePath, 1)
-		structInfo, err = new(StructFinder).Find(pkgAbsPath, query.TypeName)
-		if err != nil {
-			return nil, err
-		}
-		if structInfo == nil {
-			return nil, fmt.Errorf("struct %s not found\n", query)
-		}
-		return structInfo, nil
+func (project *Project) parseSchemaObject(object *schema.Object) (*Object, error) {
+	obj := Object{
+		ID:         object.ID,
+		Type:       (*ObjectType)(object.Type),
+		Fields:     nil,
+		Extensions: nil,
+		Loaded:     false,
 	}
-
-	goSrcPaths := GetGOSrcPaths()
-	pkgAbsPaths := make([]string, 0)
-	for _, p := range goSrcPaths {
-		pkgAbsPath := filepath.Join(p, query.Package)
-		pkgAbsPaths = append(pkgAbsPaths, pkgAbsPath)
-		if _, err := os.Stat(pkgAbsPath); err != nil {
-			continue
-		}
-		structInfo, err = new(StructFinder).Find(pkgAbsPath, query.TypeName)
-		if err != nil && err != errGoStructNotFound {
-			return nil, err
-		}
-		if structInfo != nil {
-			break
-		}
-	}
-	if structInfo == nil {
-		return nil, fmt.Errorf("struct %s not found in any of:\n	%s", query, strings.Join(pkgAbsPaths, "\n	"))
-	}
-	return structInfo, nil
-}
-
-func (project *Project) loadObj(query *PkgType, queue *[]string) error {
-	if query == nil {
-		return nil
-	}
-	structInfo, err := project.getStructInfo(query)
-	if err != nil {
-		return err
-	}
-
-	rootObj := project.GetObject(query.fullPath)
-	rootObj.Type = &ObjectType{
-		Name:       "object",
-		IsRepeated: false,
-	}
-	rootObj.Fields = make([]*ObjectField, 0)
-
-	for _, field := range structInfo.Fields {
-		if field.GoType.NotSupport {
-			continue
-		}
-		// priority use doc comment
-		var comment string
-		if field.DocComment != "" {
-			comment = field.DocComment
-		} else {
-			comment = field.Comment
-		}
-		fieldTag, err := NewObjectFieldTag(field.Tag)
-		if err != nil {
-			return err
-		}
+	for _, field := range object.Fields {
 		objField := &ObjectField{
 			Name: field.Name,
-			Desc: comment,
-			Type: &ObjectType{},
-			Tag:  fieldTag,
+			Desc: field.Desc,
+			Type: (*ObjectType)(field.Type),
 		}
-		goType := field.GoType
-
-		// builtin type
-		if goType.IsBuiltin && !goType.IsArray {
-			objField.Type.Name = goType.TypeName
-			rootObj.Fields = append(rootObj.Fields, objField)
-			continue
-		}
-
-		objField.Type.Name = "object"
-
-		// builtin array type
-		if goType.IsBuiltin {
-			arrObj := createArrayObjectByID(goType.TypeName, goType.ArrayDepth)
-			objField.Type.Ref = arrObj.ID
-			rootObj.Fields = append(rootObj.Fields, objField)
-			continue
-		}
-
-		pkgTypePath := fmt.Sprintf("%s.%s", goType.ImportPkgName, goType.TypeName)
-		obj := GetProject().GetObject(pkgTypePath)
-		if obj == nil {
-			obj = &Object{
-				ID: pkgTypePath,
-				Type: &ObjectType{
-					Name:       "object",
-					Ref:        "",
-					IsRepeated: false,
-				},
-				Fields: nil,
-				Loaded: false,
+		for _, ext := range field.Extensions {
+			if ext != nil {
+				extParsed, err := project.parseSchemaExtension(ext)
+				if err != nil {
+					return nil, err
+				}
+				objField.Extensions = append(objField.Extensions, extParsed)
 			}
-			*queue = append(*queue, pkgTypePath)
 		}
-
-		if goType.IsArray {
-			obj = createArrayObject(obj, goType.ArrayDepth)
-		} else {
-			obj = createArrayObject(obj, 0)
-		}
-		objField.Type.Ref = obj.ID
-
-		rootObj.Fields = append(rootObj.Fields, objField)
+		obj.Fields = append(obj.Fields, objField)
 	}
-	rootObj.Loaded = true
-	return nil
+	for _, ext := range object.Extensions {
+		extParsed, err := project.parseSchemaExtension(ext)
+		if err != nil {
+			return nil, err
+		}
+		obj.Extensions = append(obj.Extensions, extParsed)
+	}
+	return &obj, nil
 }
 
-// dfs search
-func (project *Project) firstUnLoadID(objects map[string]*Object, id string) string {
-	obj := objects[id]
-	if obj == nil {
-		return ""
+func (project *Project) ParseSchemaAPI(api *schema.API) (*API, error) {
+	loader := GetObjectLoader(api.Language)
+	if loader == nil {
+		return nil, fmt.Errorf("object loader for language %s not found", api.Language)
 	}
-	if !obj.Loaded {
-		return id
+	loader.SetConfig(project.defaultLoaderCfg)
+	a := &API{
+		API:  *api,
+		Mime: &MimeType{In: api.MimeIn, Out: api.MimeOut},
 	}
-	if obj.Type.Ref == "" {
-		return ""
+	if len(a.Mime.In) == 0 {
+		a.Mime.In = project.Config.Mime.In
 	}
-	return project.firstUnLoadID(objects, obj.Type.Ref)
+	if len(a.Mime.Out) == 0 {
+		a.Mime.Out = project.Config.Mime.Out
+	}
+
+	if len(api.InType) > 0 {
+		objId, err := loader.GetObjectId(TypeScope{api.SourceFileName, api.InType})
+		if err != nil {
+			return nil, err
+		}
+		id := LangObjectId{Lang: api.Language, Id: objId}
+		a.InType = objId
+		a.InArgument = project.GetLangObject(id)
+	}
+	if len(api.OutType) > 0 {
+		objId, err := loader.GetObjectId(TypeScope{api.SourceFileName, api.OutType})
+		if err != nil {
+			return nil, err
+		}
+		id := LangObjectId{Lang: api.Language, Id: objId}
+		a.OutType = objId
+		a.OutArgument = project.GetLangObject(id)
+	}
+	return a, nil
+}
+
+func (project *Project) LoadObjects(schemaDef *schema.Schema) error {
+	// load object from schema object define
+	for _, object := range schemaDef.Objects {
+		id := LangObjectId{Lang: object.Language, Id: object.ID}
+		obj, err := project.parseSchemaObject(object)
+		if err != nil {
+			return err
+		}
+		project.AddLangObject(id, obj)
+	}
+	langTs := make(map[string][]TypeScope)
+	for _, api := range schemaDef.APIs {
+		if len(api.InType) > 0 {
+			ts := TypeScope{FileName: api.SourceFileName, TypeName: api.InType}
+			langTs[api.Language] = append(langTs[api.Language], ts)
+		}
+		if len(api.OutType) > 0 {
+			ts := TypeScope{FileName: api.SourceFileName, TypeName: api.OutType}
+			langTs[api.Language] = append(langTs[api.Language], ts)
+		}
+	}
+	for lang := range langTs {
+		if GetObjectLoader(lang) == nil {
+			return fmt.Errorf("object loader for language %s not found", lang)
+		}
+	}
+	eg := errgroup.Group{}
+	for lang, typeScopes := range langTs {
+		loader := GetObjectLoader(lang)
+		loader.SetConfig(project.defaultLoaderCfg)
+		for id, object := range project.Objects() {
+			if id.Lang == loader.Lang() {
+				if err := loader.Add(object); err != nil {
+					return err
+				}
+			}
+		}
+		eg.Go(func() error {
+			objs, err := loader.LoadAll(typeScopes)
+			if err != nil {
+				return err
+			}
+			for _, obj := range objs {
+				id := LangObjectId{Lang: lang, Id: obj.ID}
+				project.AddLangObject(id, obj)
+			}
+			return nil
+		})
+	}
+	return eg.Wait()
 }

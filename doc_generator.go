@@ -16,13 +16,13 @@ type DocGenContext struct {
 	Tag    string
 	APIs   []*API
 	Config Config
-	RefObj map[string]*Object
+	RefObj map[LangObjectId]*Object
 	Args   map[string]string
 }
 
 var generators map[string]DocGenerator
 
-// RegisterGenerator to global generators
+// RegisterGenerator to global generator
 func RegisterGenerator(generator DocGenerator) {
 	if generators == nil {
 		generators = make(map[string]DocGenerator)
@@ -34,7 +34,7 @@ func RegisterGenerator(generator DocGenerator) {
 	generators[name] = generator
 }
 
-// GetGenerators get all registered generators
+// GetGenerators get all registered generator
 func GetGenerators() map[string]DocGenerator {
 	return generators
 }
