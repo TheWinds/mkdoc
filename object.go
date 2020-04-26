@@ -3,15 +3,20 @@ package mkdoc
 import (
 	"fmt"
 	"math/rand"
-	"time"
 )
 
 // Object info
 type Object struct {
-	ID     string
-	Type   *ObjectType
-	Fields []*ObjectField
-	Loaded bool
+	ID         string
+	Type       *ObjectType
+	Fields     []*ObjectField
+	Extensions []*Extension
+	Loaded     bool
+}
+
+type LangObjectId struct {
+	Lang string
+	Id   string
 }
 
 // Clone object with a random id
@@ -34,10 +39,6 @@ func (obj *Object) Clone() *Object {
 	}
 	newObj.Loaded = obj.Loaded
 	return newObj
-}
-
-func init() {
-	rand.Seed(time.Now().Unix())
 }
 
 func randObjectID(s string) string {
