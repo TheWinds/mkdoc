@@ -17,7 +17,7 @@ type GoLoader struct {
 	cached      map[string]*mkdoc.Object
 	initialed   bool
 	once        sync.Once
-	mod         *goModuleInfo
+	mod         *mkdoc.GoModuleInfo
 	enableGoMod bool
 }
 
@@ -48,7 +48,7 @@ func (g *GoLoader) LoadAll(tss []mkdoc.TypeScope) ([]*mkdoc.Object, error) {
 	}
 	var unloads []*mkdoc.Object
 	for _, ts := range tss {
-		imports, err := getFileImportsAtFile(ts.FileName, g.mod)
+		imports, err := mkdoc.GetFileImportsAtFile(ts.FileName, g.mod)
 		if err != nil {
 			return nil, err
 		}
@@ -215,7 +215,7 @@ func (g *GoLoader) getStructInfo(query *PkgType) (*GoStructInfo, error) {
 		return structInfo, nil
 	}
 
-	goSrcPaths := GetGOSrcPaths()
+	goSrcPaths := mkdoc.GetGOSrcPaths()
 	pkgAbsPaths := make([]string, 0)
 	for _, p := range goSrcPaths {
 		pkgAbsPath := filepath.Join(p, query.Package)

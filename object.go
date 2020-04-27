@@ -22,7 +22,7 @@ type LangObjectId struct {
 // Clone object with a random id
 func (obj *Object) Clone() *Object {
 	newObj := new(Object)
-	newObj.ID = randObjectID("clone")
+	newObj.ID = RandObjectID("clone")
 	t := *obj.Type
 	newObj.Type = &t
 	for _, field := range obj.Fields {
@@ -40,7 +40,7 @@ func (obj *Object) Clone() *Object {
 	return newObj
 }
 
-func randObjectID(s string) string {
+func RandObjectID(s string) string {
 	return fmt.Sprintf("obj_%s_#%d", s, rand.Int63())
 }
 
@@ -86,7 +86,7 @@ func CreateArrayObject(leaf *Object, dep int) []*Object {
 	deps = append(deps, root)
 	for k := 0; k < dep; k++ {
 		obj := &Object{
-			ID: randObjectID("arr"),
+			ID: RandObjectID("arr"),
 			Type: &ObjectType{
 				Name:       "object",
 				Ref:        root.ID,

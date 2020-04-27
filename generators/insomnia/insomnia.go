@@ -181,16 +181,21 @@ func (g *Generator) Name() string {
 }
 
 func formFieldName(field *mkdoc.ObjectField) string {
+	goTagExt := getGoTag(field.Extensions)
+	if goTagExt == nil {
+		return field.Name
+	}
 	tags := []string{"form", "json", "xml"}
 	for _, tag := range tags {
-		tv := field.Tag.GetValue(tag)
+		tv := goTagExt.Tag.GetValue(tag)
+
 		if tv == "-" {
 			return ""
 		}
 		if tv == "" {
 			continue
 		}
-		return field.Tag.GetFirstValue(tag, ",")
+		return goTagExt.Tag.GetFirstValue(tag, ",")
 	}
 	return field.Name
 }
@@ -293,4 +298,13 @@ func genResID(typ string) string {
 	k := fmt.Sprintf("%s%d%d", typ, time.Now().UnixNano(), rand.Int31())
 	sum := md5.Sum([]byte(k))
 	return fmt.Sprintf("typ_%s", hex.EncodeToString(sum[:]))
+}
+
+func getGoTag(exts []mkdoc.Extension) *mkdoc.ExtensionGoTag {
+	for _, ext := range exts {
+		if e, ok := ext.(*mkdoc.ExtensionGoTag); ok {
+			return e
+		}
+	}
+	return nil
 }

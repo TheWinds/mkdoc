@@ -100,7 +100,7 @@ func makeDoc(ctx *kingpin.ParseContext) error {
 		err = a.Build()
 		if err != nil {
 			fmt.Println()
-			return fmt.Errorf("build api %s\n%v\n------\nAt:\n%s:%d\nSource:\n%s\n------\n", api.Name, err, def.SourceFileName, def.SourceLineNum, def.Source)
+			return fmt.Errorf("build api %s\n%v\n------\nAt:\n%s:%d\nSource:\n%s\n------\n", def.Name, err, def.SourceFileName, def.SourceLineNum, def.Source)
 		}
 		apis = append(apis, a)
 	}

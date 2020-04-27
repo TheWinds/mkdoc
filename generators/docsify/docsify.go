@@ -13,7 +13,7 @@ import (
 type Generator struct {
 	tagAPIs map[string][]*mkdoc.API
 	tags    []string
-	refObj  map[string]*mkdoc.Object
+	refObj  map[mkdoc.LangObjectId]*mkdoc.Object
 }
 
 func (g *Generator) Gen(ctx *mkdoc.DocGenContext) (output *mkdoc.GeneratedOutput, err error) {
@@ -159,7 +159,7 @@ func (g *Generator) makeTagMD(tag string) (*mkdoc.GeneratedFile, error) {
 		switch api.Mime.In {
 		default:
 			writef("json\n")
-			o, err := objmock.NewJSONMocker().MockPrettyComment(api.InArgument, g.refObj)
+			o, err := objmock.NewJSONMocker().SetLanguage(api.Language).MockPrettyComment(api.InArgument, g.refObj)
 			if err != nil {
 				return nil, err
 			}
@@ -175,7 +175,7 @@ func (g *Generator) makeTagMD(tag string) (*mkdoc.GeneratedFile, error) {
 		switch api.Mime.Out {
 		default:
 			writef("json\n")
-			o, err := objmock.NewJSONMocker().MockPrettyComment(api.OutArgument, g.refObj)
+			o, err := objmock.NewJSONMocker().SetLanguage(api.Language).MockPrettyComment(api.OutArgument, g.refObj)
 			if err != nil {
 				return nil, err
 			}

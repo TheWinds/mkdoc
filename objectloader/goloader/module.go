@@ -1,23 +1,19 @@
 package goloader
 
 import (
+	"github.com/thewinds/mkdoc"
 	"io/ioutil"
 	"path/filepath"
 )
-
-type goModuleInfo struct {
-	ModulePkg  string
-	ModulePath string
-}
 
 func (g *GoLoader) initGoModule(pkgPath string) error {
 	data, err := ioutil.ReadFile(filepath.Join(pkgPath, "go.mod"))
 	if err != nil {
 		return err
 	}
-	g.mod = &goModuleInfo{
-		ModulePkg:  ModulePath(data),
-		ModulePath: FindGOModAbsPath(pkgPath),
+	g.mod = &mkdoc.GoModuleInfo{
+		ModulePkg:  mkdoc.ModulePath(data),
+		ModulePath: mkdoc.FindGOModAbsPath(pkgPath),
 	}
 	return nil
 }

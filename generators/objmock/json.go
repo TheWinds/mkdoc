@@ -9,7 +9,7 @@ import (
 )
 
 type JSONMocker struct {
-	refs      map[string]*mkdoc.Object
+	refs      map[mkdoc.LangObjectId]*mkdoc.Object
 	err       error
 	dep       int
 	data      strings.Builder
@@ -17,13 +17,19 @@ type JSONMocker struct {
 	commented map[string]bool
 	fieldNo   int
 	refPath   []string
+	curLang   string
 }
 
 func NewJSONMocker() *JSONMocker {
 	return &JSONMocker{}
 }
 
-func (j *JSONMocker) Mock(object *mkdoc.Object, refs map[string]*mkdoc.Object) (string, error) {
+func (j *JSONMocker) SetLanguage(lang string) *JSONMocker {
+	j.curLang = lang
+	return j
+}
+
+func (j *JSONMocker) Mock(object *mkdoc.Object, refs map[mkdoc.LangObjectId]*mkdoc.Object) (string, error) {
 	if object == nil {
 		return "\n", nil
 	}
@@ -39,7 +45,7 @@ func (j *JSONMocker) Mock(object *mkdoc.Object, refs map[string]*mkdoc.Object) (
 	return j.data.String(), nil
 }
 
-func (j *JSONMocker) MockPretty(object *mkdoc.Object, refs map[string]*mkdoc.Object) (string, error) {
+func (j *JSONMocker) MockPretty(object *mkdoc.Object, refs map[mkdoc.LangObjectId]*mkdoc.Object) (string, error) {
 	if object == nil {
 		return "\n", nil
 	}
@@ -55,7 +61,7 @@ func (j *JSONMocker) MockPretty(object *mkdoc.Object, refs map[string]*mkdoc.Obj
 	return dst.String(), nil
 }
 
-func (j *JSONMocker) MockPrettyComment(object *mkdoc.Object, refs map[string]*mkdoc.Object) (string, error) {
+func (j *JSONMocker) MockPrettyComment(object *mkdoc.Object, refs map[mkdoc.LangObjectId]*mkdoc.Object) (string, error) {
 	if object == nil {
 		return "\n", nil
 	}
@@ -120,7 +126,7 @@ func (j *JSONMocker) mock(obj *mkdoc.Object) {
 }
 
 func (j *JSONMocker) mockRef(refID string) {
-	refObj := j.refs[refID]
+	refObj := j.refs[mkdoc.LangObjectId{Lang: j.curLang, Id: refID}]
 	if refObj == nil {
 		j.err = fmt.Errorf("mock: type %s not exist", refID)
 		return

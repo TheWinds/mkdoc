@@ -1,4 +1,4 @@
-package goloader
+package mkdoc
 
 import (
 	"bytes"
@@ -11,6 +11,11 @@ import (
 	"strings"
 	"sync"
 )
+
+type GoModuleInfo struct {
+	ModulePkg  string
+	ModulePath string
+}
 
 // GetGOPaths get all go paths
 func GetGOPaths() []string {
@@ -71,7 +76,7 @@ func GetSubDirs(root string) []string {
 var importCache sync.Map
 
 // GetFileImportsAtNode infer filename from node and then get the file imports
-func GetFileImportsAtNode(node ast.Node, pkg *ast.Package, fileset *token.FileSet, mod *goModuleInfo) map[string]string {
+func GetFileImportsAtNode(node ast.Node, pkg *ast.Package, fileset *token.FileSet, mod *GoModuleInfo) map[string]string {
 	fileName := fileset.File(node.Pos()).Name()
 	m, ok := importCache.Load(fileName)
 	if !ok {
@@ -93,7 +98,7 @@ func GetFileImportsAtNode(node ast.Node, pkg *ast.Package, fileset *token.FileSe
 	return m.(map[string]string)
 }
 
-func getFileImportsAtFile(fileName string, mod *goModuleInfo) (map[string]string, error) {
+func GetFileImportsAtFile(fileName string, mod *GoModuleInfo) (map[string]string, error) {
 	f := token.NewFileSet()
 	file, err := parser.ParseFile(f, fileName, nil, parser.ParseComments)
 	if err != nil {
@@ -120,7 +125,7 @@ func getFileImportsAtFile(fileName string, mod *goModuleInfo) (map[string]string
 }
 
 // getFilePkgPath get go package name from absolute file name
-func getFilePkgPath(fileName string, mod *goModuleInfo) string {
+func getFilePkgPath(fileName string, mod *GoModuleInfo) string {
 	if mod == nil {
 		goSrcPaths := GetGOSrcPaths()
 		for _, v := range goSrcPaths {
