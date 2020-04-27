@@ -9,11 +9,11 @@ inject:
     desc: "jwt token"
     default: "hfjdjhkklashjkfsd.hjkfsdajhkfdsj.jknsfdksf"
     scope: header
-pkg: "./src"
+path: "./src"
 base_type: "github.com/thewinds/mkdoc/example/view.BaseView"
 use_go_mod: true
 scanner:
-  - funcdoc
+  - gofunc
 generator:
   - markdown
   - insomnia

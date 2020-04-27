@@ -12,6 +12,10 @@ import (
 	"sync"
 )
 
+func init() {
+	mkdoc.RegisterObjectLoader(new(GoLoader))
+}
+
 type GoLoader struct {
 	config      *mkdoc.ObjectLoaderConfig
 	cached      map[string]*mkdoc.Object

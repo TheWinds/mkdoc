@@ -206,9 +206,12 @@ func (project *Project) LoadObjects(schemaDef *schema.Schema) error {
 			return fmt.Errorf("object loader for language %s not found", lang)
 		}
 	}
+	cfg := ObjectLoaderConfig{Config: GetProject().Config.Copy()}
+
 	eg := errgroup.Group{}
 	for lang, typeScopes := range langTs {
 		loader := GetObjectLoader(lang)
+		loader.SetConfig()
 		eg.Go(func() error {
 			objs, err := loader.LoadAll(typeScopes)
 			if err != nil {

@@ -47,6 +47,7 @@ func init() {
 // ParseToAPI parse doc annotation to API def struct
 func (annotation DocAnnotation) ParseToAPI() (*schema.API, []*schema.Object, error) {
 	api := new(schema.API)
+	api.Language = "go"
 	err := parseSimple(annotation, api)
 	if err != nil {
 		return nil, nil, err
@@ -202,7 +203,7 @@ func parseToObjectFields(fieldStmts string) []*schema.ObjectField {
 			}
 			ext := &schema.Extension{
 				Name: "go_tag",
-				Data: json.RawMessage(fmt.Sprintf("`json:\"%s\" xml:\"%s\"`", matchGroups[1], matchGroups[1])),
+				Data: json.RawMessage(fmt.Sprintf(`"json:\"%s\" xml:\"%s\""`, matchGroups[1], matchGroups[1])),
 			}
 			fields = append(fields, &schema.ObjectField{
 				Name:       matchGroups[1],

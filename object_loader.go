@@ -1,6 +1,8 @@
 package mkdoc
 
-import "log"
+import (
+	"log"
+)
 
 type ObjectLoader interface {
 	Load(ts TypeScope) (*Object, error)

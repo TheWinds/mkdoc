@@ -17,6 +17,7 @@ func (s *Scanner) Scan(config mkdoc.DocScanConfig) (*mkdoc.DocScanResult, error)
 	if config.Args[EnableGoModule] == "true" {
 		s.enableGoMod = true
 	}
+	s.enableGoMod = true
 	annotations, err := s.scanAnnotations(&config)
 	if err != nil {
 		return nil, err
