@@ -1,7 +1,8 @@
-package mkdoc
+package goloader
 
 import (
 	"bytes"
+	"github.com/thewinds/mkdoc"
 	"go/ast"
 	"go/parser"
 	"go/token"
@@ -121,7 +122,7 @@ func getFileImportsAtFile(fileName string) (map[string]string, error) {
 
 // getFilePkgPath get go package name from absolute file name
 func getFilePkgPath(fileName string) string {
-	project := GetProject()
+	project := mkdoc.GetProject()
 	if !project.Config.UseGOModule {
 		goSrcPaths := GetGOSrcPaths()
 		for _, v := range goSrcPaths {

@@ -9,7 +9,11 @@ type GoLoader struct {
 	config *mkdoc.ObjectLoaderConfig
 }
 
-func (g *GoLoader) Load(ts *mkdoc.TypeScope) (*mkdoc.Object, error) {
+func (g *GoLoader) LoadAll(tss []mkdoc.TypeScope) ([]*mkdoc.Object, error) {
+	panic("implement me")
+}
+
+func (g *GoLoader) Load(ts mkdoc.TypeScope) (*mkdoc.Object, error) {
 	if g.config == nil {
 		return nil, errors.New("config not set")
 	}

@@ -10,7 +10,7 @@ type Object struct {
 	ID         string
 	Type       *ObjectType
 	Fields     []*ObjectField
-	Extensions []*Extension
+	Extensions []Extension
 	Loaded     bool
 }
 

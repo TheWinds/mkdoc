@@ -5,6 +5,7 @@ import "encoding/json"
 type Object struct {
 	ID         string         `json:"id"`
 	Type       *ObjectType    `json:"type"`
+	Language   string         `json:"lang"`
 	Fields     []*ObjectField `json:"fields"`
 	Extensions []*Extension   `json:"extensions"`
 }

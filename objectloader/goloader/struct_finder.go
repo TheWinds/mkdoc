@@ -1,8 +1,9 @@
-package mkdoc
+package goloader
 
 import (
 	"errors"
 	"fmt"
+	"github.com/thewinds/mkdoc"
 	"go/ast"
 	"go/token"
 	"strings"
@@ -94,7 +95,7 @@ func (s *StructFinder) walkTypeSpec(spec *ast.TypeSpec, ctx *walkCtx) {
 			baseTyp := baseType(field.Type)
 			imports := GetFileImportsAtNode(spec, ctx.pkg, ctx.fileset)
 			baseTyp.ImportPkgName = imports[baseTyp.PkgName]
-			baseTyp.IsBuiltin = isBuiltinType(baseTyp.TypeName)
+			baseTyp.IsBuiltin = mkdoc.isBuiltinType(baseTyp.TypeName)
 			structField := &GoStructField{
 				Name:       name,
 				Comment:    comment,

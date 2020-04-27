@@ -1,7 +1,8 @@
-package mkdoc
+package goloader
 
 import (
 	"fmt"
+	"github.com/thewinds/mkdoc"
 	"strings"
 )
 
@@ -33,7 +34,7 @@ func newPkgType(fullPath string) (*PkgType, error) {
 }
 
 func replacePkg(fullPath string, imports map[string]string) string {
-	if isBuiltinType(fullPath) {
+	if mkdoc.isBuiltinType(fullPath) {
 		return fullPath
 	}
 	var i int

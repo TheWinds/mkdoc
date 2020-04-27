@@ -3,6 +3,7 @@ package mkdoc
 import (
 	"fmt"
 	"github.com/go-yaml/yaml"
+	"github.com/thewinds/mkdoc/objectloader/goloader"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -55,7 +56,7 @@ func (config *Config) Check() error {
 			return fmt.Errorf("no such file or directory: %s\n", path)
 		}
 	} else {
-		goPaths := GetGOPaths()
+		goPaths := goloader.GetGOPaths()
 		pkgExist := false
 		for _, gopath := range goPaths {
 			if _, err := os.Stat(filepath.Join(gopath, "src", config.Package)); err == nil {

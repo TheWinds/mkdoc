@@ -10,8 +10,7 @@ type ObjectField struct {
 	Name       string
 	Desc       string
 	Type       *ObjectType
-	Tag        *ObjectFieldTag
-	Extensions []*Extension
+	Extensions []Extension
 }
 
 type ObjectFieldTag struct {

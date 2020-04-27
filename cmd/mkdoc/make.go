@@ -13,7 +13,7 @@ import (
 func scanAPIs(project *mkdoc.Project) ([]*mkdoc.API, error) {
 	var apis []*mkdoc.API
 	for _, scanner := range project.Scanners {
-		fmt.Printf("🔎  scan doc annotations (use %s)\n", scanner.GetName())
+		fmt.Printf("🔎  scan doc annotations (use %s)\n", scanner.Name())
 		annotations, err := scanner.ScanAnnotations(*project)
 		if err != nil {
 			return nil, fmt.Errorf("scan annotations %v\n", err)

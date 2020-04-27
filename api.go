@@ -2,24 +2,15 @@ package mkdoc
 
 import (
 	"fmt"
+	"github.com/thewinds/mkdoc/schema"
 )
 
 // API def
 type API struct {
-	Name        string            `json:"name"`
-	Desc        string            `json:"desc"`
-	Path        string            `json:"path"`
-	Method      string            `json:"method"` // post get delete patch ; query mutation
-	Type        string            `json:"type"`   // echo_handle graphql
-	Tags        []string          `json:"tags"`
-	Query       map[string]string `json:"query"`
-	Header      map[string]string `json:"header"`
-	InArgument  *Object           `json:"in_argument"`
-	OutArgument *Object           `json:"out_argument"`
+	schema.API
+	InArgument  *Object `json:"in_argument"`
+	OutArgument *Object `json:"out_argument"`
 	Mime        *MimeType
-	DocLocation string        `json:"doc_location"`
-	Disables    []string      `json:"disables"`
-	Annotation  DocAnnotation `json:"annotation"`
 }
 
 // Build 生成API信息

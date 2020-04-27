@@ -2,7 +2,9 @@ package mkdoc
 
 import (
 	"fmt"
-	"io/ioutil"
+	"github.com/thewinds/mkdoc/objectloader/goloader"
+	"github.com/thewinds/mkdoc/schema"
+	"golang.org/x/sync/errgroup"
 	"os"
 	"path/filepath"
 	"strings"
@@ -11,11 +13,9 @@ import (
 
 type Project struct {
 	Config     *Config
-	Scanners   []APIScanner   `yaml:"-"`
+	Scanners   []DocScanner   `yaml:"-"`
 	Generators []DocGenerator `yaml:"-"`
-	ModulePkg  string
-	ModulePath string
-	refObjects map[string]*Object
+	refObjects map[LangObjectId]*Object
 	muObj      sync.Mutex
 }
 
@@ -68,8 +68,8 @@ func GetProject() *Project {
 }
 
 func (project *Project) checkScanner() error {
-	var okScanners []APIScanner
-	scanners := GetScanners()
+	var okScanners []DocScanner
+	scanners := GetDocScanners()
 	if len(project.Config.Scanner) == 0 {
 		return fmt.Errorf("please use at least one scanner")
 	}
@@ -111,17 +111,7 @@ func (project *Project) checkGenerator() error {
 	return nil
 }
 
-func (project *Project) initGoModule() error {
-	data, err := ioutil.ReadFile(filepath.Join(project.Config.Package, "go.mod"))
-	if err != nil {
-		return err
-	}
-	project.ModulePkg = ModulePath(data)
-	project.ModulePath = FindGOModAbsPath(project.Config.Package)
-	return nil
-}
-
-func (project *Project) AddObject(id string, value *Object) {
+func (project *Project) AddLangObject(id LangObjectId, value *Object) {
 	project.muObj.Lock()
 	defer project.muObj.Unlock()
 	if _, exist := project.refObjects[id]; !exist {
@@ -129,19 +119,107 @@ func (project *Project) AddObject(id string, value *Object) {
 	}
 }
 
-func (project *Project) GetObject(id string) *Object {
+func (project *Project) GetLangObject(id LangObjectId) *Object {
 	project.muObj.Lock()
 	defer project.muObj.Unlock()
 	return project.refObjects[id]
 }
 
-func (project *Project) Objects() map[string]*Object {
+func (project *Project) Objects() map[LangObjectId]*Object {
 	project.muObj.Lock()
 	defer project.muObj.Unlock()
 	return project.refObjects
 }
 
-func (project *Project) LoadObjects(ids ...string) error {
+func (project *Project) parseSchemaExtension(ext *schema.Extension) (Extension, error) {
+	switch ext.Name {
+	case "go_tag":
+		return new(ExtensionGoTag).Parse(ext)
+	default:
+		return new(ExtensionUnknown).Parse(ext)
+	}
+}
+
+func (project *Project) parseSchemaObject(object *schema.Object) (*Object, error) {
+	obj := Object{
+		ID:         object.ID,
+		Type:       (*ObjectType)(object.Type),
+		Fields:     nil,
+		Extensions: nil,
+		Loaded:     false,
+	}
+	for _, field := range object.Fields {
+		objField := &ObjectField{
+			Name: field.Name,
+			Desc: field.Desc,
+			Type: (*ObjectType)(field.Type),
+		}
+		for _, ext := range field.Extensions {
+			if ext != nil {
+				extParsed, err := project.parseSchemaExtension(ext)
+				if err != nil {
+					return nil, err
+				}
+				objField.Extensions = append(objField.Extensions, extParsed)
+			}
+		}
+		obj.Fields = append(obj.Fields, objField)
+	}
+	for _, ext := range object.Extensions {
+		extParsed, err := project.parseSchemaExtension(ext)
+		if err != nil {
+			return nil, err
+		}
+		obj.Extensions = append(obj.Extensions, extParsed)
+	}
+	return &obj, nil
+}
+
+func (project *Project) LoadObjects(schemaDef *schema.Schema) error {
+	// load object from schema object define
+	for _, object := range schemaDef.Objects {
+		id := LangObjectId{Lang: object.Language, Id: object.ID}
+		obj, err := project.parseSchemaObject(object)
+		if err != nil {
+			return err
+		}
+		project.AddLangObject(id, obj)
+	}
+	langTs := make(map[string][]TypeScope)
+	for _, api := range schemaDef.APIs {
+		if len(api.InType) > 0 {
+			ts := TypeScope{FileName: api.SourceFileName, TypeName: api.InType}
+			langTs[api.Language] = append(langTs[api.Language], ts)
+		}
+		if len(api.OutType) > 0 {
+			ts := TypeScope{FileName: api.SourceFileName, TypeName: api.OutType}
+			langTs[api.Language] = append(langTs[api.Language], ts)
+		}
+	}
+	for lang := range langTs {
+		if GetObjectLoader(lang) == nil {
+			return fmt.Errorf("object loader for language %s not found", lang)
+		}
+	}
+	eg := errgroup.Group{}
+	for lang, typeScopes := range langTs {
+		loader := GetObjectLoader(lang)
+		eg.Go(func() error {
+			objs, err := loader.LoadAll(typeScopes)
+			if err != nil {
+				return err
+			}
+			for _, obj := range objs {
+				id := LangObjectId{Lang: lang, Id: obj.ID}
+				project.AddLangObject(id, obj)
+			}
+			return nil
+		})
+	}
+	return eg.Wait()
+}
+
+func (project *Project) LoadObjects11(ids ...LangObjectId) error {
 	objects := project.Objects()
 	var queue []string
 	if len(ids) == 0 {
@@ -168,7 +246,7 @@ func (project *Project) LoadObjects(ids ...string) error {
 	}
 	i := 0
 	for i < len(queue) {
-		pkgType, err := newPkgType(queue[i])
+		pkgType, err := goloader.newPkgType(queue[i])
 		if err != nil {
 			return err
 		}
@@ -181,12 +259,12 @@ func (project *Project) LoadObjects(ids ...string) error {
 	return nil
 }
 
-func (project *Project) getStructInfo(query *PkgType) (*GoStructInfo, error) {
-	var structInfo *GoStructInfo
+func (project *Project) getStructInfo(query *goloader.PkgType) (*goloader.GoStructInfo, error) {
+	var structInfo *goloader.GoStructInfo
 	var err error
 	if project.Config.UseGOModule {
 		pkgAbsPath := strings.Replace(query.Package, project.ModulePkg, project.ModulePath, 1)
-		structInfo, err = new(StructFinder).Find(pkgAbsPath, query.TypeName)
+		structInfo, err = new(goloader.StructFinder).Find(pkgAbsPath, query.TypeName)
 		if err != nil {
 			return nil, err
 		}
@@ -196,7 +274,7 @@ func (project *Project) getStructInfo(query *PkgType) (*GoStructInfo, error) {
 		return structInfo, nil
 	}
 
-	goSrcPaths := GetGOSrcPaths()
+	goSrcPaths := goloader.GetGOSrcPaths()
 	pkgAbsPaths := make([]string, 0)
 	for _, p := range goSrcPaths {
 		pkgAbsPath := filepath.Join(p, query.Package)
@@ -204,8 +282,8 @@ func (project *Project) getStructInfo(query *PkgType) (*GoStructInfo, error) {
 		if _, err := os.Stat(pkgAbsPath); err != nil {
 			continue
 		}
-		structInfo, err = new(StructFinder).Find(pkgAbsPath, query.TypeName)
-		if err != nil && err != errGoStructNotFound {
+		structInfo, err = new(goloader.StructFinder).Find(pkgAbsPath, query.TypeName)
+		if err != nil && err != goloader.errGoStructNotFound {
 			return nil, err
 		}
 		if structInfo != nil {
@@ -218,7 +296,7 @@ func (project *Project) getStructInfo(query *PkgType) (*GoStructInfo, error) {
 	return structInfo, nil
 }
 
-func (project *Project) loadObj(query *PkgType, queue *[]string) error {
+func (project *Project) loadObj(query *goloader.PkgType, queue *[]string) error {
 	if query == nil {
 		return nil
 	}
