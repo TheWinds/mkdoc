@@ -3,7 +3,7 @@ package markdown
 import (
 	"fmt"
 	"github.com/thewinds/mkdoc"
-	"github.com/thewinds/mkdoc/generators/objmock"
+	"github.com/thewinds/mkdoc/generator/objmock"
 	"sort"
 	"strings"
 	"time"

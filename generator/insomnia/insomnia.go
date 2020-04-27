@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/thewinds/mkdoc"
-	"github.com/thewinds/mkdoc/generators/objmock"
+	"github.com/thewinds/mkdoc/generator/objmock"
 	"math/rand"
 	"strings"
 	"time"
