@@ -4,32 +4,28 @@ package main
 import (
 	"fmt"
 	"github.com/thewinds/mkdoc"
+	"github.com/thewinds/mkdoc/schema"
 	"gopkg.in/alecthomas/kingpin.v2"
 	"os"
 	"path/filepath"
 	"sort"
 )
 
-func scanAPIs(project *mkdoc.Project) ([]*mkdoc.API, error) {
-	var apis []*mkdoc.API
+func scanSchemas(project *mkdoc.Project, filterTag string) ([]*schema.Schema, error) {
+	var schemas []*schema.Schema
 	for _, scanner := range project.Scanners {
 		fmt.Printf("🔎  scan doc annotations (use %s)\n", scanner.Name())
-		annotations, err := scanner.ScanAnnotations(*project)
+		// TODO: other args
+		sr, err := scanner.Scan(mkdoc.DocScanConfig{
+			ProjectConfig: project.Config.Copy(),
+			Args:          map[string]string{"_filter_tag": filterTag},
+		})
 		if err != nil {
-			return nil, fmt.Errorf("scan annotations %v\n", err)
+			return nil, fmt.Errorf("scan docs %v\n", err)
 		}
-		for k, a := range annotations {
-			fmt.Printf("\r🔥  parse annotation to api [%d/%d]", k+1, len(annotations))
-			api, err := a.ParseToAPI()
-			if err != nil {
-				fmt.Println()
-				return nil, fmt.Errorf("annotation can not be parse\n%v\n------\nAnnotation:%s\n------\n", err, a)
-			}
-			apis = append(apis, api)
-		}
-		fmt.Printf("\n")
+		schemas = append(schemas, &schema.Schema{APIs: sr.APIs, Objects: sr.Objects})
 	}
-	return apis, nil
+	return schemas, nil
 }
 
 func getAllTags(apis []*mkdoc.API) []string {
@@ -47,37 +43,6 @@ func getAllTags(apis []*mkdoc.API) []string {
 	return tags
 }
 
-func filterAPIByTag(apis []*mkdoc.API, tag string) []*mkdoc.API {
-	var matched []*mkdoc.API
-
-	if tag == "" {
-		return apis
-	}
-
-	for _, api := range apis {
-		for _, t := range api.Tags {
-			if t == tag {
-				matched = append(matched, api)
-				break
-			}
-		}
-	}
-	return matched
-}
-
-func buildAPI(apis []*mkdoc.API) error {
-	for k, api := range apis {
-		fmt.Printf("\r🔥  building api '%s' [%d/%d]          ", api.Name, k+1, len(apis))
-		err := api.Build()
-		if err != nil {
-			fmt.Println()
-			return fmt.Errorf("build api %s\n%v\n------\nAnnotation:\n%s\n------\n", api.Name, err, api.Annotation)
-		}
-	}
-	fmt.Println()
-	return nil
-}
-
 func makeDoc(ctx *kingpin.ParseContext) error {
 	config, err := mkdoc.LoadDefaultConfig()
 	if err != nil {
@@ -90,50 +55,59 @@ func makeDoc(ctx *kingpin.ParseContext) error {
 	}
 	mkdoc.SetProject(project)
 
-	apis, err := scanAPIs(project)
+	tag := *makeDocTag
+
+	schemas, err := scanSchemas(project, tag)
 	if err != nil {
 		return showErr("%v", err)
 	}
 
-	tag := *makeDocTag
-
-	matchedAPIs := filterAPIByTag(apis, tag)
-
-	if len(matchedAPIs) == 0 {
-		fmt.Printf("👽  no tag is matched,all tags:\n")
-		for _, t := range getAllTags(apis) {
-			fmt.Printf("    %s\n", t)
+	var (
+		apiDefs []*schema.API
+		apis    []*mkdoc.API
+	)
+	for _, schemaDef := range schemas {
+		err := project.LoadObjects(schemaDef)
+		if err != nil {
+			return showErr("%v", err)
 		}
+		for _, api := range schemaDef.APIs {
+			apiDefs = append(apiDefs, api)
+		}
+	}
+
+	if len(apiDefs) == 0 {
+		fmt.Printf("👽  no api is matched,all tags:\n")
+		// TODO: show all tags
+		//for _, t := range getAllTags(schemas) {
+		//	fmt.Printf("    %s\n", t)
+		//}
 		return nil
 	}
 
 	if tag != "" {
-		fmt.Printf("👽  tag '%s' match %d api\n", tag, len(matchedAPIs))
+		fmt.Printf("👽  tag '%s' match %d api\n", tag, len(apiDefs))
 	} else {
-		fmt.Printf("👽  %d api is matched \n", len(matchedAPIs))
+		fmt.Printf("👽  %d api is matched \n", len(apiDefs))
 	}
 
-	var loadIDs []string
-	for _, api := range matchedAPIs {
-		if api.InArgument != nil {
-			loadIDs = append(loadIDs, api.InArgument.ID)
+	for n, def := range apiDefs {
+		fmt.Printf("\r🔥 parse & build api '%s' [%d/%d]          ", def.Name, n+1, len(apiDefs))
+		a, err := project.ParseSchemaAPI(def)
+		if err != nil {
+			return showErr("%v", err)
 		}
-		if api.OutArgument != nil {
-			loadIDs = append(loadIDs, api.OutArgument.ID)
+		err = a.Build()
+		if err != nil {
+			fmt.Println()
+			return fmt.Errorf("build api %s\n%v\n------\nAt:\n%s:%d\nSource:\n%s\n------\n", api.Name, err, def.SourceFileName, def.SourceLineNum, def.Source)
 		}
-	}
-
-	if err := project.LoadObjects(loadIDs...); err != nil {
-		return showErr("%v", err)
-	}
-
-	if err := buildAPI(matchedAPIs); err != nil {
-		return showErr("%v", err)
+		apis = append(apis, a)
 	}
 
 	genCtx := &mkdoc.DocGenContext{
 		Tag:    tag,
-		APIs:   matchedAPIs,
+		APIs:   apis,
 		Config: *config,
 		RefObj: project.Objects(),
 	}
