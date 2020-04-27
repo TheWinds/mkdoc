@@ -16,7 +16,7 @@ type DocGenContext struct {
 	Tag    string
 	APIs   []*API
 	Config Config
-	RefObj map[string]*Object
+	RefObj map[LangObjectId]*Object
 	Args   map[string]string
 }
 

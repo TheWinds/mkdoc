@@ -90,7 +90,11 @@ func (j *JSONMocker) mock(obj *mkdoc.Object) {
 	defer func() { j.write("}") }()
 	var firstField bool
 	for _, field := range obj.Fields {
-		jsonTag := field.Tag.GetFirstValue("json", ",")
+		goTagExt := getGoTag(field.Extensions)
+		var jsonTag string
+		if goTagExt != nil {
+			jsonTag = goTagExt.Tag.GetFirstValue("json", ",")
+		}
 		if jsonTag == "-" {
 			continue
 		}
@@ -221,4 +225,13 @@ func (j *JSONMocker) popRefPath() {
 		return
 	}
 	j.refPath = j.refPath[:len(j.refPath)-1]
+}
+
+func getGoTag(exts []mkdoc.Extension) *mkdoc.ExtensionGoTag {
+	for _, ext := range exts {
+		if e, ok := ext.(*mkdoc.ExtensionGoTag); ok {
+			return e
+		}
+	}
+	return nil
 }

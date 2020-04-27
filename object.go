@@ -32,9 +32,8 @@ func (obj *Object) Clone() *Object {
 			Desc: field.Desc,
 			Type: &ft,
 		}
-		if field.Tag != nil {
-			newField.Tag = mustObjectFieldTag(field.Tag.raw)
-		}
+		// TODO copy extensions
+		//field.Extensions
 		newObj.Fields = append(newObj.Fields, newField)
 	}
 	newObj.Loaded = obj.Loaded
@@ -45,10 +44,10 @@ func randObjectID(s string) string {
 	return fmt.Sprintf("obj_%s_#%d", s, rand.Int63())
 }
 
-// createRootObject
-// crate root object by package and type
-// at the same register those created object to project's ref objects
-func createRootObject(pkgTyp string) (*Object, error) {
+// CreateRootObject
+// create root object by package and type
+// returns the created obj(return Object[0]) an refs object
+func CreateRootObject(pkgTyp string, loadFn func(id string) *Object) ([]*Object, error) {
 	var i int
 	for i = 0; i < len(pkgTyp); i += 2 {
 		if pkgTyp[i] == '[' {
@@ -61,8 +60,10 @@ func createRootObject(pkgTyp string) (*Object, error) {
 	}
 	arrDep := i / 2
 	pkgTypPath := pkgTyp[i:]
-
-	leaf := GetProject().GetObject(pkgTypPath)
+	var leaf *Object
+	if loadFn != nil {
+		leaf = loadFn(pkgTypPath)
+	}
 	if leaf == nil {
 		leaf = &Object{
 			ID: pkgTypPath,
@@ -75,13 +76,14 @@ func createRootObject(pkgTyp string) (*Object, error) {
 			Loaded: false,
 		}
 	}
-	return createArrayObject(leaf, arrDep), nil
+	return CreateArrayObject(leaf, arrDep), nil
 }
 
-// create and register a n-dimensional(dep) array object
-func createArrayObject(leaf *Object, dep int) *Object {
+// Create a n-dimensional(dep) array object
+func CreateArrayObject(leaf *Object, dep int) []*Object {
+	var deps []*Object
 	root := leaf
-	GetProject().AddObject(root.ID, root)
+	deps = append(deps, root)
 	for k := 0; k < dep; k++ {
 		obj := &Object{
 			ID: randObjectID("arr"),
@@ -93,13 +95,13 @@ func createArrayObject(leaf *Object, dep int) *Object {
 			Loaded: true,
 		}
 		root = obj
-		GetProject().AddObject(root.ID, root)
+		deps = append(deps, obj)
 	}
-	return root
+	return deps
 }
 
-// create and register a n-dimensional(dep) array object by leaf object id
-func createArrayObjectByID(leafObjID string, dep int) *Object {
-	leaf := GetProject().GetObject(leafObjID)
-	return createArrayObject(leaf, dep)
+// Create and register a n-dimensional(dep) array object by leaf object id
+func CreateArrayObjectByID(leafObjID string, dep int, loadFn func(id string) *Object) []*Object {
+	leaf := loadFn(leafObjID)
+	return CreateArrayObject(leaf, dep)
 }

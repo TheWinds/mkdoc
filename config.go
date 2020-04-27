@@ -3,11 +3,9 @@ package mkdoc
 import (
 	"fmt"
 	"github.com/go-yaml/yaml"
-	"github.com/thewinds/mkdoc/objectloader/goloader"
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 const configFileName = "conf.yaml"
@@ -43,35 +41,35 @@ func (config *Config) Check() error {
 		return fmt.Errorf("please config a path to scan in conf.yaml")
 	}
 
-	if config.UseGOModule {
-		path := config.Package
-		if !filepath.IsAbs(path) {
-			wd, err := os.Getwd()
-			if err != nil {
-				return err
-			}
-			path = filepath.Join(wd, path)
-		}
-		if _, err := os.Stat(path); err != nil {
-			return fmt.Errorf("no such file or directory: %s\n", path)
-		}
-	} else {
-		goPaths := goloader.GetGOPaths()
-		pkgExist := false
-		for _, gopath := range goPaths {
-			if _, err := os.Stat(filepath.Join(gopath, "src", config.Package)); err == nil {
-				pkgExist = true
-			}
-		}
-		if !pkgExist {
-			sb := strings.Builder{}
-			sb.WriteString(fmt.Sprintf("error: package \"%s\" is not found in any of:\n", config.Package))
-			for _, gopath := range goPaths {
-				sb.WriteString(fmt.Sprintln("  ", filepath.Join(gopath, "src", config.Package)))
-			}
-			return fmt.Errorf("%s", sb.String())
-		}
-	}
+	//if config.UseGOModule {
+	//	path := config.Package
+	//	if !filepath.IsAbs(path) {
+	//		wd, err := os.Getwd()
+	//		if err != nil {
+	//			return err
+	//		}
+	//		path = filepath.Join(wd, path)
+	//	}
+	//	if _, err := os.Stat(path); err != nil {
+	//		return fmt.Errorf("no such file or directory: %s\n", path)
+	//	}
+	//} else {
+	//	goPaths := GetGOPaths()
+	//	pkgExist := false
+	//	for _, gopath := range goPaths {
+	//		if _, err := os.Stat(filepath.Join(gopath, "src", config.Package)); err == nil {
+	//			pkgExist = true
+	//		}
+	//	}
+	//	if !pkgExist {
+	//		sb := strings.Builder{}
+	//		sb.WriteString(fmt.Sprintf("error: package \"%s\" is not found in any of:\n", config.Package))
+	//		for _, gopath := range goPaths {
+	//			sb.WriteString(fmt.Sprintln("  ", filepath.Join(gopath, "src", config.Package)))
+	//		}
+	//		return fmt.Errorf("%s", sb.String())
+	//	}
+	//}
 	return nil
 }
 
@@ -161,11 +159,11 @@ func CreateDefaultConfig() error {
 				Scope:   "",
 			},
 		},
-		Path:        "",
-		BaseType:    "",
-		Scanner:     []string{"funcdoc"},
-		Generator:   []string{"markdown"},
-		Args: map[string]string{},
+		Path:      "",
+		BaseType:  "",
+		Scanner:   []string{"funcdoc"},
+		Generator: []string{"markdown"},
+		Args:      map[string]string{},
 	}
 	b, err := yaml.Marshal(cfg)
 	if err != nil {

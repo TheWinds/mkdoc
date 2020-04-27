@@ -6,14 +6,14 @@ import (
 )
 
 type DocScanner interface {
-	Scan(config Config) (*DocScanResult, error)
+	Scan(config DocScanConfig) (*DocScanResult, error)
 	Name() string
 	Help() string
 }
 
 type DocScanResult struct {
 	APIs    []*schema.API
-	Objects map[LangObjectId]*schema.Object
+	Objects []*schema.Object
 }
 
 type DocScanConfig struct {

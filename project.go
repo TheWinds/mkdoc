@@ -2,11 +2,8 @@ package mkdoc
 
 import (
 	"fmt"
-	"github.com/thewinds/mkdoc/objectloader/goloader"
 	"github.com/thewinds/mkdoc/schema"
 	"golang.org/x/sync/errgroup"
-	"os"
-	"path/filepath"
 	"strings"
 	"sync"
 )
@@ -31,23 +28,15 @@ func NewProject(config *Config) (*Project, error) {
 	if err := project.checkGenerator(); err != nil {
 		return nil, err
 	}
-	if config.UseGOModule {
-		if err := project.initGoModule(); err != nil {
-			return nil, err
-		}
-	}
-	project.refObjects = make(map[string]*Object)
-	for _, obj := range BuiltinObjects() {
-		project.refObjects[obj.ID] = obj
-	}
+	project.refObjects = make(map[LangObjectId]*Object)
 
-	if config.BaseType != "" {
-		baseTypeObj := &Object{
-			ID:   config.BaseType,
-			Type: &ObjectType{Name: "object"},
-		}
-		project.refObjects[baseTypeObj.ID] = baseTypeObj
-	}
+	//if config.BaseType != "" {
+	//	baseTypeObj := &Object{
+	//		ID:   config.BaseType,
+	//		Type: &ObjectType{Name: "object"},
+	//	}
+	//	project.refObjects[baseTypeObj.ID] = baseTypeObj
+	//}
 	return project, nil
 }
 
@@ -175,6 +164,22 @@ func (project *Project) parseSchemaObject(object *schema.Object) (*Object, error
 	return &obj, nil
 }
 
+func (project *Project) ParseSchemaAPI(api *schema.API) (*API, error) {
+	a := &API{
+		API:  *api,
+		Mime: &MimeType{In: api.MimeIn, Out: api.MimeOut},
+	}
+	if len(api.InType) > 0 {
+		id := LangObjectId{Lang: api.Language, Id: api.InType}
+		a.InArgument = project.GetLangObject(id)
+	}
+	if len(api.OutType) > 0 {
+		id := LangObjectId{Lang: api.Language, Id: api.OutType}
+		a.OutArgument = project.GetLangObject(id)
+	}
+	return a, nil
+}
+
 func (project *Project) LoadObjects(schemaDef *schema.Schema) error {
 	// load object from schema object define
 	for _, object := range schemaDef.Objects {
@@ -217,181 +222,4 @@ func (project *Project) LoadObjects(schemaDef *schema.Schema) error {
 		})
 	}
 	return eg.Wait()
-}
-
-func (project *Project) LoadObjects11(ids ...LangObjectId) error {
-	objects := project.Objects()
-	var queue []string
-	if len(ids) == 0 {
-		// load all
-		for _, object := range objects {
-			if !object.Loaded {
-				queue = append(queue, object.ID)
-			}
-		}
-	} else {
-		if project.Config.BaseType != "" {
-			queue = append(queue, project.Config.BaseType)
-		}
-		for _, id := range ids {
-			toLoadID := project.firstUnLoadID(objects, id)
-			if toLoadID != "" {
-				queue = append(queue, toLoadID)
-			}
-		}
-	}
-
-	if len(queue) == 0 {
-		return nil
-	}
-	i := 0
-	for i < len(queue) {
-		pkgType, err := goloader.newPkgType(queue[i])
-		if err != nil {
-			return err
-		}
-		err = project.loadObj(pkgType, &queue)
-		if err != nil {
-			return err
-		}
-		i++
-	}
-	return nil
-}
-
-func (project *Project) getStructInfo(query *goloader.PkgType) (*goloader.GoStructInfo, error) {
-	var structInfo *goloader.GoStructInfo
-	var err error
-	if project.Config.UseGOModule {
-		pkgAbsPath := strings.Replace(query.Package, project.ModulePkg, project.ModulePath, 1)
-		structInfo, err = new(goloader.StructFinder).Find(pkgAbsPath, query.TypeName)
-		if err != nil {
-			return nil, err
-		}
-		if structInfo == nil {
-			return nil, fmt.Errorf("struct %s not found\n", query)
-		}
-		return structInfo, nil
-	}
-
-	goSrcPaths := goloader.GetGOSrcPaths()
-	pkgAbsPaths := make([]string, 0)
-	for _, p := range goSrcPaths {
-		pkgAbsPath := filepath.Join(p, query.Package)
-		pkgAbsPaths = append(pkgAbsPaths, pkgAbsPath)
-		if _, err := os.Stat(pkgAbsPath); err != nil {
-			continue
-		}
-		structInfo, err = new(goloader.StructFinder).Find(pkgAbsPath, query.TypeName)
-		if err != nil && err != goloader.errGoStructNotFound {
-			return nil, err
-		}
-		if structInfo != nil {
-			break
-		}
-	}
-	if structInfo == nil {
-		return nil, fmt.Errorf("struct %s not found in any of:\n	%s", query, strings.Join(pkgAbsPaths, "\n	"))
-	}
-	return structInfo, nil
-}
-
-func (project *Project) loadObj(query *goloader.PkgType, queue *[]string) error {
-	if query == nil {
-		return nil
-	}
-	structInfo, err := project.getStructInfo(query)
-	if err != nil {
-		return err
-	}
-
-	rootObj := project.GetObject(query.fullPath)
-	rootObj.Type = &ObjectType{
-		Name:       "object",
-		IsRepeated: false,
-	}
-	rootObj.Fields = make([]*ObjectField, 0)
-
-	for _, field := range structInfo.Fields {
-		if field.GoType.NotSupport {
-			continue
-		}
-		// priority use doc comment
-		var comment string
-		if field.DocComment != "" {
-			comment = field.DocComment
-		} else {
-			comment = field.Comment
-		}
-		fieldTag, err := NewObjectFieldTag(field.Tag)
-		if err != nil {
-			return err
-		}
-		objField := &ObjectField{
-			Name: field.Name,
-			Desc: comment,
-			Type: &ObjectType{},
-			Tag:  fieldTag,
-		}
-		goType := field.GoType
-
-		// builtin type
-		if goType.IsBuiltin && !goType.IsArray {
-			objField.Type.Name = goType.TypeName
-			rootObj.Fields = append(rootObj.Fields, objField)
-			continue
-		}
-
-		objField.Type.Name = "object"
-
-		// builtin array type
-		if goType.IsBuiltin {
-			arrObj := createArrayObjectByID(goType.TypeName, goType.ArrayDepth)
-			objField.Type.Ref = arrObj.ID
-			rootObj.Fields = append(rootObj.Fields, objField)
-			continue
-		}
-
-		pkgTypePath := fmt.Sprintf("%s.%s", goType.ImportPkgName, goType.TypeName)
-		obj := GetProject().GetObject(pkgTypePath)
-		if obj == nil {
-			obj = &Object{
-				ID: pkgTypePath,
-				Type: &ObjectType{
-					Name:       "object",
-					Ref:        "",
-					IsRepeated: false,
-				},
-				Fields: nil,
-				Loaded: false,
-			}
-			*queue = append(*queue, pkgTypePath)
-		}
-
-		if goType.IsArray {
-			obj = createArrayObject(obj, goType.ArrayDepth)
-		} else {
-			obj = createArrayObject(obj, 0)
-		}
-		objField.Type.Ref = obj.ID
-
-		rootObj.Fields = append(rootObj.Fields, objField)
-	}
-	rootObj.Loaded = true
-	return nil
-}
-
-// dfs search
-func (project *Project) firstUnLoadID(objects map[string]*Object, id string) string {
-	obj := objects[id]
-	if obj == nil {
-		return ""
-	}
-	if !obj.Loaded {
-		return id
-	}
-	if obj.Type.Ref == "" {
-		return ""
-	}
-	return project.firstUnLoadID(objects, obj.Type.Ref)
 }
