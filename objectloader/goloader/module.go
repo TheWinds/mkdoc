@@ -5,12 +5,19 @@ import (
 	"path/filepath"
 )
 
-func (project *Project) initGoModule() error {
-	data, err := ioutil.ReadFile(filepath.Join(project.Config.Package, "go.mod"))
+type goModuleInfo struct {
+	ModulePkg  string
+	ModulePath string
+}
+
+func (g *GoLoader) initGoModule(pkgPath string) error {
+	data, err := ioutil.ReadFile(filepath.Join(pkgPath, "go.mod"))
 	if err != nil {
 		return err
 	}
-	project.ModulePkg = goloader.ModulePath(data)
-	project.ModulePath = goloader.FindGOModAbsPath(project.Config.Package)
+	g.mod = &goModuleInfo{
+		ModulePkg:  ModulePath(data),
+		ModulePath: FindGOModAbsPath(pkgPath),
+	}
 	return nil
 }
