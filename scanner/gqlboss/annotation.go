@@ -153,9 +153,10 @@ func parseInOut(annotation DocAnnotation, api *schema.API) ([]*schema.Object, er
 					api.MimeIn = rmBracket(matchGroup[2])
 					fieldStmts := matchGroup[4]
 					obj := &schema.Object{
-						ID:     mkdoc.RandObjectID("in"),
-						Type:   &schema.ObjectType{Name: "object"},
-						Fields: parseToObjectFields(fieldStmts),
+						ID:       mkdoc.RandObjectID("in"),
+						Type:     &schema.ObjectType{Name: "object"},
+						Fields:   parseToObjectFields(fieldStmts),
+						Language: "go",
 					}
 					if matchGroup[3] != "" {
 						obj.Type.IsRepeated = true
@@ -166,9 +167,10 @@ func parseInOut(annotation DocAnnotation, api *schema.API) ([]*schema.Object, er
 					api.MimeOut = rmBracket(matchGroup[2])
 					fieldStmts := matchGroup[4]
 					obj := &schema.Object{
-						ID:     mkdoc.RandObjectID("out"),
-						Type:   &schema.ObjectType{Name: "object"},
-						Fields: parseToObjectFields(fieldStmts),
+						ID:       mkdoc.RandObjectID("out"),
+						Type:     &schema.ObjectType{Name: "object"},
+						Fields:   parseToObjectFields(fieldStmts),
+						Language: "go",
 					}
 					if matchGroup[3] != "" {
 						obj.Type.IsRepeated = true

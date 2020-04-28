@@ -65,8 +65,8 @@ func (g *GoLoader) GetObjectId(ts mkdoc.TypeScope) (string, error) {
 			return "", err
 		}
 	}
-	if g.cached[ts.TypeName] != nil {
-		return g.cached[ts.TypeName].ID, nil
+	if strings.HasPrefix(ts.TypeName, "@") {
+		return ts.TypeName, nil
 	}
 	if g.tsId[ts] == "" {
 		imports, err := mkdoc.GetFileImportsAtFile(ts.FileName, g.mod)
@@ -89,6 +89,13 @@ func (g *GoLoader) LoadAll(tss []mkdoc.TypeScope) ([]*mkdoc.Object, error) {
 	}
 	var unloads []*mkdoc.Object
 	for _, ts := range tss {
+		if strings.HasPrefix(ts.TypeName, "@") {
+			obj := g.cached[ts.TypeName]
+			if obj == nil {
+				return nil, fmt.Errorf("type scope %v: type not found", ts)
+			}
+			unloads = append(unloads, obj)
+		}
 		pkgTyp, err := g.GetObjectId(ts)
 		if err != nil {
 			return nil, err
