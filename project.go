@@ -9,11 +9,12 @@ import (
 )
 
 type Project struct {
-	Config     *Config
-	Scanners   []DocScanner   `yaml:"-"`
-	Generators []DocGenerator `yaml:"-"`
-	refObjects map[LangObjectId]*Object
-	muObj      sync.Mutex
+	Config           *Config
+	Scanners         []DocScanner   `yaml:"-"`
+	Generators       []DocGenerator `yaml:"-"`
+	refObjects       map[LangObjectId]*Object
+	defaultLoaderCfg *ObjectLoaderConfig
+	muObj            sync.Mutex
 }
 
 func NewProject(config *Config) (*Project, error) {
@@ -29,7 +30,7 @@ func NewProject(config *Config) (*Project, error) {
 		return nil, err
 	}
 	project.refObjects = make(map[LangObjectId]*Object)
-
+	project.defaultLoaderCfg = &ObjectLoaderConfig{project.Config.Copy()}
 	//if config.BaseType != "" {
 	//	baseTypeObj := &Object{
 	//		ID:   config.BaseType,
@@ -165,16 +166,31 @@ func (project *Project) parseSchemaObject(object *schema.Object) (*Object, error
 }
 
 func (project *Project) ParseSchemaAPI(api *schema.API) (*API, error) {
+	loader := GetObjectLoader(api.Language)
+	if loader == nil {
+		return nil, fmt.Errorf("object loader for language %s not found", api.Language)
+	}
+	loader.SetConfig(project.defaultLoaderCfg)
 	a := &API{
 		API:  *api,
 		Mime: &MimeType{In: api.MimeIn, Out: api.MimeOut},
 	}
 	if len(api.InType) > 0 {
-		id := LangObjectId{Lang: api.Language, Id: api.InType}
+		objId, err := loader.GetObjectId(TypeScope{api.SourceFileName, api.InType})
+		if err != nil {
+			return nil, err
+		}
+		id := LangObjectId{Lang: api.Language, Id: objId}
+		a.InType = objId
 		a.InArgument = project.GetLangObject(id)
 	}
 	if len(api.OutType) > 0 {
-		id := LangObjectId{Lang: api.Language, Id: api.OutType}
+		objId, err := loader.GetObjectId(TypeScope{api.SourceFileName, api.OutType})
+		if err != nil {
+			return nil, err
+		}
+		id := LangObjectId{Lang: api.Language, Id: objId}
+		a.OutType = objId
 		a.OutArgument = project.GetLangObject(id)
 	}
 	return a, nil
@@ -206,12 +222,17 @@ func (project *Project) LoadObjects(schemaDef *schema.Schema) error {
 			return fmt.Errorf("object loader for language %s not found", lang)
 		}
 	}
-	cfg := ObjectLoaderConfig{Config: GetProject().Config.Copy()}
-
 	eg := errgroup.Group{}
 	for lang, typeScopes := range langTs {
 		loader := GetObjectLoader(lang)
-		loader.SetConfig()
+		loader.SetConfig(project.defaultLoaderCfg)
+		for id, object := range project.Objects() {
+			if id.Lang == loader.Lang() {
+				if err := loader.Add(object); err != nil {
+					return err
+				}
+			}
+		}
 		eg.Go(func() error {
 			objs, err := loader.LoadAll(typeScopes)
 			if err != nil {

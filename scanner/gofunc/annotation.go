@@ -6,6 +6,7 @@ import (
 	"github.com/thewinds/mkdoc"
 	"github.com/thewinds/mkdoc/schema"
 	"go/token"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -225,7 +226,8 @@ func rmBracket(s string) string {
 
 func (annotation DocAnnotation) AppendMetaData(typ string, fp token.Position) DocAnnotation {
 	t := fmt.Sprintf("@type %s\n", typ)
-	loc := fmt.Sprintf("@loc %s:%d\n", fp.Filename, fp.Line)
+	absfp, _ := filepath.Abs(fp.Filename)
+	loc := fmt.Sprintf("@loc %s:%d\n", absfp, fp.Line)
 	return annotation + DocAnnotation(t+loc)
 }
 

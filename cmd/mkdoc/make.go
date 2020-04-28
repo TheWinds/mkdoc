@@ -102,8 +102,15 @@ func makeDoc(ctx *kingpin.ParseContext) error {
 			fmt.Println()
 			return fmt.Errorf("build api %s\n%v\n------\nAt:\n%s:%d\nSource:\n%s\n------\n", def.Name, err, def.SourceFileName, def.SourceLineNum, def.Source)
 		}
+		if a.InArgument != nil {
+			a.InType = a.InArgument.ID
+		}
+		if a.OutArgument != nil {
+			a.OutType = a.OutArgument.ID
+		}
 		apis = append(apis, a)
 	}
+	fmt.Println()
 
 	genCtx := &mkdoc.DocGenContext{
 		Tag:    tag,

@@ -7,7 +7,9 @@ import (
 type ObjectLoader interface {
 	Load(ts TypeScope) (*Object, error)
 	LoadAll(tss []TypeScope) ([]*Object, error)
-	SetConfig(cfg ObjectLoaderConfig)
+	Add(object *Object) error
+	GetObjectId(ts TypeScope) (string, error)
+	SetConfig(cfg *ObjectLoaderConfig)
 	Lang() string
 }
 

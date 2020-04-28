@@ -19,6 +19,7 @@ func init() {
 type GoLoader struct {
 	config      *mkdoc.ObjectLoaderConfig
 	cached      map[string]*mkdoc.Object
+	tsId        map[mkdoc.TypeScope]string
 	initialed   bool
 	once        sync.Once
 	mod         *mkdoc.GoModuleInfo
@@ -29,6 +30,7 @@ func (g *GoLoader) init(config *mkdoc.ObjectLoaderConfig) {
 	g.once.Do(func() {
 		g.config = config
 		g.cached = make(map[string]*mkdoc.Object)
+		g.tsId = make(map[mkdoc.TypeScope]string)
 		g.initialed = true
 		if config.Args[EnableGoModule] == "true" {
 			g.enableGoMod = true
@@ -46,17 +48,48 @@ func (g *GoLoader) loadCache(id string) *mkdoc.Object {
 	return g.cached[id]
 }
 
+func (g *GoLoader) Add(object *mkdoc.Object) error {
+	if !g.initialed {
+		return errors.New("loader not initialed")
+	}
+	g.cached[object.ID] = object
+	return nil
+}
+
+func (g *GoLoader) GetObjectId(ts mkdoc.TypeScope) (string, error) {
+	if !g.initialed {
+		return "", errors.New("loader not initialed")
+	}
+	if g.enableGoMod && (g.mod == nil) {
+		if err := g.initGoModule(g.config.Path); err != nil {
+			return "", err
+		}
+	}
+	if g.tsId[ts] == "" {
+		imports, err := mkdoc.GetFileImportsAtFile(ts.FileName, g.mod)
+		if err != nil {
+			return "", err
+		}
+		g.tsId[ts] = replacePkg(ts.TypeName, imports)
+	}
+	return g.tsId[ts], nil
+}
+
 func (g *GoLoader) LoadAll(tss []mkdoc.TypeScope) ([]*mkdoc.Object, error) {
-	if g.config == nil {
-		return nil, errors.New("config not set")
+	if !g.initialed {
+		return nil, errors.New("loader not initialed")
+	}
+	if g.enableGoMod && (g.mod == nil) {
+		if err := g.initGoModule(g.config.Path); err != nil {
+			return nil, err
+		}
 	}
 	var unloads []*mkdoc.Object
 	for _, ts := range tss {
-		imports, err := mkdoc.GetFileImportsAtFile(ts.FileName, g.mod)
+		pkgTyp, err := g.GetObjectId(ts)
 		if err != nil {
 			return nil, err
 		}
-		pkgTyp := replacePkg(ts.TypeName, imports)
 		objs, err := mkdoc.CreateRootObject(pkgTyp, g.loadCache)
 		if err != nil {
 			return nil, err
@@ -84,11 +117,15 @@ func (g *GoLoader) loadUnloads(unloads []*mkdoc.Object) error {
 	}
 	var queue []string
 	for _, obj := range unloads {
-		queue = append(queue, obj.ID)
+		toLoadID := g.lookupUnLoadId(obj.ID)
+		if toLoadID != "" {
+			queue = append(queue, toLoadID)
+		}
 	}
 	i := 0
 	for i < len(queue) {
-		pkgType, err := newPkgType(queue[i])
+		id := queue[i]
+		pkgType, err := newPkgType(id)
 		if err != nil {
 			return err
 		}
@@ -101,13 +138,21 @@ func (g *GoLoader) loadUnloads(unloads []*mkdoc.Object) error {
 	return nil
 }
 
-func (g *GoLoader) loadObj(query *PkgType, queue *[]string) error {
-	fmt.Println(query)
-	if g.enableGoMod && (g.mod == nil) {
-		if err := g.initGoModule(g.config.Path); err != nil {
-			return err
-		}
+func (g *GoLoader) lookupUnLoadId(id string) string {
+	o := g.loadCache(id)
+	if o == nil {
+		return ""
 	}
+	if !o.Loaded {
+		return o.ID
+	}
+	if o.Type.Ref == "" {
+		return ""
+	}
+	return g.lookupUnLoadId(o.Type.Ref)
+}
+
+func (g *GoLoader) loadObj(query *PkgType, queue *[]string) error {
 	if query == nil {
 		return nil
 	}
@@ -171,7 +216,9 @@ func (g *GoLoader) loadObj(query *PkgType, queue *[]string) error {
 
 		pkgTypePath := fmt.Sprintf("%s.%s", goType.ImportPkgName, goType.TypeName)
 		obj := g.loadCache(pkgTypePath)
+		objCached := true
 		if obj == nil {
+			objCached = false
 			obj = &mkdoc.Object{
 				ID: pkgTypePath,
 				Type: &mkdoc.ObjectType{
@@ -192,6 +239,10 @@ func (g *GoLoader) loadObj(query *PkgType, queue *[]string) error {
 		}
 
 		for _, o := range arrObjs {
+			if !objCached {
+				g.cached[o.ID] = o
+				continue
+			}
 			if o.ID != obj.ID {
 				g.cached[o.ID] = o
 			}
@@ -242,6 +293,9 @@ func (g *GoLoader) getStructInfo(query *PkgType) (*GoStructInfo, error) {
 }
 
 func (g *GoLoader) Load(ts mkdoc.TypeScope) (*mkdoc.Object, error) {
+	if !g.initialed {
+		return nil, errors.New("loader not initialed")
+	}
 	objs, err := g.LoadAll([]mkdoc.TypeScope{ts})
 	if err != nil {
 		return nil, err
@@ -252,8 +306,8 @@ func (g *GoLoader) Load(ts mkdoc.TypeScope) (*mkdoc.Object, error) {
 	return objs[0], nil
 }
 
-func (g *GoLoader) SetConfig(cfg mkdoc.ObjectLoaderConfig) {
-	g.init(&cfg)
+func (g *GoLoader) SetConfig(cfg *mkdoc.ObjectLoaderConfig) {
+	g.init(cfg)
 }
 
 func (g *GoLoader) Lang() string {
