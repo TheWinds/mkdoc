@@ -41,7 +41,7 @@ func (obj *Object) Clone() *Object {
 }
 
 func RandObjectID(s string) string {
-	return fmt.Sprintf("obj_%s_#%d", s, rand.Int63())
+	return fmt.Sprintf("@obj_%s_#%d", s, rand.Int63())
 }
 
 // CreateRootObject
