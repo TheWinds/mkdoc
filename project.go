@@ -136,7 +136,7 @@ func (project *Project) parseSchemaObject(object *schema.Object) (*Object, error
 		Type:       (*ObjectType)(object.Type),
 		Fields:     nil,
 		Extensions: nil,
-		Loaded:     false,
+		Loaded:     true,
 	}
 	for _, field := range object.Fields {
 		objField := &ObjectField{
