@@ -28,7 +28,6 @@ type Config struct {
 	Description string            `yaml:"desc"`
 	APIBaseURL  string            `yaml:"api_base_url"` // https://api.xxx.com
 	Injects     []*Inject         `yaml:"inject"`       //
-	BaseType    string            `yaml:"base_type"`    // models.BaseType
 	Scanner     []string          `yaml:"scanner"`
 	Generator   []string          `yaml:"generator"`
 	Mime        *MimeType         `yaml:"mime"` // MimeType
@@ -80,7 +79,6 @@ func (config *Config) Copy() Config {
 		Description: config.Description,
 		APIBaseURL:  config.APIBaseURL,
 		Injects:     nil,
-		BaseType:    config.BaseType,
 		Scanner:     nil,
 		Generator:   nil,
 		Mime:        nil,
@@ -160,7 +158,6 @@ func CreateDefaultConfig() error {
 			},
 		},
 		Path:      "",
-		BaseType:  "",
 		Scanner:   []string{"funcdoc"},
 		Generator: []string{"markdown"},
 		Args:      map[string]string{},

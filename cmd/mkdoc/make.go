@@ -95,13 +95,9 @@ func makeDoc(ctx *kingpin.ParseContext) error {
 		fmt.Printf("\r🔥 parse & build api '%s' [%d/%d]          ", def.Name, n+1, len(apiDefs))
 		a, err := project.ParseSchemaAPI(def)
 		if err != nil {
-			return showErr("%v", err)
+			return showErr("parse api schema %s\n%v\n------\nAt:\n%s:%d\nSource:\n%s\n------\n", def.Name, err, def.SourceFileName, def.SourceLineNum, def.Source)
 		}
-		err = a.Build()
-		if err != nil {
-			fmt.Println()
-			return fmt.Errorf("build api %s\n%v\n------\nAt:\n%s:%d\nSource:\n%s\n------\n", def.Name, err, def.SourceFileName, def.SourceLineNum, def.Source)
-		}
+
 		if a.InArgument != nil {
 			a.InType = a.InArgument.ID
 		}

@@ -175,6 +175,13 @@ func (project *Project) ParseSchemaAPI(api *schema.API) (*API, error) {
 		API:  *api,
 		Mime: &MimeType{In: api.MimeIn, Out: api.MimeOut},
 	}
+	if len(a.Mime.In) == 0 {
+		a.Mime.In = project.Config.Mime.In
+	}
+	if len(a.Mime.Out) == 0 {
+		a.Mime.Out = project.Config.Mime.Out
+	}
+
 	if len(api.InType) > 0 {
 		objId, err := loader.GetObjectId(TypeScope{api.SourceFileName, api.InType})
 		if err != nil {
