@@ -45,22 +45,9 @@ func init() {
 	}
 }
 
-// ParseToAPI parse doc annotation to API def struct
-func (annotation DocAnnotation) ParseToAPI() (*schema.API, []*schema.Object, error) {
+func parseSimple(annotation DocAnnotation) (*schema.API, error) {
 	api := new(schema.API)
 	api.Language = "go"
-	err := parseSimple(annotation, api)
-	if err != nil {
-		return nil, nil, err
-	}
-	objects, err := parseInOut(annotation, api)
-	if err != nil {
-		return nil, nil, err
-	}
-	return api, objects, nil
-}
-
-func parseSimple(annotation DocAnnotation, api *schema.API) error {
 	api.Query = make(map[string]string)
 	api.Header = make(map[string]string)
 
@@ -146,7 +133,7 @@ func parseSimple(annotation DocAnnotation, api *schema.API) error {
 		}
 	}
 	api.Desc = sbDescription.String()
-	return nil
+	return api, nil
 }
 
 func parseInOut(annotation DocAnnotation, api *schema.API) ([]*schema.Object, error) {

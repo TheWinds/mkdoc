@@ -3,6 +3,7 @@ package gofunc
 import (
 	"github.com/thewinds/mkdoc"
 	"go/ast"
+	"strings"
 )
 
 func init() {
@@ -11,19 +12,37 @@ func init() {
 
 type Scanner struct {
 	enableGoMod bool
+	filterTag   string
 }
 
 func (s *Scanner) Scan(config mkdoc.DocScanConfig) (*mkdoc.DocScanResult, error) {
 	if config.Args[EnableGoModule] == "true" {
 		s.enableGoMod = true
 	}
+	s.filterTag = config.Args["_filter_tag"]
 	annotations, err := s.scanAnnotations(&config)
 	if err != nil {
 		return nil, err
 	}
 	r := new(mkdoc.DocScanResult)
 	for _, v := range annotations {
-		api, objects, err := v.ParseToAPI()
+		api, err := parseSimple(v)
+		if err != nil {
+			return nil, err
+		}
+		if len(s.filterTag) > 0 {
+			var ok bool
+			for _, tag := range api.Tags {
+				if tag == strings.TrimSpace(s.filterTag) {
+					ok = true
+					break
+				}
+			}
+			if !ok {
+				continue
+			}
+		}
+		objects, err := parseInOut(v, api)
 		if err != nil {
 			return nil, err
 		}
