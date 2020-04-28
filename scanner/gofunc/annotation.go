@@ -1,10 +1,14 @@
-package mkdoc
+package gofunc
 
 import (
+	"encoding/json"
 	"fmt"
+	"github.com/thewinds/mkdoc"
+	"github.com/thewinds/mkdoc/schema"
 	"go/token"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -41,35 +45,9 @@ func init() {
 	}
 }
 
-// ParseToAPI parse doc annotation to API def struct
-func (annotation DocAnnotation) ParseToAPI() (*API, error) {
-	api := new(API)
-	api.Mime = new(MimeType)
-	api.Annotation = annotation
-	err := parseSimple(annotation, api)
-	if err != nil {
-		return nil, err
-	}
-	// replace package name
-	fl := strings.Split(api.DocLocation, ":")
-	if len(fl) != 2 {
-		fmt.Printf("WARNING: DocLocation is incomplete, got %s\n", api.DocLocation)
-		return api, nil
-	}
-	fileName := fl[0]
-	fileName, _ = filepath.Abs(fileName)
-	imports, err := getFileImportsAtFile(fileName)
-	if err != nil {
-		return nil, err
-	}
-	err = parseInOut(annotation, api, imports)
-	if err != nil {
-		return nil, err
-	}
-	return api, nil
-}
-
-func parseSimple(annotation DocAnnotation, api *API) error {
+func parseSimple(annotation DocAnnotation) (*schema.API, error) {
+	api := new(schema.API)
+	api.Language = "go"
 	api.Query = make(map[string]string)
 	api.Header = make(map[string]string)
 
@@ -144,73 +122,66 @@ func parseSimple(annotation DocAnnotation, api *API) error {
 			}
 			api.Header[name] = comment
 		case "@loc":
-			api.DocLocation = fields[1]
+			loc := strings.Split(fields[1], ":")
+			if len(loc) == 2 {
+				api.SourceFileName = loc[0]
+				api.SourceLineNum, _ = strconv.Atoi(loc[1])
+			}
 		case "@disable":
 			api.Disables = append(api.Disables, fields[1])
 		default:
 		}
 	}
 	api.Desc = sbDescription.String()
-	return nil
+	return api, nil
 }
 
-func parseInOut(annotation DocAnnotation, api *API, imports map[string]string) error {
+func parseInOut(annotation DocAnnotation, api *schema.API) ([]*schema.Object, error) {
+	var objects []*schema.Object
 	for command, re := range annotationRegexps {
 		matchGroups := re.FindAllStringSubmatch(string(annotation), -1)
 		for _, matchGroup := range matchGroups {
 			if len(matchGroup) > 0 {
 				switch command {
 				case "in_go_type":
-					api.Mime.In = rmBracket(matchGroup[2])
-					pkgTyp := replacePkg(matchGroup[3], imports)
-					obj, err := createRootObject(pkgTyp)
-					if err != nil {
-						return err
-					}
-					api.InArgument = obj
+					api.MimeIn = rmBracket(matchGroup[2])
+					api.InType = matchGroup[3]
 				case "out_go_type":
-					api.Mime.Out = rmBracket(matchGroup[2])
-					pkgTyp := replacePkg(matchGroup[3], imports)
-					obj, err := createRootObject(pkgTyp)
-					if err != nil {
-						return err
-					}
-					api.OutArgument = obj
+					api.MimeOut = rmBracket(matchGroup[2])
+					api.OutType = matchGroup[3]
 				case "in_fields_block":
-					api.Mime.In = rmBracket(matchGroup[2])
+					api.MimeIn = rmBracket(matchGroup[2])
 					fieldStmts := matchGroup[4]
-					api.InArgument = &Object{
-						ID:     randObjectID("in"),
-						Type:   &ObjectType{Name: "object"},
+					obj := &schema.Object{
+						ID:     mkdoc.RandObjectID("in"),
+						Type:   &schema.ObjectType{Name: "object"},
 						Fields: parseToObjectFields(fieldStmts),
-						Loaded: true,
 					}
 					if matchGroup[3] != "" {
-						api.InArgument.Type.IsRepeated = true
+						obj.Type.IsRepeated = true
 					}
-					GetProject().AddObject(api.InArgument.ID, api.InArgument)
+					objects = append(objects, obj)
 				case "out_fields_block":
-					api.Mime.Out = rmBracket(matchGroup[2])
+					api.MimeOut = rmBracket(matchGroup[2])
 					fieldStmts := matchGroup[4]
-					api.InArgument = &Object{
-						ID:     randObjectID("out"),
-						Type:   &ObjectType{Name: "object"},
+					obj := &schema.Object{
+						ID:     mkdoc.RandObjectID("out"),
+						Type:   &schema.ObjectType{Name: "object"},
 						Fields: parseToObjectFields(fieldStmts),
-						Loaded: true,
 					}
 					if matchGroup[3] != "" {
-						api.OutArgument.Type.IsRepeated = true
+						obj.Type.IsRepeated = true
 					}
-					GetProject().AddObject(api.OutArgument.ID, api.OutArgument)
+					objects = append(objects, obj)
 				}
 			}
 		}
 	}
-	return nil
+	return objects, nil
 }
 
-func parseToObjectFields(fieldStmts string) []*ObjectField {
-	fields := make([]*ObjectField, 0)
+func parseToObjectFields(fieldStmts string) []*schema.ObjectField {
+	fields := make([]*schema.ObjectField, 0)
 	for _, stmt := range strings.Split(fieldStmts, "\n") {
 		matchGroups := annotationRegexps["field"].FindStringSubmatch(stmt)
 		if len(matchGroups) > 0 {
@@ -218,12 +189,15 @@ func parseToObjectFields(fieldStmts string) []*ObjectField {
 				fmt.Printf("type [%s] is not support,skip\n", matchGroups[2])
 				continue
 			}
-			tag, _ := NewObjectFieldTag(fmt.Sprintf(`json:"%s" xml:"%s"`, matchGroups[1], matchGroups[1]))
-			fields = append(fields, &ObjectField{
-				Name: matchGroups[1],
-				Desc: strings.TrimSpace(matchGroups[3]),
-				Type: &ObjectType{Name: matchGroups[2]},
-				Tag:  tag,
+			ext := &schema.Extension{
+				Name: "go_tag",
+				Data: json.RawMessage(fmt.Sprintf(`"json:\"%s\" xml:\"%s\""`, matchGroups[1], matchGroups[1])),
+			}
+			fields = append(fields, &schema.ObjectField{
+				Name:       matchGroups[1],
+				Desc:       strings.TrimSpace(matchGroups[3]),
+				Type:       &schema.ObjectType{Name: matchGroups[2]},
+				Extensions: []*schema.Extension{ext},
 			})
 		}
 	}
@@ -239,7 +213,8 @@ func rmBracket(s string) string {
 
 func (annotation DocAnnotation) AppendMetaData(typ string, fp token.Position) DocAnnotation {
 	t := fmt.Sprintf("@type %s\n", typ)
-	loc := fmt.Sprintf("@loc %s:%d\n", fp.Filename, fp.Line)
+	absfp, _ := filepath.Abs(fp.Filename)
+	loc := fmt.Sprintf("@loc %s:%d\n", absfp, fp.Line)
 	return annotation + DocAnnotation(t+loc)
 }
 

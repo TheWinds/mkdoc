@@ -1,4 +1,4 @@
-package mkdoc
+package goloader
 
 import (
 	"fmt"

@@ -3,7 +3,6 @@ package gqlboss
 import (
 	"errors"
 	"fmt"
-	"github.com/thewinds/mkdoc"
 	"go/ast"
 	"go/token"
 	"strings"
@@ -16,7 +15,7 @@ type gqlFieldParser struct {
 	AST     []ast.Expr
 }
 
-func (g *gqlFieldParser) Parse() (annotation mkdoc.DocAnnotation, err error) {
+func (g *gqlFieldParser) Parse() (annotation DocAnnotation, err error) {
 	if len(g.AST) == 0 {
 		return "", errDefNotMatch
 	}
@@ -99,7 +98,7 @@ func (g *gqlFieldParser) Parse() (annotation mkdoc.DocAnnotation, err error) {
 
 	annotationBuilder.WriteString(g.getAnnotationFromCode())
 
-	annotation = mkdoc.DocAnnotation(annotationBuilder.String())
+	annotation = DocAnnotation(annotationBuilder.String())
 	annotation = annotation.AppendMetaData("graphql", g.FileSet.Position(g.AST[0].Pos()))
 	return
 }

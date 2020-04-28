@@ -12,7 +12,7 @@ import (
 )
 
 func init() {
-	mkdoc.RegisterScanner(&Scanner{})
+	mkdoc.RegisterDocScanner(&Scanner{})
 }
 
 var regSchemaPath = regexp.MustCompile(`path\s+(.+)`)
@@ -20,11 +20,58 @@ var regSchemaPath = regexp.MustCompile(`path\s+(.+)`)
 type Scanner struct {
 	fileSet         *token.FileSet
 	currentPkg      *ast.Package
-	filedAnnotation map[string]mkdoc.DocAnnotation
+	filedAnnotation map[string]DocAnnotation
 	fieldSchema     map[string]opSchema
 	currentSchema   string //deep first
 	schemaPath      map[string]string
+	enableGoMod     bool
+	filterTag       string
 	err             error
+}
+
+func (s *Scanner) Scan(config mkdoc.DocScanConfig) (*mkdoc.DocScanResult, error) {
+	if config.Args[EnableGoModule] == "true" {
+		s.enableGoMod = true
+	}
+	s.filterTag = config.Args["_filter_tag"]
+	annotations, err := s.scanAnnotations(&config)
+	if err != nil {
+		return nil, err
+	}
+	r := new(mkdoc.DocScanResult)
+	for _, v := range annotations {
+		api, err := parseSimple(v)
+		if err != nil {
+			return nil, err
+		}
+		if len(s.filterTag) > 0 {
+			var ok bool
+			for _, tag := range api.Tags {
+				if tag == strings.TrimSpace(s.filterTag) {
+					ok = true
+					break
+				}
+			}
+			if !ok {
+				continue
+			}
+		}
+		objects, err := parseInOut(v, api)
+		if err != nil {
+			return nil, err
+		}
+		r.APIs = append(r.APIs, api)
+		r.Objects = append(r.Objects, objects...)
+	}
+	return r, nil
+}
+
+func (s *Scanner) Name() string {
+	return "gqlboss"
+}
+
+func (s *Scanner) Help() string {
+	return "scan doc annotation from graphql api in corego/boss project"
 }
 
 type opSchema struct {
@@ -100,15 +147,15 @@ func (s *Scanner) walkNode(node ast.Node) bool {
 	return true
 }
 
-func (s *Scanner) ScanAnnotations(project mkdoc.Project) ([]mkdoc.DocAnnotation, error) {
+func (s *Scanner) scanAnnotations(config *mkdoc.DocScanConfig) ([]DocAnnotation, error) {
 	dirs := mkdoc.GetScanDirs(
-		project.Config.Package,
-		project.Config.UseGOModule,
+		config.ProjectConfig.Path,
+		s.enableGoMod,
 		func(dirName string) bool {
 			return strings.Contains(dirName, "service/boss/schemas")
 		})
 
-	s.filedAnnotation = make(map[string]mkdoc.DocAnnotation)
+	s.filedAnnotation = make(map[string]DocAnnotation)
 	s.fieldSchema = make(map[string]opSchema)
 	s.schemaPath = make(map[string]string)
 
@@ -128,11 +175,11 @@ func (s *Scanner) ScanAnnotations(project mkdoc.Project) ([]mkdoc.DocAnnotation,
 			}
 		}
 	}
-	var annotations []mkdoc.DocAnnotation
+	var annotations []DocAnnotation
 	for filedFuncName, annotation := range s.filedAnnotation {
 		opSchema := s.fieldSchema[filedFuncName]
 		pathdoc := fmt.Sprintf("@path %s:%s\n", s.schemaPath[opSchema.SchemaName], opSchema.OpName)
-		annotations = append(annotations, annotation+mkdoc.DocAnnotation(pathdoc))
+		annotations = append(annotations, annotation+DocAnnotation(pathdoc))
 	}
 	return annotations, nil
 
@@ -144,14 +191,4 @@ func readCode(f *token.FileSet, node ast.Node) string {
 	pe := f.Position(node.End())
 	file, _ := ioutil.ReadFile(ps.Filename)
 	return string(file[ps.Offset:pe.Offset])
-}
-
-func (s *Scanner) GetName() string {
-	return "gqlboss"
-}
-
-func (s *Scanner) SetConfig(map[string]interface{}) {}
-
-func (s *Scanner) GetHelp() string {
-	return "scan doc annotation from graphql api in corego/boss project"
 }

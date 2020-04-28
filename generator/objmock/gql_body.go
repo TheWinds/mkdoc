@@ -8,18 +8,24 @@ import (
 )
 
 type GQLBodyMocker struct {
-	refs    map[string]*mkdoc.Object
+	refs    map[mkdoc.LangObjectId]*mkdoc.Object
 	err     error
 	dep     int
 	data    strings.Builder
 	refPath []string
+	curLang string
 }
 
 func GqlBodyMocker() *GQLBodyMocker {
 	return &GQLBodyMocker{}
 }
 
-func (g *GQLBodyMocker) Mock(object *mkdoc.Object, refs map[string]*mkdoc.Object) (string, error) {
+func (g *GQLBodyMocker) SetLanguage(lang string) *GQLBodyMocker {
+	g.curLang = lang
+	return g
+}
+
+func (g *GQLBodyMocker) Mock(object *mkdoc.Object, refs map[mkdoc.LangObjectId]*mkdoc.Object) (string, error) {
 	if object == nil {
 		return "\n", nil
 	}
@@ -33,7 +39,7 @@ func (g *GQLBodyMocker) Mock(object *mkdoc.Object, refs map[string]*mkdoc.Object
 	return g.data.String(), nil
 }
 
-func (g *GQLBodyMocker) MockPretty(object *mkdoc.Object, refs map[string]*mkdoc.Object, prefix string, indent string) (string, error) {
+func (g *GQLBodyMocker) MockPretty(object *mkdoc.Object, refs map[mkdoc.LangObjectId]*mkdoc.Object, prefix string, indent string) (string, error) {
 	if object == nil {
 		return "\n", nil
 	}
@@ -103,7 +109,11 @@ func (g *GQLBodyMocker) mock(obj *mkdoc.Object) {
 	g.write("{")
 	defer func() { g.write("}") }()
 	for _, field := range obj.Fields {
-		jsonTag := field.Tag.GetFirstValue("json", ",")
+		goTagExt := getGoTag(field.Extensions)
+		var jsonTag string
+		if goTagExt != nil {
+			jsonTag = goTagExt.Tag.GetFirstValue("json", ",")
+		}
 		if jsonTag == "-" {
 			continue
 		}
@@ -122,7 +132,7 @@ func (g *GQLBodyMocker) mock(obj *mkdoc.Object) {
 }
 
 func (g *GQLBodyMocker) mockRef(refID string) {
-	refObj := g.refs[refID]
+	refObj := g.refs[mkdoc.LangObjectId{Lang: g.curLang, Id: refID}]
 	if refObj == nil {
 		g.err = fmt.Errorf("mock: type %s not exist", refID)
 		return

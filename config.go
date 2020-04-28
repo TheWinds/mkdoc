@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 const configFileName = "conf.yaml"
@@ -24,54 +23,54 @@ type MimeType struct {
 }
 
 type Config struct {
-	Name        string    `yaml:"name"`
-	Description string    `yaml:"desc"`
-	APIBaseURL  string    `yaml:"api_base_url"` // https://api.xxx.com
-	Injects     []*Inject `yaml:"inject"`       //
-	Package     string    `yaml:"pkg"`          //
-	BaseType    string    `yaml:"base_type"`    // models.BaseType
-	UseGOModule bool      `yaml:"use_go_mod"`
-	Scanner     []string  `yaml:"scanner"`
-	Generator   []string  `yaml:"generator"`
-	Mime        *MimeType `yaml:"mime"` // MimeType
+	Path        string            `yaml:"path"`
+	Name        string            `yaml:"name"`
+	Description string            `yaml:"desc"`
+	APIBaseURL  string            `yaml:"api_base_url"` // https://api.xxx.com
+	Injects     []*Inject         `yaml:"inject"`       //
+	Scanner     []string          `yaml:"scanner"`
+	Generator   []string          `yaml:"generator"`
+	Mime        *MimeType         `yaml:"mime"` // MimeType
+	Args        map[string]string `yaml:"args"`
 }
 
 func (config *Config) Check() error {
 	// check if the pkg to scan is exist
-	if config.Package == "" {
-		return fmt.Errorf("please config a pkg to scan in conf.yaml")
-	}
-
-	if config.UseGOModule {
-		path := config.Package
-		if !filepath.IsAbs(path) {
-			wd, err := os.Getwd()
-			if err != nil {
-				return err
-			}
-			path = filepath.Join(wd, path)
-		}
-		if _, err := os.Stat(path); err != nil {
-			return fmt.Errorf("no such file or directory: %s\n", path)
-		}
-	} else {
-		goPaths := GetGOPaths()
-		pkgExist := false
-		for _, gopath := range goPaths {
-			if _, err := os.Stat(filepath.Join(gopath, "src", config.Package)); err == nil {
-				pkgExist = true
-			}
-		}
-		if !pkgExist {
-			sb := strings.Builder{}
-			sb.WriteString(fmt.Sprintf("error: package \"%s\" is not found in any of:\n", config.Package))
-			for _, gopath := range goPaths {
-				sb.WriteString(fmt.Sprintln("  ", filepath.Join(gopath, "src", config.Package)))
-			}
-			return fmt.Errorf("%s", sb.String())
-		}
+	if config.Path == "" {
+		return fmt.Errorf("please config a path to scan in conf.yaml")
 	}
 	return nil
+}
+
+func (config *Config) Copy() Config {
+	c := Config{
+		Path:        config.Path,
+		Name:        config.Name,
+		Description: config.Description,
+		APIBaseURL:  config.APIBaseURL,
+		Injects:     nil,
+		Scanner:     nil,
+		Generator:   nil,
+		Mime:        nil,
+		Args:        nil,
+	}
+	for _, inject := range config.Injects {
+		cp := *inject
+		c.Injects = append(c.Injects, &cp)
+	}
+	for _, s := range config.Scanner {
+		c.Scanner = append(c.Scanner, s)
+	}
+	for _, s := range config.Generator {
+		c.Generator = append(c.Generator, s)
+	}
+	mime := *config.Mime
+	c.Mime = &mime
+	c.Args = make(map[string]string, len(config.Args))
+	for k, v := range config.Args {
+		c.Args[k] = v
+	}
+	return c
 }
 
 func loadConfig(fileName string) (*Config, error) {
@@ -128,11 +127,10 @@ func CreateDefaultConfig() error {
 				Scope:   "",
 			},
 		},
-		Package:     "",
-		BaseType:    "",
-		UseGOModule: false,
-		Scanner:     []string{"funcdoc"},
-		Generator:   []string{"markdown"},
+		Path:      "",
+		Scanner:   []string{"funcdoc"},
+		Generator: []string{"markdown"},
+		Args:      map[string]string{},
 	}
 	b, err := yaml.Marshal(cfg)
 	if err != nil {

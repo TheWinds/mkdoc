@@ -3,17 +3,18 @@ package docsify
 import (
 	"bytes"
 	"fmt"
-	"github.com/thewinds/mkdoc"
-	"github.com/thewinds/mkdoc/generators/objmock"
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/thewinds/mkdoc"
+	"github.com/thewinds/mkdoc/generator/objmock"
 )
 
 type Generator struct {
 	tagAPIs map[string][]*mkdoc.API
 	tags    []string
-	refObj  map[string]*mkdoc.Object
+	refObj  map[mkdoc.LangObjectId]*mkdoc.Object
 }
 
 func (g *Generator) Gen(ctx *mkdoc.DocGenContext) (output *mkdoc.GeneratedOutput, err error) {
@@ -160,7 +161,7 @@ func (g *Generator) makeTagMD(tag string) (*mkdoc.GeneratedFile, error) {
 		switch api.Mime.In {
 		default:
 			writef("json\n")
-			o, err := objmock.NewJSONMocker().MockPrettyComment(api.InArgument, g.refObj)
+			o, err := objmock.NewJSONMocker().SetLanguage(api.Language).MockPrettyComment(api.InArgument, g.refObj)
 			if err != nil {
 				return nil, err
 			}
@@ -176,7 +177,7 @@ func (g *Generator) makeTagMD(tag string) (*mkdoc.GeneratedFile, error) {
 		switch api.Mime.Out {
 		default:
 			writef("json\n")
-			o, err := objmock.NewJSONMocker().MockPrettyComment(api.OutArgument, g.refObj)
+			o, err := objmock.NewJSONMocker().SetLanguage(api.Language).MockPrettyComment(api.OutArgument, g.refObj)
 			if err != nil {
 				return nil, err
 			}
@@ -221,7 +222,7 @@ func (g *Generator) groupAPIByTag(ctx *mkdoc.DocGenContext) {
 	sort.Strings(g.tags)
 }
 
-func (g *Generator) gql(api *mkdoc.API, refs map[string]*mkdoc.Object) (string, error) {
+func (g *Generator) gql(api *mkdoc.API, refs map[mkdoc.LangObjectId]*mkdoc.Object) (string, error) {
 	sb := new(strings.Builder)
 	ind := strings.LastIndex(api.Path, ":")
 	opName := api.Path[ind+1:]
@@ -233,14 +234,16 @@ func (g *Generator) gql(api *mkdoc.API, refs map[string]*mkdoc.Object) (string, 
 			//fmt.Printf("gql_zk: SKIP '%s' field %s array or object field is not support\n", api.Name, field.Name)
 			continue
 		}
-		if field.Tag.GetValue("json") == "-" {
+		goTagExt := getGoTag(field.Extensions)
+
+		if goTagExt.Tag.GetValue("json") == "-" {
 			continue
 		}
 		var jsonTag string
-		if field.Tag.GetValue("json") == "" {
+		if goTagExt.Tag.GetValue("json") == "" {
 			jsonTag = field.Name
 		} else {
-			jsonTag = field.Tag.GetFirstValue("json", ",")
+			jsonTag = goTagExt.Tag.GetFirstValue("json", ",")
 		}
 		var gqlTyp string
 		switch field.Type.Name {
@@ -280,7 +283,7 @@ func (g *Generator) gql(api *mkdoc.API, refs map[string]*mkdoc.Object) (string, 
 		  success
 		}
 	  }`
-	gqlBody, err := objmock.GqlBodyMocker().MockPretty(api.OutArgument, refs, "		  ", "    ")
+	gqlBody, err := objmock.GqlBodyMocker().SetLanguage(api.Language).MockPretty(api.OutArgument, refs, "		  ", "    ")
 	if err != nil {
 		return "", err
 	}
@@ -305,4 +308,13 @@ func (g *Generator) Name() string {
 
 func init() {
 	mkdoc.RegisterGenerator(&Generator{})
+}
+
+func getGoTag(exts []mkdoc.Extension) *mkdoc.ExtensionGoTag {
+	for _, ext := range exts {
+		if e, ok := ext.(*mkdoc.ExtensionGoTag); ok {
+			return e
+		}
+	}
+	return nil
 }
