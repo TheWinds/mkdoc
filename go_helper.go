@@ -2,6 +2,7 @@ package mkdoc
 
 import (
 	"bytes"
+	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/token"
@@ -213,4 +214,42 @@ func ParseDir(dir string) (map[string]*ast.Package, *token.FileSet, error) {
 		globalDirParseCache[dir] = pkgs
 	}
 	return globalDirParseCache[dir], globalFileset, nil
+}
+
+func CheckGoScanPath(pkg string, enableGoMod bool) error {
+	// check if the pkg to scan is exist
+	if pkg == "" {
+		return fmt.Errorf("please config a pkg to scan in conf.yaml")
+	}
+
+	if enableGoMod {
+		path := pkg
+		if !filepath.IsAbs(path) {
+			wd, err := os.Getwd()
+			if err != nil {
+				return err
+			}
+			path = filepath.Join(wd, path)
+		}
+		if _, err := os.Stat(path); err != nil {
+			return fmt.Errorf("no such file or directory: %s\n", path)
+		}
+	} else {
+		goPaths := GetGOPaths()
+		pkgExist := false
+		for _, gopath := range goPaths {
+			if _, err := os.Stat(filepath.Join(gopath, "src", pkg)); err == nil {
+				pkgExist = true
+			}
+		}
+		if !pkgExist {
+			sb := strings.Builder{}
+			sb.WriteString(fmt.Sprintf("error: package \"%s\" is not found in any of:\n", pkg))
+			for _, gopath := range goPaths {
+				sb.WriteString(fmt.Sprintln("  ", filepath.Join(gopath, "src", pkg)))
+			}
+			return fmt.Errorf("%s", sb.String())
+		}
+	}
+	return nil
 }

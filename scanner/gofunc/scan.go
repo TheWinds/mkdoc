@@ -26,6 +26,9 @@ func (s *Scanner) Scan(config mkdoc.DocScanConfig) (*mkdoc.DocScanResult, error)
 	} else {
 		s.pkg = config.Args["path"]
 	}
+	if err := mkdoc.CheckGoScanPath(s.pkg, s.enableGoMod); err != nil {
+		return nil, err
+	}
 	annotations, err := s.scanAnnotations()
 	if err != nil {
 		return nil, err
