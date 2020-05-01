@@ -15,10 +15,11 @@ func scanSchemas(project *mkdoc.Project, filterTag string) ([]*schema.Schema, er
 	var schemas []*schema.Schema
 	for _, scanner := range project.Scanners {
 		fmt.Printf("🔎  scan doc annotations (use %s)\n", scanner.Name())
-		// TODO: other args
+		args := project.Config.GetScannerArgs(scanner.Name())
+		args["_filter_tag"] = filterTag
 		sr, err := scanner.Scan(mkdoc.DocScanConfig{
-			ProjectConfig: project.Config.Copy(),
-			Args:          map[string]string{"_filter_tag": filterTag},
+			ProjectConfig: *project.Config,
+			Args:          args,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("scan docs %v\n", err)
@@ -53,7 +54,6 @@ func makeDoc(ctx *kingpin.ParseContext) error {
 	if err != nil {
 		return showErr("%v", err)
 	}
-	mkdoc.SetProject(project)
 
 	tag := *makeDocTag
 
@@ -134,7 +134,9 @@ func gen(project *mkdoc.Project, ctx *mkdoc.DocGenContext) error {
 		docName += "_" + version
 	}
 	for _, generator := range project.Generators {
-		out, err := generator.Gen(ctx)
+		ctxcp := *ctx
+		ctxcp.Args = ctxcp.Config.GetGeneratorArgs(generator.Name())
+		out, err := generator.Gen(&ctxcp)
 		if err != nil {
 			return err
 		}
