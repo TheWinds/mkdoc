@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 func init() {
@@ -17,11 +18,16 @@ type Scanner struct {
 	enableGoMod bool
 	filterTag   string
 	path        string
+	fileExt     string
 }
 
 func (s *Scanner) Scan(config mkdoc.DocScanConfig) (*mkdoc.DocScanResult, error) {
 	s.filterTag = config.Args["_filter_tag"]
 	s.path = config.Args["path"]
+	s.fileExt = config.Args["file_ext"]
+	if len(s.fileExt) == 0 {
+		s.fileExt = ".doc.json"
+	}
 	r := new(mkdoc.DocScanResult)
 	defs, err := s.scanDefs(&config)
 	if err != nil {
@@ -48,7 +54,7 @@ func (s *Scanner) Scan(config mkdoc.DocScanConfig) (*mkdoc.DocScanResult, error)
 func (s *Scanner) scanDefs(config *mkdoc.DocScanConfig) ([]*schema.Schema, error) {
 	var schemas []*schema.Schema
 	err := filepath.Walk(s.path, func(path string, info os.FileInfo, err error) error {
-		if info.IsDir() || filepath.Ext(path) != "def" {
+		if info.IsDir() || !strings.HasSuffix(path, s.fileExt) {
 			return nil
 		}
 		b, err := ioutil.ReadFile(path)
