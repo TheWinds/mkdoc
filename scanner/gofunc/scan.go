@@ -13,6 +13,7 @@ func init() {
 type Scanner struct {
 	enableGoMod bool
 	filterTag   string
+	pkg         string
 }
 
 func (s *Scanner) Scan(config mkdoc.DocScanConfig) (*mkdoc.DocScanResult, error) {
@@ -20,7 +21,12 @@ func (s *Scanner) Scan(config mkdoc.DocScanConfig) (*mkdoc.DocScanResult, error)
 		s.enableGoMod = true
 	}
 	s.filterTag = config.Args["_filter_tag"]
-	annotations, err := s.scanAnnotations(&config)
+	if len(config.Args["pkg"]) > 0 {
+		s.pkg = config.Args["pkg"]
+	} else {
+		s.pkg = config.Args["path"]
+	}
+	annotations, err := s.scanAnnotations()
 	if err != nil {
 		return nil, err
 	}
@@ -52,9 +58,9 @@ func (s *Scanner) Scan(config mkdoc.DocScanConfig) (*mkdoc.DocScanResult, error)
 	return r, nil
 }
 
-func (s *Scanner) scanAnnotations(config *mkdoc.DocScanConfig) ([]DocAnnotation, error) {
+func (s *Scanner) scanAnnotations() ([]DocAnnotation, error) {
 	annotations := make([]DocAnnotation, 0)
-	dirs := mkdoc.GetScanDirs(config.ProjectConfig.Path, s.enableGoMod, nil)
+	dirs := mkdoc.GetScanDirs(s.pkg, s.enableGoMod, nil)
 	for _, dir := range dirs {
 
 		pkgs, fileset, err := mkdoc.ParseDir(dir)
