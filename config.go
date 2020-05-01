@@ -88,6 +88,8 @@ func copysmap(src map[string]string) map[string]string {
 }
 
 func rewriteConfig(conf *Config) error {
+	conf.scannerArgs = make(map[string]map[string]string)
+	conf.generatorArgs = make(map[string]map[string]string)
 	for k, s := range conf.Scanner {
 		name, args, err := nameArgs(s)
 		if err != nil {
