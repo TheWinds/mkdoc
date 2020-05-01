@@ -19,9 +19,6 @@ type Project struct {
 }
 
 func NewProject(config *Config) (*Project, error) {
-	if err := config.Check(); err != nil {
-		return nil, err
-	}
 	project := &Project{Config: config, pluginArgs: make(map[string]string)}
 	if err := project.checkScanner(); err != nil {
 		return nil, err

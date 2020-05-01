@@ -25,7 +25,6 @@ type MimeType struct {
 }
 
 type Config struct {
-	Path          string            `yaml:"path"`
 	Name          string            `yaml:"name"`
 	Description   string            `yaml:"desc"`
 	APIBaseURL    string            `yaml:"api_base_url"` // https://api.xxx.com
@@ -38,13 +37,6 @@ type Config struct {
 	generatorArgs map[string]map[string]string
 }
 
-func (c *Config) Check() error {
-	// check if the pkg to scan is exist
-	if c.Path == "" {
-		return fmt.Errorf("please config a path to scan in conf.yaml")
-	}
-	return nil
-}
 
 func (c *Config) GetScannerArgs(name string) map[string]string {
 	return c.scannerArgs[name]
@@ -176,7 +168,6 @@ func CreateDefaultConfig() error {
 				Scope:   "",
 			},
 		},
-		Path:          "",
 		Scanner:       []string{"funcdoc"},
 		Generator:     []string{"markdown"},
 		Args:          map[string]string{},

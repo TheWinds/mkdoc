@@ -67,7 +67,7 @@ func (g *GoLoader) GetObjectId(ts mkdoc.TypeScope) (string, error) {
 		return "", errors.New("loader not initialed")
 	}
 	if g.enableGoMod && (g.mod == nil) {
-		if err := g.initGoModule(g.); err != nil {
+		if err := g.initGoModule(g.pkg); err != nil {
 			return "", err
 		}
 	}
@@ -89,7 +89,7 @@ func (g *GoLoader) LoadAll(tss []mkdoc.TypeScope) ([]*mkdoc.Object, error) {
 		return nil, errors.New("loader not initialed")
 	}
 	if g.enableGoMod && (g.mod == nil) {
-		if err := g.initGoModule(g.config.Path); err != nil {
+		if err := g.initGoModule(g.pkg); err != nil {
 			return nil, err
 		}
 	}

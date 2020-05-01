@@ -9,7 +9,6 @@ inject:
     desc: "jwt token"
     default: "hfjdjhkklashjkfsd.hjkfsdajhkfdsj.jknsfdksf"
     scope: header
-path: "./src"
 scanner:
   - gofunc
 generator:
@@ -18,3 +17,4 @@ generator:
   - docsify
 args:
   enable_go_mod: true
+  path: "./src"
