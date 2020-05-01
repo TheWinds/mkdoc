@@ -97,7 +97,9 @@ func rewriteConfig(conf *Config) error {
 		}
 		conf.scannerArgs[name] = copysmap(conf.Args)
 		conf.Scanner[k] = name
-		conf.scannerArgs[name] = args
+		for kk, vv := range args {
+			conf.scannerArgs[name][kk] = vv
+		}
 	}
 	for k, s := range conf.Generator {
 		name, args, err := nameArgs(s)
@@ -106,12 +108,14 @@ func rewriteConfig(conf *Config) error {
 		}
 		conf.generatorArgs[name] = copysmap(conf.Args)
 		conf.Generator[k] = name
-		conf.generatorArgs[name] = args
+		for kk, vv := range args {
+			conf.generatorArgs[name][kk] = vv
+		}
 	}
 	return nil
 }
 
-var reArgKV = regexp.MustCompile(`(\s+)=(\s*)`)
+var reArgKV = regexp.MustCompile(`(\S+)=(\S*)`)
 
 func nameArgs(s string) (string, map[string]string, error) {
 	if strings.Index(s, ";") == -1 {
