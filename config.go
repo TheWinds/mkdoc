@@ -6,6 +6,8 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strings"
 )
 
 const configFileName = "conf.yaml"
@@ -23,54 +25,33 @@ type MimeType struct {
 }
 
 type Config struct {
-	Path        string            `yaml:"path"`
-	Name        string            `yaml:"name"`
-	Description string            `yaml:"desc"`
-	APIBaseURL  string            `yaml:"api_base_url"` // https://api.xxx.com
-	Injects     []*Inject         `yaml:"inject"`       //
-	Scanner     []string          `yaml:"scanner"`
-	Generator   []string          `yaml:"generator"`
-	Mime        *MimeType         `yaml:"mime"` // MimeType
-	Args        map[string]string `yaml:"args"`
+	Path          string            `yaml:"path"`
+	Name          string            `yaml:"name"`
+	Description   string            `yaml:"desc"`
+	APIBaseURL    string            `yaml:"api_base_url"` // https://api.xxx.com
+	Injects       []*Inject         `yaml:"inject"`       //
+	Scanner       []string          `yaml:"scanner"`
+	Generator     []string          `yaml:"generator"`
+	Mime          *MimeType         `yaml:"mime"` // MimeType
+	Args          map[string]string `yaml:"args"`
+	scannerArgs   map[string]map[string]string
+	generatorArgs map[string]map[string]string
 }
 
-func (config *Config) Check() error {
+func (c *Config) Check() error {
 	// check if the pkg to scan is exist
-	if config.Path == "" {
+	if c.Path == "" {
 		return fmt.Errorf("please config a path to scan in conf.yaml")
 	}
 	return nil
 }
 
-func (config *Config) Copy() Config {
-	c := Config{
-		Path:        config.Path,
-		Name:        config.Name,
-		Description: config.Description,
-		APIBaseURL:  config.APIBaseURL,
-		Injects:     nil,
-		Scanner:     nil,
-		Generator:   nil,
-		Mime:        nil,
-		Args:        nil,
-	}
-	for _, inject := range config.Injects {
-		cp := *inject
-		c.Injects = append(c.Injects, &cp)
-	}
-	for _, s := range config.Scanner {
-		c.Scanner = append(c.Scanner, s)
-	}
-	for _, s := range config.Generator {
-		c.Generator = append(c.Generator, s)
-	}
-	mime := *config.Mime
-	c.Mime = &mime
-	c.Args = make(map[string]string, len(config.Args))
-	for k, v := range config.Args {
-		c.Args[k] = v
-	}
-	return c
+func (c *Config) GetScannerArgs(name string) map[string]string {
+	return c.scannerArgs[name]
+}
+
+func (c *Config) GetGeneratorArgs(name string) map[string]string {
+	return c.generatorArgs[name]
 }
 
 func loadConfig(fileName string) (*Config, error) {
@@ -98,8 +79,70 @@ func mergeDefault(conf *Config) *Config {
 	return conf
 }
 
+func copysmap(src map[string]string) map[string]string {
+	dst := make(map[string]string, len(src))
+	for k, v := range src {
+		dst[k] = v
+	}
+	return dst
+}
+
+func rewriteConfig(conf *Config) error {
+	for k, s := range conf.Scanner {
+		name, args, err := nameArgs(s)
+		if err != nil {
+			return err
+		}
+		conf.scannerArgs[name] = copysmap(conf.Args)
+		conf.Scanner[k] = name
+		conf.scannerArgs[name] = args
+	}
+	for k, s := range conf.Generator {
+		name, args, err := nameArgs(s)
+		if err != nil {
+			return err
+		}
+		conf.generatorArgs[name] = copysmap(conf.Args)
+		conf.Generator[k] = name
+		conf.generatorArgs[name] = args
+	}
+	return nil
+}
+
+var reArgKV = regexp.MustCompile(`(\s+)=(\s*)`)
+
+func nameArgs(s string) (string, map[string]string, error) {
+	if strings.Index(s, ";") == -1 {
+		return s, make(map[string]string), nil
+	}
+	items := strings.Split(s, ";")
+	var name string
+	kv := make(map[string]string)
+	for i, item := range items {
+		trimmed := strings.TrimSpace(item)
+		if i == 0 {
+			name = trimmed
+			continue
+		}
+		matches := reArgKV.FindStringSubmatch(trimmed)
+		if len(matches) != 3 {
+			return "", nil, fmt.Errorf("fomat error: '%s'", s)
+		}
+		kv[matches[1]] = matches[2]
+	}
+	return name, kv, nil
+}
+
 func LoadDefaultConfig() (*Config, error) {
-	return loadConfig(configFileName)
+	conf, err := loadConfig(configFileName)
+	if err != nil {
+		return nil, err
+	}
+	err = rewriteConfig(conf)
+	if err != nil {
+		return nil, err
+	}
+	return conf, nil
 }
 
 func CreateDefaultConfig() error {
@@ -127,10 +170,12 @@ func CreateDefaultConfig() error {
 				Scope:   "",
 			},
 		},
-		Path:      "",
-		Scanner:   []string{"funcdoc"},
-		Generator: []string{"markdown"},
-		Args:      map[string]string{},
+		Path:          "",
+		Scanner:       []string{"funcdoc"},
+		Generator:     []string{"markdown"},
+		Args:          map[string]string{},
+		scannerArgs:   map[string]map[string]string{},
+		generatorArgs: map[string]map[string]string{},
 	}
 	b, err := yaml.Marshal(cfg)
 	if err != nil {

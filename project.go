@@ -12,6 +12,7 @@ type Project struct {
 	Config           *Config
 	Scanners         []DocScanner   `yaml:"-"`
 	Generators       []DocGenerator `yaml:"-"`
+	pluginArgs       map[string]string
 	refObjects       map[LangObjectId]*Object
 	defaultLoaderCfg *ObjectLoaderConfig
 	muObj            sync.Mutex
@@ -21,7 +22,7 @@ func NewProject(config *Config) (*Project, error) {
 	if err := config.Check(); err != nil {
 		return nil, err
 	}
-	project := &Project{Config: config}
+	project := &Project{Config: config, pluginArgs: make(map[string]string)}
 	if err := project.checkScanner(); err != nil {
 		return nil, err
 	}
@@ -30,7 +31,7 @@ func NewProject(config *Config) (*Project, error) {
 		return nil, err
 	}
 	project.refObjects = make(map[LangObjectId]*Object)
-	project.defaultLoaderCfg = &ObjectLoaderConfig{project.Config.Copy()}
+	project.defaultLoaderCfg = &ObjectLoaderConfig{*project.Config}
 	//if config.BaseType != "" {
 	//	baseTypeObj := &Object{
 	//		ID:   config.BaseType,
@@ -39,22 +40,6 @@ func NewProject(config *Config) (*Project, error) {
 	//	project.refObjects[baseTypeObj.ID] = baseTypeObj
 	//}
 	return project, nil
-}
-
-var projectOnce sync.Once
-var _project *Project
-
-func SetProject(project *Project) {
-	projectOnce.Do(func() {
-		_project = project
-	})
-}
-
-func GetProject() *Project {
-	if _project == nil {
-		panic("_project is nil")
-	}
-	return _project
 }
 
 func (project *Project) checkScanner() error {
