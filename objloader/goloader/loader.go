@@ -23,12 +23,18 @@ type GoLoader struct {
 	initialed   bool
 	once        sync.Once
 	mod         *mkdoc.GoModuleInfo
+	pkg         string
 	enableGoMod bool
 }
 
 func (g *GoLoader) init(config *mkdoc.ObjectLoaderConfig) {
 	g.once.Do(func() {
 		g.config = config
+		if len(config.Args["pkg"]) > 0 {
+			g.pkg = config.Args["pkg"]
+		} else {
+			g.pkg = config.Args["path"]
+		}
 		g.cached = make(map[string]*mkdoc.Object)
 		g.tsId = make(map[mkdoc.TypeScope]string)
 		g.initialed = true
@@ -61,7 +67,7 @@ func (g *GoLoader) GetObjectId(ts mkdoc.TypeScope) (string, error) {
 		return "", errors.New("loader not initialed")
 	}
 	if g.enableGoMod && (g.mod == nil) {
-		if err := g.initGoModule(g.config.Path); err != nil {
+		if err := g.initGoModule(g.); err != nil {
 			return "", err
 		}
 	}
