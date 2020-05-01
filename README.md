@@ -40,8 +40,8 @@ mkdoc make
 
 | 名称    | 说明                      | 链接                                                         |
 | ------- | ------------------------- | ------------------------------------------------------------ |
-| *gofuc* | 从 golang func comments中扫描文档信息 | [🛸](https://github.com/TheWinds/mkdoc/tree/master/scanners/gofunc) |
-| *docdef* | 从 doc schema文件中扫描文档信息 | [🛸](https://github.com/TheWinds/mkdoc/tree/master/scanners/docdef) |
+| *gofuc* | 从 golang func comments中扫描文档信息 | [🛸](https://github.com/TheWinds/mkdoc/tree/master/scanner/gofunc) |
+| *docdef* | 从 doc schema文件中扫描文档信息 | [🛸](https://github.com/TheWinds/mkdoc/tree/master/scanner/docdef) |
 
 
 
