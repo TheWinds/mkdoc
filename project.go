@@ -125,6 +125,8 @@ func (project *Project) parseSchemaExtension(ext *schema.Extension) (Extension, 
 	switch ext.Name {
 	case "go_tag":
 		return new(ExtensionGoTag).Parse(ext)
+	case "gapi_field":
+		return new(GApiFieldExtension).Parse(ext)
 	default:
 		return new(ExtensionUnknown).Parse(ext)
 	}

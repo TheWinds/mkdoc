@@ -43,5 +43,27 @@ func (e *ExtensionUnknown) Name() string {
 func (e *ExtensionUnknown) Parse(schema *schema.Extension) (Extension, error) {
 	e.OriginData = schema.Data
 	e.OriginExtensionName = schema.Name
-	return e,nil
+	return e, nil
+}
+
+type GApiFieldExtension struct {
+	Options struct {
+		OmitEmpty   bool `json:"omit_empty"`
+		RawData     bool `json:"raw_data"`
+		FromHeader  bool `json:"from_header"`
+		FromContext bool `json:"from_context"`
+		FromParams  bool `json:"from_params"`
+		Validate    bool `json:"validate"`
+	}
+}
+
+func (e *GApiFieldExtension) Name() string {
+	return "gapi_field"
+}
+
+func (e *GApiFieldExtension) Parse(schema *schema.Extension) (Extension, error) {
+	if err := json.Unmarshal(schema.Data, &e.Options); err != nil {
+		return nil, err
+	}
+	return e, nil
 }
