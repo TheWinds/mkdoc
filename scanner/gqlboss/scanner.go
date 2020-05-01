@@ -26,6 +26,7 @@ type Scanner struct {
 	schemaPath      map[string]string
 	enableGoMod     bool
 	filterTag       string
+	pkg             string
 	err             error
 }
 
@@ -34,7 +35,12 @@ func (s *Scanner) Scan(config mkdoc.DocScanConfig) (*mkdoc.DocScanResult, error)
 		s.enableGoMod = true
 	}
 	s.filterTag = config.Args["_filter_tag"]
-	annotations, err := s.scanAnnotations(&config)
+	if len(config.Args["pkg"]) > 0 {
+		s.pkg = config.Args["pkg"]
+	} else {
+		s.pkg = config.Args["path"]
+	}
+	annotations, err := s.scanAnnotations()
 	if err != nil {
 		return nil, err
 	}
@@ -147,9 +153,9 @@ func (s *Scanner) walkNode(node ast.Node) bool {
 	return true
 }
 
-func (s *Scanner) scanAnnotations(config *mkdoc.DocScanConfig) ([]DocAnnotation, error) {
+func (s *Scanner) scanAnnotations() ([]DocAnnotation, error) {
 	dirs := mkdoc.GetScanDirs(
-		config.ProjectConfig.Path,
+		s.pkg,
 		s.enableGoMod,
 		func(dirName string) bool {
 			return strings.Contains(dirName, "service/boss/schemas")
