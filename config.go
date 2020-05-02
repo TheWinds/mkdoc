@@ -167,9 +167,9 @@ func CreateDefaultConfig() error {
 				Scope:   "",
 			},
 		},
-		Scanner:       []string{"gofunc", "docdef"},
+		Scanner:       []string{"gofunc;pkg=corego/service;enable_go_mod=false", "docdef;path=path/to/scan"},
 		Generator:     []string{"markdown", "docsify"},
-		Args:          map[string]string{"path": "path/to/your/project", "enable_go_mod": "false"},
+		Args:          map[string]string{"path": "path/to/your/project"},
 		scannerArgs:   map[string]map[string]string{},
 		generatorArgs: map[string]map[string]string{},
 	}
