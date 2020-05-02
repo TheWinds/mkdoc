@@ -15,10 +15,9 @@ func init() {
 }
 
 type Scanner struct {
-	enableGoMod bool
-	filterTag   string
-	path        string
-	fileExt     string
+	filterTag string
+	path      string
+	fileExt   string
 }
 
 func (s *Scanner) Scan(config mkdoc.DocScanConfig) (*mkdoc.DocScanResult, error) {
@@ -83,5 +82,5 @@ func (s *Scanner) Name() string {
 }
 
 func (s *Scanner) Help() string {
-	return "scan code from doc.def"
+	return "scan code from doc schema json"
 }

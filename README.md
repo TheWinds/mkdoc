@@ -1,7 +1,5 @@
 # MKDOC
-> 灵活可定制,基于注释注解的API文档生成器
-
-[![asciicast](https://asciinema.org/a/fIDwADlE8X1MtCCSNb8bUJPte.svg)](https://asciinema.org/a/fIDwADlE8X1MtCCSNb8bUJPte)
+> 灵活可定制,多语言支持的API文档生成器
 
 ## 快速开始
 
@@ -32,25 +30,38 @@ mkdoc make
 [👉 Wiki](https://github.com/TheWinds/mkdoc/wiki)
 
 ## 插件
-插件包括两种类型*Scanner*和*Generator*,您可以自己实现这两种插件来适应自己项目中的文档需求,
+插件包括3种类型*Scanner*、*Generator*、*ObjectLoader*,您可以自己实现这3种插件来适应自己项目中的生成需求,
 下面有一些已经实现的插件。
 ### Scanner
 
-*Scanner*(注解扫描器)的作用是从go源码中扫描注解,现在支持以下扫描器:
+*Scanner*(扫描器)的作用是从源码中扫描注解
+
+内置了以下扫描器:
 
 | 名称    | 说明                      | 链接                                                         |
 | ------- | ------------------------- | ------------------------------------------------------------ |
-| *funcdoc* | 从func document中获取注解 | [🛸](https://github.com/TheWinds/mkdoc/tree/master/scanners/funcdoc) |
+| *gofuc* | 从 golang func comments中扫描文档信息 | [🛸](https://github.com/TheWinds/mkdoc/tree/master/scanner/gofunc) |
+| *docdef* | 从 doc schema文件中扫描文档信息 | [🛸](https://github.com/TheWinds/mkdoc/tree/master/scanner/docdef) |
 
 
 
 ### Generator
 
-*Generator*(文档生成器)的作用是根据api信息生成文档,现在支持以下生成器:
+*Generator*(文档生成器)的作用是根据api信息生成 文档 || 测试
+
+内置了以下生成器:
 
 | 名称     | 说明                                  | 链接                                  |
 | -------- | ------------------------------------- | --------------------------------------- |
-| *docsify* | 生成docsify所需文档                | [🛸](https://github.com/TheWinds/mkdoc/tree/master/generators/docsify) |
-| *markdown* | 生成markdown格式的文档                | [🛸](https://github.com/TheWinds/mkdoc/tree/master/generators/markdown) |
-| *insomnia* | 生成可供insomnia导入的数据,可用于测试 | [🛸](https://github.com/TheWinds/mkdoc/tree/master/generators/insomnia) |
+| *docsify* | 生成docsify所需文档                | [🛸](https://github.com/TheWinds/mkdoc/tree/master/generator/docsify) |
+| *markdown* | 生成markdown格式的文档                | [🛸](https://github.com/TheWinds/mkdoc/tree/master/generator/markdown) |
+| *insomnia* | 生成可供insomnia导入的数据,可用于测试 | [🛸](https://github.com/TheWinds/mkdoc/tree/master/generator/insomnia) |
 
+### ObjectLoader
+*ObjectLoader*(Object加载器)的作用是根据类型定位信息加载Object
+
+内置了以下Loader:
+
+| 名称     | 说明                                  | 链接                                  |
+| -------- | ------------------------------------- | --------------------------------------- |
+| *goloader* | golang sturct 类型加载               | [🛸](https://github.com/TheWinds/mkdoc/tree/master/objloader/goloader) |
