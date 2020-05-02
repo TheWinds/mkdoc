@@ -53,6 +53,9 @@ func (s *Scanner) Scan(config mkdoc.DocScanConfig) (*mkdoc.DocScanResult, error)
 func (s *Scanner) scanDefs(config *mkdoc.DocScanConfig) ([]*schema.Schema, error) {
 	var schemas []*schema.Schema
 	err := filepath.Walk(s.path, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
 		if info.IsDir() || !strings.HasSuffix(path, s.fileExt) {
 			return nil
 		}
