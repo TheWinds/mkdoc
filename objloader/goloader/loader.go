@@ -110,6 +110,9 @@ func (g *GoLoader) LoadAll(tss []mkdoc.TypeScope) ([]*mkdoc.Object, error) {
 		if err != nil {
 			return nil, err
 		}
+		if len(objs) > 0 {
+			objs[len(objs)-1].ID = pkgTyp
+		}
 		for _, obj := range objs {
 			g.cached[obj.ID] = obj
 			if !obj.Loaded {
