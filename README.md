@@ -21,7 +21,6 @@ mkdoc make
 ```
 
 - 使用 (DocServer)
-### Quick Start
 ```shell script
 # 1.pull
 docker pull thewinds/mkdoc-server
@@ -39,9 +38,9 @@ docker pull thewinds/mkdoc-server
 >
 > notify url is `:8080/notify`
 
-### Environments
+### 环境变量
 
-| name| description |
+| 名称| 描述 |
 | --- | --- |
 |GIT_USER_NAME|user name for private git repository |
 |GIT_PASSWORD|password for private git repository|
@@ -52,7 +51,7 @@ docker pull thewinds/mkdoc-server
 
 > if `WEB_USER_NAME` is not empty basic auth will be open
 
-### Config file
+### 配置文件
 config file must named as `conf.yaml`
 
 this file contains multi section.
@@ -61,7 +60,7 @@ the first section is `docserver` config,other sections are mkdoc project config 
 
 - docserver section
 
-| name| description |
+| 名称| 描述 |
 | --- | --- |
 |repo| repository to clone|
 |branch| branch to clone|
