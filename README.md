@@ -67,7 +67,7 @@ the first section is `docserver` config,other sections are mkdoc project config 
 
 - projects section
 
-| name| description |
+| 名称| 描述 |
 | --- | --- |
 |id|path for doc page|
 
