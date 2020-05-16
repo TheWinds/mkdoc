@@ -132,10 +132,19 @@ func makeDoc(dir string) ([]byte, error) {
 	return cmd.Output()
 }
 
+func repoDir(url string) string {
+	i := strings.LastIndex(url, "/")
+	if i == -1 {
+		log.Fatalf("config: invalid repo url: %s", url)
+	}
+	return url[i : len(url)-len(".git")]
+}
+
 // clone and checkout source repo
 func checkoutRepo(conf *config) error {
-	repoURL, branch := conf.repoName, conf.branchName
+	repoURL, branch := conf.repoURL, conf.branchName
 	userName, password := conf.gitUserName, conf.gitPassword
+	cloneDir := repoDir(repoURL)
 	var auth string
 	if len(userName) > 0 {
 		auth = userName
@@ -167,7 +176,12 @@ func checkoutRepo(conf *config) error {
 		opt.Progress = os.Stdout
 		log.Println("clone:", repoURL)
 	}
-	_, err = git.PlainClone("./src", false, opt)
+	err = os.Mkdir("./src", 0755)
+	if err != nil {
+		return err
+	}
+
+	_, err = git.PlainClone(filepath.Join("./src", cloneDir), false, opt)
 	return err
 }
 

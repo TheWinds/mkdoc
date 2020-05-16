@@ -5,10 +5,11 @@ import (
 	"io"
 	"log"
 	"os"
+	"strings"
 )
 
 type config struct {
-	repoName     string
+	repoURL      string
 	branchName   string
 	gitUserName  string
 	gitPassword  string
@@ -67,13 +68,16 @@ func getConfig() *config {
 	}
 
 	if name, ok := configs[0]["repo"].(string); ok {
-		conf.repoName = name
+		conf.repoURL = name
 	}
 	if name, ok := configs[0]["branch"].(string); ok {
 		conf.branchName = name
 	}
-	if len(conf.repoName) == 0 {
+	if len(conf.repoURL) == 0 {
 		log.Fatal("config: miss repo name")
+	}
+	if !strings.HasSuffix(conf.repoURL, ".git") {
+		log.Fatal("config: repo must have a .git suffix")
 	}
 	if len(conf.branchName) == 0 {
 		log.Fatal("config: miss branch name")
