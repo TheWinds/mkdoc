@@ -9,12 +9,45 @@ import (
 	"time"
 )
 
-func handleWithBasicAuth(pattern string, user, pwd string, handlerFunc http.HandlerFunc) {
-	if len(user) > 0 {
-		http.HandleFunc(pattern, basicAuth(handlerFunc, []byte(user), []byte(pwd)))
+type basicAuthHandler struct {
+	user, pwd string
+	handler   http.Handler
+}
+
+func newBasicAuthHandler(user string, pwd string, handler http.Handler) *basicAuthHandler {
+	return &basicAuthHandler{user: user, pwd: pwd, handler: handler}
+}
+
+func (b *basicAuthHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+	if len(b.user) == 0 {
+		b.handler.ServeHTTP(rw, req)
 		return
 	}
-	http.HandleFunc(pattern, handlerFunc)
+	basicAuthPrefix := "Basic "
+	auth := req.Header.Get("Authorization")
+	if strings.HasPrefix(auth, basicAuthPrefix) {
+		payload, err := base64.StdEncoding.DecodeString(
+			auth[len(basicAuthPrefix):],
+		)
+		if err == nil {
+			pair := bytes.SplitN(payload, []byte(":"), 2)
+			if len(pair) == 2 && bytes.Equal(pair[0], []byte(b.user)) &&
+				bytes.Equal(pair[1], []byte(b.pwd)) {
+				b.handler.ServeHTTP(rw, req)
+				return
+			}
+		}
+	}
+	rw.Header().Set("WWW-Authenticate", `Basic realm="Restricted"`)
+	rw.WriteHeader(http.StatusUnauthorized)
+}
+
+func handleWithBasicAuth(pattern string, user, pwd string, handlerFunc http.HandlerFunc) {
+	if len(user) == 0 {
+		http.HandleFunc(pattern, handlerFunc)
+		return
+	}
+	http.HandleFunc(pattern, basicAuth(handlerFunc, []byte(user), []byte(pwd)))
 }
 
 func basicAuth(f http.HandlerFunc, user, pwd []byte) http.HandlerFunc {
