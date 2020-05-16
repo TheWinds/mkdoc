@@ -41,7 +41,8 @@ func registerHandler(conf *config) {
 		docdir := filepath.Join("project", id, "docs", "docsify")
 		log.Printf("    %s\t=>\t127.0.0.1:8080/%s", id, id)
 		prefix := "/" + id + "/"
-		http.Handle(prefix, http.StripPrefix(prefix, http.FileServer(http.Dir(docdir))))
+		h := http.StripPrefix(prefix, http.FileServer(http.Dir(docdir)))
+		http.Handle(prefix, newBasicAuthHandler(conf.webUserName, conf.webPassword, h))
 	}
 	log.Println("notify url: 127.0.0.1:8080/notify")
 
