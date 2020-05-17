@@ -24,6 +24,7 @@ func main() {
 		log.Fatal(err)
 	}
 	processMakeDoc(conf)
+	notify()
 	server(conf)
 }
 
@@ -89,11 +90,13 @@ func registerHandler(conf *config) {
 	})
 }
 
-var delayNotify = debounce(func() {
-	go func() { makeDocChan <- struct{}{} }()
-}, time.Second*3)
-
 var makeDocChan = make(chan struct{})
+
+func notify() {
+	go func() { makeDocChan <- struct{}{} }()
+}
+
+var delayNotify = debounce(notify, time.Second*3)
 
 func processMakeDoc(conf *config) {
 	go func() {
