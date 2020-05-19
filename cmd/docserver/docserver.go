@@ -13,7 +13,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -107,22 +106,22 @@ func processMakeDoc(conf *config) {
 				log.Println("checkout repo:", err)
 				continue
 			}
-			wg := sync.WaitGroup{}
+			//wg := sync.WaitGroup{}
 			for _, v := range conf.mkdocConfigs {
-				wg.Add(1)
+				//wg.Add(1)
 				dir := filepath.Join("project", v["id"].(string))
-				go func() {
-					defer wg.Done()
-					o, err := makeDoc(dir)
-					if err != nil {
-						log.Println("mkdoc:", err)
-					}
-					if conf.debug {
-						log.Println(string(o))
-					}
-				}()
+				//go func() {
+				//defer wg.Done()
+				o, err := makeDoc(dir)
+				if err != nil {
+					log.Println("mkdoc:", err)
+				}
+				if conf.debug {
+					log.Println(string(o))
+				}
+				//}()
 			}
-			wg.Wait()
+			//wg.Wait()
 			os.RemoveAll("./src")
 		}
 	}()
@@ -173,6 +172,7 @@ func checkoutRepo(conf *config) error {
 		URL:           repoURL,
 		ReferenceName: plumbing.NewBranchReferenceName(branch),
 		SingleBranch:  true,
+		Depth:         1,
 		Progress:      nil,
 	}
 	if conf.debug {
