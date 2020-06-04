@@ -96,6 +96,10 @@ func (j *JSONMocker) mock(obj *mkdoc.Object) {
 	defer func() { j.write("}") }()
 	var firstField bool
 	for _, field := range obj.Fields {
+		gapiExt := getGAPIExt(field.Extensions)
+		if gapiExt != nil && gapiExt.Options.FromContext {
+			continue
+		}
 		goTagExt := getGoTag(field.Extensions)
 		var jsonTag string
 		if goTagExt != nil {
@@ -120,7 +124,11 @@ func (j *JSONMocker) mock(obj *mkdoc.Object) {
 		if fieldTyp.Ref != "" {
 			j.mockRef(fieldTyp.Ref)
 		} else {
-			j.writeValue(fieldTyp.Name)
+			if gapiExt != nil && gapiExt.Options.RawData {
+				j.writeValue("interface{}")
+			} else {
+				j.writeValue(fieldTyp.Name)
+			}
 		}
 	}
 }
@@ -236,6 +244,15 @@ func (j *JSONMocker) popRefPath() {
 func getGoTag(exts []mkdoc.Extension) *mkdoc.ExtensionGoTag {
 	for _, ext := range exts {
 		if e, ok := ext.(*mkdoc.ExtensionGoTag); ok {
+			return e
+		}
+	}
+	return nil
+}
+
+func getGAPIExt(exts []mkdoc.Extension) *mkdoc.GApiFieldExtension {
+	for _, ext := range exts {
+		if e, ok := ext.(*mkdoc.GApiFieldExtension); ok {
 			return e
 		}
 	}
