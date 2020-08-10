@@ -11,6 +11,7 @@
 * [介绍](#介绍)
 * [特性](#特性)
 * [开始使用](#开始使用)
+    * [Playground](#Playground)
     * [CLI](#cli)
       * [安装](#安装)
       * [使用](#使用)
@@ -51,6 +52,12 @@ mkdoc(make doc)是一款api文档生成器，相较于swagger等文档生成工�
   以上两种方式只需要一个额外的conf.yaml即可完成配置。
 
 ## 开始使用
+
+### Playground
+
+为了方便体验 mkdoc ,这里编译了WebAssembly版本（😎），点击下方链接即可在线体验。
+
+[ 👉 在线体验 👈 ](http://mkdoc.thewinds.cn/)
 
 ### CLI
 

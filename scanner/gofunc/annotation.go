@@ -161,6 +161,7 @@ func parseInOut(annotation DocAnnotation, api *schema.API) ([]*schema.Object, er
 					if matchGroup[3] != "" {
 						obj.Type.IsRepeated = true
 					}
+					api.InType = obj.ID
 					objects = append(objects, obj)
 				case "out_fields_block":
 					api.MimeOut = rmBracket(matchGroup[2])
@@ -174,6 +175,7 @@ func parseInOut(annotation DocAnnotation, api *schema.API) ([]*schema.Object, er
 					if matchGroup[3] != "" {
 						obj.Type.IsRepeated = true
 					}
+					api.OutType = obj.ID
 					objects = append(objects, obj)
 				}
 			}

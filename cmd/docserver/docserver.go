@@ -49,9 +49,6 @@ func registerHandler(conf *config) {
 
 	// handle notify
 	http.HandleFunc("/notify", func(writer http.ResponseWriter, request *http.Request) {
-		if request.Method != http.MethodGet {
-			return
-		}
 		token := request.FormValue("token")
 		if token != conf.notifyToken {
 			writer.WriteHeader(http.StatusForbidden)
