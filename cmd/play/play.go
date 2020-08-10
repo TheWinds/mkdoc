@@ -44,9 +44,9 @@ func initJS() {
 
 func loadSource() {
 	dom := js.Global().Get("document")
-	defaultConf := unQuote(dom.Call("getElementById", "code-conf").Get("innerText").String())
-	apiGO := unQuote(dom.Call("getElementById", "code-api").Get("innerText").String())
-	userGO := unQuote(dom.Call("getElementById", "code-user").Get("innerText").String())
+	defaultConf := unQuote(dom.Call("getElementById", "code-conf").Get("value").String())
+	apiGO := unQuote(dom.Call("getElementById", "code-api").Get("value").String())
+	userGO := unQuote(dom.Call("getElementById", "code-user").Get("value").String())
 	const modSrc = `module github.com/thewinds/mkdoc/example
 
 go 1.12
@@ -71,7 +71,6 @@ func setGenResult() {
 	var mds []string
 	filepath.Walk("./docs/docsify/", func(path string, info os.FileInfo, err error) error {
 		if info != nil && !info.IsDir() && strings.HasSuffix(path, ".md") {
-			log.Println(info.Name())
 			mds = append(mds, path)
 		}
 		return err
