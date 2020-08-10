@@ -1,0 +1,60 @@
+<!doctype html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>doc</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/docsify@4.11.4/themes/vue.css">
+</head>
+<body>
+<div>
+    <div id="app-container">
+        <div id="app"></div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/ajax-hook@2.0.3/dist/ajaxhook.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/docsify@4.11.4/lib/docsify.min.js"></script>
+<script src="//cdn.jsdelivr.net/npm/docsify/lib/plugins/search.min.js"></script>
+<script src="//cdn.jsdelivr.net/npm/docsify-copy-code"></script>
+<script src="//cdn.jsdelivr.net/npm/prismjs/components/prism-json.min.js"></script>
+<script>
+    window.$docsify = {
+        loadSidebar: true,
+        subMaxLevel: 2,
+        search: 'auto',
+        basePath: '/',
+    };
+    // read generated doc file from localStorage
+    let docsSrc = localStorage.getItem("docs.md");
+    window.docs = JSON.parse(docsSrc);
+</script>
+<script>
+    function fetchMD(name) {
+        return docs[name];
+    }
+
+    ah.proxy({
+        onRequest: (config, handler) => {
+            if (config.url.endsWith(".md")) {
+                handler.resolve({
+                    config: config,
+                    status: 200,
+                    headers: {'content-type': 'text/text'},
+                    response: fetchMD(config.url)
+                })
+            } else {
+                handler.next(config);
+            }
+        },
+        onError: (err, handler) => {
+            handler.next(err)
+        },
+        onResponse: (response, handler) => {
+            handler.next(response)
+        }
+    })
+</script>
+</body>
+
+</html>
