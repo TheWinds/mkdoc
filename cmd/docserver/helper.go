@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"encoding/base64"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -83,4 +85,15 @@ func debounce(f func(), d time.Duration) func() {
 		}
 		timer = time.AfterFunc(d, f)
 	}
+}
+
+func createSrcDirLink(dir string) error {
+	srcPath := "/mkdoc/src"
+	envSrcPath := os.Getenv("SRCPATH")
+	if len(envSrcPath) > 0 {
+		srcPath = envSrcPath
+	}
+	linkName := filepath.Join(dir, "src")
+	os.Remove(linkName)
+	return os.Symlink(srcPath, linkName)
 }

@@ -110,6 +110,10 @@ func processMakeDoc(conf *config) {
 				dir := filepath.Join("project", v["id"].(string))
 				go func() {
 					defer wg.Done()
+					err := createSrcDirLink(dir)
+					if err != nil {
+						log.Println("src link:", err)
+					}
 					o, err := makeDoc(dir)
 					if err != nil {
 						log.Println("mkdoc:", err)
