@@ -27,6 +27,7 @@
       * [gofunc 注解详细介绍](#gofunc-注解详细介绍)
 * [例子](#例子-1)
 * [原理](#原理)
+* [鸣谢](#鸣谢)
 * [END](#end)
 
 ## 介绍
@@ -422,5 +423,16 @@ docserver提供了一个简单的文档服务，他在mkdoc之外增加了源码
 参考[examples](https://github.com/TheWinds/mkdoc/tree/master/_examples)目录下的例子🌰
 ## 原理
 TODO
+
+## 鸣谢
+
+特别感谢 [JetBrains](https://www.jetbrains.com/?from=ferry) 为本开源项目提供免费的 [IntelliJ GoLand](https://www.jetbrains.com/go/?from=ferry) 授权
+
+<p>
+ <a href="https://www.jetbrains.com/?from=ferry">
+   <img height="200" src="https://www.fdevops.com/wp-content/uploads/2020/09/1599213857-jetbrains-variant-4.png">
+ </a>
+</p>
+
 ## END
 感谢您关注此项目 : )，如果有好的想法欢迎 Issue or PR。
